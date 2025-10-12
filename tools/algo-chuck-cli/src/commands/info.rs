@@ -35,7 +35,7 @@ pub async fn handle_info_command(_matches: &ArgMatches) -> Result<()> {
         println!();
     } else {
         println!("🔐 Secure Token Storage: ❌ No tokens found");
-        println!("Run 'schwab-authenticator login' to authenticate first.\n");
+        println!("Run 'chuck login' to authenticate first.\n");
     }
 
     Ok(())

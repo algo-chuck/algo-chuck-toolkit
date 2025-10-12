@@ -15,7 +15,7 @@ pub async fn handle_refresh_command(_matches: &ArgMatches) -> Result<()> {
 
     // Get refresh token from TokenManager
     let refresh_token = token_manager.get_refresh_token()?.ok_or_else(|| {
-        anyhow::anyhow!("No refresh token found. Please run 'schwab-authenticator login' first.")
+        anyhow::anyhow!("No refresh token found. Please run 'chuck login' first.")
     })?;
 
     println!("🔍 Found stored refresh token");

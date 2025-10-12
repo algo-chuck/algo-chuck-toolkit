@@ -70,8 +70,8 @@ pub async fn handle_login_command(_matches: &ArgMatches) -> Result<()> {
 
     println!("🔐 Tokens saved securely using encryption");
     println!("\n🎉 Authentication complete!");
-    println!("💡 Use 'schwab-authenticator info' to view token status");
-    println!("💡 Use 'schwab-authenticator refresh' to refresh tokens when needed");
+    println!("💡 Use 'chuck info' to view token status");
+    println!("💡 Use 'chuck refresh' to refresh tokens when needed");
 
     Ok(())
 }

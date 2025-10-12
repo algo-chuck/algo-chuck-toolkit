@@ -106,9 +106,9 @@ async fn handle_callback(
     // Send success response
     let response = "HTTP/1.1 200 OK\r\n\
                    Content-Type: text/html\r\n\
-                   Content-Length: 185\r\n\
+                   Content-Length: 180\r\n\
                    \r\n\
-                   <html><body><h1>✅ Authentication Successful!</h1>\
+                   <html><body><h1>Authentication Successful!</h1>\
                    <p>You have successfully authenticated with Schwab.</p>\
                    <p>You can now close this browser window and return to the terminal.</p></body></html>";
 
