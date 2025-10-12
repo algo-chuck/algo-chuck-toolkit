@@ -174,10 +174,16 @@ chuck config set --auto-refresh false
 **Auto-Refresh in Action:**
 
 ```bash
-# With auto-refresh enabled
+# With auto-refresh enabled (token expired)
 chuck info
 🔄 Auto-refresh: ✅ Enabled
 🔄 Access token expired, auto-refreshing...
+✅ Token refreshed successfully
+
+# With auto-refresh enabled (token expiring soon)
+chuck info
+🔄 Auto-refresh: ✅ Enabled
+🔄 Access token expires soon, auto-refreshing...
 ✅ Token refreshed successfully
 
 # With auto-refresh disabled
