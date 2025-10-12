@@ -128,7 +128,7 @@ This will:
 ### 🔄 **Token Refresh**
 
 ```bash
-# Refresh expired access token
+# Refresh access token
 chuck refresh
 ```
 
@@ -233,7 +233,7 @@ chuck config set --client-secret "YOUR_SECRET"
 - Ensure you have write access to config directories
 - Check file permissions: `ls -la ~/Library/Application\ Support/Algo\ Chuck\ CLI/`
 
-### **Reset Everything**
+### **Reset vs Clean Options**
 
 ```bash
 # Clear data but keep directory structure
