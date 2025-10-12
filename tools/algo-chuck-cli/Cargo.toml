@@ -11,14 +11,39 @@ name = "algo-chuck"
 path = "src/main.rs"
 
 [dependencies]
-schwab-api-types = { path = "../../crates/schwab-api-types" }
-schwab-api-core = { path = "../../crates/schwab-api-core" }
-schwab-api-oauth = { path = "../../crates/schwab-api-oauth" }
-schwab-api-marketdata = { path = "../../crates/schwab-api-marketdata" }
-schwab-api-trader = { path = "../../crates/schwab-api-trader" }
-clap = { workspace = true, features = ["derive"] }
-tokio = { workspace = true, features = ["full"] }
-serde = { workspace = true, features = ["derive"] }
-anyhow = { workspace = true }
-tracing = { workspace = true }
-tracing-subscriber = { workspace = true }
+# schwab-api-types = { path = "../../crates/schwab-api-types" }
+# schwab-api-core = { path = "../../crates/schwab-api-core" }
+# schwab-api-oauth = { path = "../../crates/schwab-api-oauth" }
+# schwab-api-marketdata = { path = "../../crates/schwab-api-marketdata" }
+# schwab-api-trader = { path = "../../crates/schwab-api-trader" }
+anyhow = "1.0"
+base64 = "0.21"
+chrono = { version = "0.4", features = ["serde"] }
+clap = { version = "4.4", features = ["derive"] }
+config = "0.13"
+dirs = "5.0"
+rcgen = "0.11"
+reqwest = { version = "0.11", features = ["json"] }
+rustls = "0.21"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+tokio-rustls = "0.24"
+toml = "0.8"
+url = "2.4"
+urlencoding = "2.1"
+uuid = { version = "1.0", features = ["v4"] }
+webbrowser = "0.8"
+
+# Encryption dependencies
+chacha20poly1305 = "0.10"
+argon2 = "0.5"
+rand = "0.8"
+
+# Logging and tracing
+# tracing = "0.1"
+# tracing-subscriber = { version = "0.3", default-features = false }
+
+# Unix-specific for file permissions
+[target.'cfg(unix)'.dependencies]
+nix = "0.27"
