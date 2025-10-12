@@ -16,11 +16,47 @@ version = "0.1.0"
 authors = ["Brian Kiernan <brian@algochuck.com>"]
 license = "MIT"
 
+[workspace.dependencies]
+# Serialization
+serde = { version = "1.0", default-features = false }
+serde_json = "1.0"
+
+# Date/Time
+chrono = { version = "0.4", default-features = false }
+
+# UUID and URL handling
+uuid = { version = "1.0", default-features = false }
+url = { version = "2.5", default-features = false }
+
+# Decimal handling for financial data
+rust_decimal = { version = "1.35", default-features = false }
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Async runtime and HTTP client
+tokio = { version = "1.0", default-features = false }
+reqwest = { version = "0.12", default-features = false }
+async-trait = "0.1"
+
+# CLI tools
+clap = { version = "4.5", features = ["derive"] }
+
+# Cryptography and encoding
+base64 = "0.22"
+rand = "0.8"
+
+# Logging and tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", default-features = false }
+
+
 [workspace.lints.clippy]
-# Enable common clippy lint groups
-pedantic = "warn"
-nursery = "warn"
-cargo = "warn"
+# Enable common clippy lint groups (with lower priority than individual lints)
+pedantic = { level = "warn", priority = -1 }
+nursery = { level = "warn", priority = -1 }
+cargo = { level = "warn", priority = -1 }
 
 # Allow some pedantic lints that can be overly strict
 module_name_repetitions = "allow"
@@ -43,4 +79,5 @@ rc_mutex = "deny"
 [workspace.lints.rust]
 unsafe_code = "forbid"
 missing_docs = "warn"
-rust_2018_idioms = "warn"
+rust_2018_idioms = { level = "warn", priority = -1 }
+
