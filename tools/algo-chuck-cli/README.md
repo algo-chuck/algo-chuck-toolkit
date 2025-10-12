@@ -49,7 +49,7 @@ A professional-grade Rust CLI tool for secure Schwab Developer API OAuth2 authen
 git clone https://github.com/algo-chuck/algo-chuck-toolkit
 cd tools/algo-chuck-cli
 cargo build --release
-# Binary will be in target/release/algo-chuck-cli
+# Binary will be in target/release/chuck
 ```
 
 ### Add to PATH (Optional)
@@ -65,11 +65,11 @@ export PATH="$PATH:/path/to/algo-chuck-cli/target/release"
 
 ```bash
 # Set your Schwab credentials securely
-algo-chuck-cli config set --client-id "YOUR_APP_KEY"
-algo-chuck-cli config set --client-secret "YOUR_APP_SECRET"
+chuck config set --client-id "YOUR_APP_KEY"
+chuck config set --client-secret "YOUR_APP_SECRET"
 
 # Verify configuration
-algo-chuck-cli config show
+chuck config show
 ```
 
 ### 🌍 **Environment Variables (Alternative)**
@@ -114,7 +114,7 @@ The tool automatically creates platform-appropriate directories:
 
 ```bash
 # Start OAuth2 flow
-algo-chuck-cli login
+chuck login
 ```
 
 This will:
@@ -129,42 +129,42 @@ This will:
 
 ```bash
 # Refresh expired access token
-algo-chuck-cli refresh
+chuck refresh
 ```
 
 ### 📊 **Token Information**
 
 ```bash
 # View current token status
-algo-chuck-cli info
+chuck info
 ```
 
 ### ⚙️ **Configuration Management**
 
 ```bash
 # View current configuration
-algo-chuck-cli config show
+chuck config show
 
 # Set credentials securely
-algo-chuck-cli config set --client-id "YOUR_APP_KEY"
-algo-chuck-cli config set --client-secret "YOUR_SECRET"
+chuck config set --client-id "YOUR_APP_KEY"
+chuck config set --client-secret "YOUR_SECRET"
 
 # Set custom callback URL
-algo-chuck-cli config set --callback-url "https://localhost:8080/callback"
+chuck config set --callback-url "https://localhost:8080/callback"
 
 # Reset everything (clears all data)
-algo-chuck-cli config reset
+chuck config reset
 ```
 
 ### 🆘 **Help System**
 
 ```bash
 # Main help
-algo-chuck-cli --help
+chuck --help
 
 # Command-specific help
-algo-chuck-cli config --help
-algo-chuck-cli config set --help
+chuck config --help
+chuck config set --help
 ```
 
 ## 🔐 **Security Features**
@@ -207,11 +207,11 @@ algo-chuck-cli config set --help
 
 ```bash
 # Check configuration
-algo-chuck-cli config show
+chuck config show
 
 # Set missing credentials
-algo-chuck-cli config set --client-id "YOUR_APP_KEY"
-algo-chuck-cli config set --client-secret "YOUR_SECRET"
+chuck config set --client-id "YOUR_APP_KEY"
+chuck config set --client-secret "YOUR_SECRET"
 ```
 
 **"Browser doesn't open"**
@@ -234,7 +234,7 @@ algo-chuck-cli config set --client-secret "YOUR_SECRET"
 
 ```bash
 # Nuclear option - clears all data
-algo-chuck-cli config reset
+chuck config reset
 
 # Or manually remove files
 rm -rf ~/Library/Application\ Support/algo-chuck/  # macOS

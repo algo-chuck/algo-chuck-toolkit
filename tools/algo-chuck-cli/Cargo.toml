@@ -7,7 +7,7 @@ license.workspace = true
 description = "Command-line interface for the Schwab API toolkit"
 
 [[bin]]
-name = "algo-chuck"
+name = "chuck"
 path = "src/main.rs"
 
 [dependencies]
@@ -16,18 +16,18 @@ path = "src/main.rs"
 # schwab-api-oauth = { path = "../../crates/schwab-api-oauth" }
 # schwab-api-marketdata = { path = "../../crates/schwab-api-marketdata" }
 # schwab-api-trader = { path = "../../crates/schwab-api-trader" }
-anyhow = "1.0"
+anyhow = { workspace = true }
 base64 = "0.21"
-chrono = { version = "0.4", features = ["serde"] }
+chrono = { workspace = true, features = ["serde", "clock"] }
 clap = { version = "4.4", features = ["derive"] }
 config = "0.13"
 dirs = "5.0"
 rcgen = "0.11"
 reqwest = { version = "0.11", features = ["json"] }
 rustls = "0.21"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-tokio = { version = "1.0", features = ["full"] }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+tokio = { workspace = true, features = ["full"] }
 tokio-rustls = "0.24"
 toml = "0.8"
 url = "2.4"

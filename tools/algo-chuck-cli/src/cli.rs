@@ -2,7 +2,7 @@ use clap::{Arg, Command};
 
 /// Build the complete CLI application structure
 pub fn build_cli() -> Command {
-    Command::new("Algo Chuck CLI")
+    Command::new("chuck")
         .version(env!("CARGO_PKG_VERSION"))
         .about("CLI tool for interacting with the Schwab Developer API")
         .subcommand_required(true)
