@@ -29,16 +29,16 @@ pub async fn handle_info_command(matches: &ArgMatches) -> Result<()> {
 
         if auto_refresher.is_enabled() {
             if let Err(e) = auto_refresher.ensure_valid_token().await {
-                println!("⚠️  Auto-refresh failed: {}", e);
+                eprintln!("⚠️  Auto-refresh failed: {}", e);
             }
         } else {
             // Show token status without auto-refresh
             match auto_refresher.get_token_status()? {
                 crate::auth::auto_refresh::TokenStatus::Expired => {
-                    println!("⚠️  Access token is expired - run 'chuck refresh'");
+                    eprintln!("⚠️  Access token is expired - run 'chuck refresh'");
                 }
                 crate::auth::auto_refresh::TokenStatus::ExpiresSoon => {
-                    println!("⚠️  Access token expires soon - consider refreshing");
+                    eprintln!("⚠️  Access token expires soon - consider refreshing");
                 }
                 _ => {}
             }
@@ -63,7 +63,7 @@ pub async fn handle_info_command(matches: &ArgMatches) -> Result<()> {
                 );
             }
             Err(e) => {
-                println!("❌ Failed to load secure tokens: {}", e);
+                eprintln!("❌ Failed to load secure tokens: {}", e);
             }
         }
         println!();

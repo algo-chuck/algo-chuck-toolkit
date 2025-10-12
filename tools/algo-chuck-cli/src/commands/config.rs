@@ -175,8 +175,8 @@ async fn handle_config_set(matches: &ArgMatches) -> Result<()> {
         config_manager.save_config(&config)?;
         println!("\n🔧 Configuration saved successfully!");
     } else if !credentials_updated {
-        println!("❌ No configuration values provided to set");
-        println!("Use --client-id, --client-secret, or --callback-url to set values");
+        eprintln!("❌ No configuration values provided to set");
+        eprintln!("Use --client-id, --client-secret, or --callback-url to set values");
     }
 
     if credentials_updated && !updated {
@@ -232,7 +232,7 @@ async fn handle_config_clean() -> Result<()> {
     std::io::stdin().read_line(&mut input)?;
 
     if input.trim() != "YES" {
-        println!("❌ Clean cancelled");
+        eprintln!("❌ Clean cancelled");
         return Ok(());
     }
 
