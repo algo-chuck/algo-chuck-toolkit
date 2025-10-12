@@ -245,6 +245,7 @@ chuck config clean
 # Or manually remove files
 rm -rf ~/Library/Application\ Support/Algo\ Chuck\ CLI/  # macOS
 rm -rf ~/.config/Algo\ Chuck\ CLI/ ~/.local/share/Algo\ Chuck\ CLI/  # Linux
+rmdir /s "%APPDATA%\Algo Chuck CLI" & rmdir /s "%LOCALAPPDATA%\Algo Chuck CLI"  # Windows
 ```
 
 **Difference between `reset` and `clean`:**
