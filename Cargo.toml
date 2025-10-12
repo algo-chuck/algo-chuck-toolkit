@@ -1,0 +1,17 @@
+[workspace]
+members = [ 
+  "crates/schwab-api-core", 
+  "crates/schwab-api-marketdata", 
+  "crates/schwab-api-oauth", 
+  "crates/schwab-api-trader", 
+  "crates/schwab-api-types",
+  "tools/algo-chuck-cli"
+]
+
+resolver = "3"
+
+[workspace.package]
+edition = "2024"
+version = "0.1.0"
+authors = ["Brian Kiernan <brian@algochuck.com>"]
+license = "MIT"
