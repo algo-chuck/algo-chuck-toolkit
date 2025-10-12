@@ -87,7 +87,7 @@ The tool automatically creates platform-appropriate directories:
 **macOS:**
 
 ```
-~/Library/Application Support/com.algochuck.cli/
+~/Library/Application Support/Algo Chuck CLI/
 ├── config.toml         # Non-sensitive settings
 ├── credentials.enc     # 🔐 Encrypted client secret
 ├── tokens.enc          # 🔐 Encrypted OAuth2 tokens
@@ -97,15 +97,15 @@ The tool automatically creates platform-appropriate directories:
 **Linux:**
 
 ```
-~/.config/com.algochuck.cli/       # or $XDG_CONFIG_HOME/com.algochuck.cli/
-~/.local/share/com.algochuck.cli/  # or $XDG_DATA_HOME/com.algochuck.cli/
+~/.config/Algo Chuck CLI/       # or $XDG_CONFIG_HOME/Algo Chuck CLI/
+~/.local/share/Algo Chuck CLI/  # or $XDG_DATA_HOME/Algo Chuck CLI/
 ```
 
 **Windows:**
 
 ```
-%APPDATA%\com.algochuck.cli\
-%LOCALAPPDATA%\com.algochuck.cli\
+%APPDATA%\Algo Chuck CLI\
+%LOCALAPPDATA%\Algo Chuck CLI\
 ```
 
 ## 🎯 **Usage**
@@ -228,7 +228,7 @@ chuck config set --client-secret "YOUR_SECRET"
 **"Permission denied" errors**
 
 - Ensure you have write access to config directories
-- Check file permissions: `ls -la ~/Library/Application\ Support/com.algochuck.cli/`
+- Check file permissions: `ls -la ~/Library/Application\ Support/Algo\ Chuck\ CLI/`
 
 ### **Reset Everything**
 
@@ -237,8 +237,8 @@ chuck config set --client-secret "YOUR_SECRET"
 chuck config reset
 
 # Or manually remove files
-rm -rf ~/Library/Application\ Support/com.algochuck.cli/  # macOS
-rm -rf ~/.config/com.algochuck.cli/ ~/.local/share/com.algochuck.cli/  # Linux
+rm -rf ~/Library/Application\ Support/Algo\ Chuck\ CLI/  # macOS
+rm -rf ~/.config/Algo\ Chuck\ CLI/ ~/.local/share/Algo\ Chuck\ CLI/  # Linux
 ```
 
 ## 🏗️ **Architecture**

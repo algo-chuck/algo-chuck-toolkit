@@ -21,15 +21,15 @@ impl ConfigManager {
     pub fn new() -> Result<Self> {
         let config_dir = dirs::config_dir()
             .context("Could not determine config directory")?
-            .join("com.algochuck.cli");
+            .join("Algo Chuck CLI");
 
         let data_dir = dirs::data_dir()
             .context("Could not determine data directory")?
-            .join("com.algochuck.cli");
+            .join("Algo Chuck CLI");
 
         let cache_dir = dirs::cache_dir()
             .context("Could not determine cache directory")?
-            .join("com.algochuck.cli");
+            .join("Algo Chuck CLI");
 
         // Create directories if they don't exist
         fs::create_dir_all(&config_dir)?;
