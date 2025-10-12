@@ -47,6 +47,14 @@ impl ConfigManager {
         self.config_dir.join("config.toml")
     }
 
+    pub fn config_dir(&self) -> &PathBuf {
+        &self.config_dir
+    }
+
+    pub fn data_dir(&self) -> &PathBuf {
+        &self.data_dir
+    }
+
     pub fn tokens_file_path(&self) -> PathBuf {
         self.data_dir.join("tokens.enc")
     }

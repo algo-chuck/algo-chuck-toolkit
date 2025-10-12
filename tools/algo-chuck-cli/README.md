@@ -152,8 +152,11 @@ chuck config set --client-secret "YOUR_SECRET"
 # Set custom callback URL
 chuck config set --callback-url "https://localhost:8080/callback"
 
-# Reset everything (clears all data)
+# Reset configuration and clear all data (keeps directories)
 chuck config reset
+
+# Remove all data and directories completely
+chuck config clean
 ```
 
 ### 🆘 **Help System**
@@ -233,13 +236,21 @@ chuck config set --client-secret "YOUR_SECRET"
 ### **Reset Everything**
 
 ```bash
-# Nuclear option - clears all data
+# Clear data but keep directory structure
 chuck config reset
+
+# Remove all data and directories completely
+chuck config clean
 
 # Or manually remove files
 rm -rf ~/Library/Application\ Support/Algo\ Chuck\ CLI/  # macOS
 rm -rf ~/.config/Algo\ Chuck\ CLI/ ~/.local/share/Algo\ Chuck\ CLI/  # Linux
 ```
+
+**Difference between `reset` and `clean`:**
+
+- **`chuck config reset`** - Clears credentials, tokens, and resets config to defaults, but keeps directory structure
+- **`chuck config clean`** - Removes all directories and files completely (equivalent to manual `rm -rf`)
 
 ## 🏗️ **Architecture**
 

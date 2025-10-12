@@ -9,6 +9,7 @@ pub async fn handle_config_command(matches: &ArgMatches) -> Result<()> {
         Some(("show", _)) => handle_config_show().await,
         Some(("set", sub_matches)) => handle_config_set(sub_matches).await,
         Some(("reset", _)) => handle_config_reset().await,
+        Some(("clean", _)) => handle_config_clean().await,
         _ => unreachable!("Config subcommand is required"),
     }
 }
@@ -168,7 +169,54 @@ async fn handle_config_reset() -> Result<()> {
     config_manager.save_config(&default_config)?;
     println!("✅ Reset configuration to defaults");
 
-    println!("\n🔧 Reset complete! Use 'schwab-authenticator config set' to configure");
+    println!("\n🔧 Reset complete! Use 'chuck config set' to configure");
+
+    Ok(())
+}
+
+/// Completely clean all data and directories
+async fn handle_config_clean() -> Result<()> {
+    println!("🧹 Cleaning All Data\n");
+    println!(
+        "⚠️  This will completely remove all configuration, credentials, tokens, and directories."
+    );
+    println!("   This action cannot be undone!");
+
+    // Confirm with user
+    print!("\n🚨 Are you sure you want to proceed? Type 'YES' to confirm: ");
+    std::io::Write::flush(&mut std::io::stdout())?;
+
+    let mut input = String::new();
+    std::io::stdin().read_line(&mut input)?;
+
+    if input.trim() != "YES" {
+        println!("❌ Clean cancelled");
+        return Ok(());
+    }
+
+    let config_manager = ConfigManager::new()?;
+
+    // Get the base directories before we clean them
+    let config_dir = config_manager.config_dir();
+    let data_dir = config_manager.data_dir();
+
+    println!("\n🗑️  Removing directories:");
+
+    // Remove config directory
+    if config_dir.exists() {
+        std::fs::remove_dir_all(&config_dir)?;
+        println!("✅ Removed: {}", config_dir.display());
+    }
+
+    // Remove data directory (if different from config)
+    if data_dir.exists() && data_dir != config_dir {
+        std::fs::remove_dir_all(&data_dir)?;
+        println!("✅ Removed: {}", data_dir.display());
+    }
+
+    println!("\n🧹 Clean complete!");
+    println!("   All Algo Chuck CLI data has been permanently removed.");
+    println!("   Use 'chuck config set' to start fresh.");
 
     Ok(())
 }

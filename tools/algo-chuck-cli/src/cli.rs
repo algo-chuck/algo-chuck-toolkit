@@ -38,8 +38,9 @@ pub fn build_cli() -> Command {
                                 .help("Set OAuth2 callback URL"),
                         ),
                 )
+                .subcommand(Command::new("reset").about("Reset configuration and clear all tokens"))
                 .subcommand(
-                    Command::new("reset").about("Reset configuration and clear all tokens"),
+                    Command::new("clean").about("Remove all data and directories completely"),
                 ),
         )
 }
