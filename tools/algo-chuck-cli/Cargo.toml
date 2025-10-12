@@ -1,0 +1,24 @@
+[package]
+name = "algo-chuck-cli"
+edition.workspace = true
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Command-line interface for the Schwab API toolkit"
+
+[[bin]]
+name = "algo-chuck"
+path = "src/main.rs"
+
+[dependencies]
+schwab-api-types = { path = "../../crates/schwab-api-types" }
+schwab-api-core = { path = "../../crates/schwab-api-core" }
+schwab-api-oauth = { path = "../../crates/schwab-api-oauth" }
+schwab-api-marketdata = { path = "../../crates/schwab-api-marketdata" }
+schwab-api-trader = { path = "../../crates/schwab-api-trader" }
+clap = { workspace = true, features = ["derive"] }
+tokio = { workspace = true, features = ["full"] }
+serde = { workspace = true, features = ["derive"] }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }

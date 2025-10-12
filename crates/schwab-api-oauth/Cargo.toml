@@ -1,0 +1,18 @@
+[package]
+name = "schwab-api-oauth"
+edition.workspace = true
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "OAuth authentication implementation for the Schwab API"
+
+[dependencies]
+schwab-api-types = { path = "../schwab-api-types" }
+schwab-api-core = { path = "../schwab-api-core" }
+serde = { workspace = true, features = ["derive"] }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = ["full"] }
+reqwest = { workspace = true, features = ["json", "rustls-tls"] }
+url = { workspace = true }
+base64 = { workspace = true }
+rand = { workspace = true }

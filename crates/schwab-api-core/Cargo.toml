@@ -1,0 +1,16 @@
+[package]
+name = "schwab-api-core"
+edition.workspace = true
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Core traits, errors, and foundational functionality for the Schwab API"
+
+[dependencies]
+schwab-api-types = { path = "../schwab-api-types" }
+serde = { workspace = true, features = ["derive"] }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = ["full"] }
+reqwest = { workspace = true, features = ["json", "rustls-tls"] }
+url = { workspace = true }
+async-trait = { workspace = true }
