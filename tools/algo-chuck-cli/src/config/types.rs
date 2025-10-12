@@ -27,6 +27,7 @@ pub struct ClientConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PreferencesConfig {
     pub auto_refresh: bool,
+    pub refresh_buffer: u32,
     pub browser_timeout: u32,
     pub log_level: String,
 }
@@ -62,6 +63,7 @@ impl Default for SchwabConfig {
             },
             preferences: PreferencesConfig {
                 auto_refresh: true,
+                refresh_buffer: 300,
                 browser_timeout: 300,
                 log_level: "info".to_string(),
             },

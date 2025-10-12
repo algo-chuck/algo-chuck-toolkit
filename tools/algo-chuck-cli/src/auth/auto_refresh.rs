@@ -31,9 +31,17 @@ impl AutoRefresher {
             return Ok(());
         }
 
-        // Check if token is expired or expires soon (5 min buffer)
-        if self.token_manager.is_access_token_expired()? || self.token_manager.expires_soon(300)? {
-            println!("🔄 Access token expired, auto-refreshing...");
+        // Check if token is expired or expires soon (using configured buffer)
+        if self.token_manager.is_access_token_expired()?
+            || self
+                .token_manager
+                .expires_soon(self.config.preferences.refresh_buffer as i64)?
+        {
+            if self.token_manager.is_access_token_expired()? {
+                println!("🔄 Access token expired, auto-refreshing...");
+            } else {
+                println!("🔄 Access token expires soon, auto-refreshing...");
+            }
             self.refresh_token().await?;
             println!("✅ Token refreshed successfully");
         }
@@ -74,7 +82,10 @@ impl AutoRefresher {
 
         if self.token_manager.is_access_token_expired()? {
             Ok(TokenStatus::Expired)
-        } else if self.token_manager.expires_soon(300)? {
+        } else if self
+            .token_manager
+            .expires_soon(self.config.preferences.refresh_buffer as i64)?
+        {
             Ok(TokenStatus::ExpiresSoon)
         } else {
             Ok(TokenStatus::Valid)

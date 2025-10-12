@@ -42,6 +42,12 @@ pub fn build_cli() -> Command {
                                 .long("auto-refresh")
                                 .value_name("BOOL")
                                 .help("Enable/disable automatic token refresh (true/false)"),
+                        )
+                        .arg(
+                            Arg::new("refresh-buffer")
+                                .long("refresh-buffer")
+                                .value_name("SECONDS")
+                                .help("Set token refresh buffer time in seconds (default: 300)"),
                         ),
                 )
                 .subcommand(Command::new("reset").about("Reset configuration and clear all tokens"))

@@ -78,6 +78,10 @@ async fn handle_config_show() -> Result<()> {
         }
     );
     println!(
+        "  Refresh buffer: {} seconds",
+        config.preferences.refresh_buffer
+    );
+    println!(
         "  Browser timeout: {} seconds",
         config.preferences.browser_timeout
     );
@@ -155,6 +159,15 @@ async fn handle_config_set(matches: &ArgMatches) -> Result<()> {
         };
         config.preferences.auto_refresh = auto_refresh_bool;
         println!("✅ Auto-refresh set to: {}", auto_refresh_bool);
+        updated = true;
+    }
+
+    if let Some(buffer) = matches.get_one::<String>("refresh-buffer") {
+        let buffer_seconds: u32 = buffer
+            .parse()
+            .map_err(|_| anyhow::anyhow!("Invalid refresh buffer. Must be a number in seconds"))?;
+        config.preferences.refresh_buffer = buffer_seconds;
+        println!("✅ Refresh buffer set to: {} seconds", buffer_seconds);
         updated = true;
     }
 
