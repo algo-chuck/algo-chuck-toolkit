@@ -68,6 +68,20 @@ async fn handle_config_show() -> Result<()> {
     println!("  Token URL: {}", config.api.token_url);
     println!("  Callback URL: {}", config.api.callback_url);
 
+    println!("\nPreferences:");
+    println!(
+        "  Auto-refresh: {}",
+        if config.preferences.auto_refresh {
+            "✅ Enabled"
+        } else {
+            "❌ Disabled"
+        }
+    );
+    println!(
+        "  Browser timeout: {} seconds",
+        config.preferences.browser_timeout
+    );
+
     println!("\nConfiguration Files:");
     println!("  Config: {}", config_manager.config_file_path().display());
 
@@ -126,6 +140,21 @@ async fn handle_config_set(matches: &ArgMatches) -> Result<()> {
         config.api.callback_url = callback_url.clone();
         config.parse_callback_url()?; // Update derived fields
         println!("✅ Callback URL updated");
+        updated = true;
+    }
+
+    if let Some(auto_refresh) = matches.get_one::<String>("auto-refresh") {
+        let auto_refresh_bool = match auto_refresh.to_lowercase().as_str() {
+            "true" | "1" | "yes" | "on" => true,
+            "false" | "0" | "no" | "off" => false,
+            _ => {
+                return Err(anyhow::anyhow!(
+                    "Invalid auto-refresh value. Use true/false"
+                ));
+            }
+        };
+        config.preferences.auto_refresh = auto_refresh_bool;
+        println!("✅ Auto-refresh set to: {}", auto_refresh_bool);
         updated = true;
     }
 

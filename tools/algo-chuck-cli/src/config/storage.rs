@@ -114,4 +114,30 @@ impl TokenManager {
         }
         Ok(())
     }
+
+    /// Check if the access token is expired
+    pub fn is_access_token_expired(&self) -> Result<bool> {
+        let tokens = self.load_tokens()?;
+        if let Some(expires_at_ms) = tokens.access_token_expiry {
+            let expires_at = chrono::DateTime::from_timestamp_millis(expires_at_ms)
+                .ok_or_else(|| anyhow::anyhow!("Invalid expiration timestamp"))?;
+            Ok(Utc::now() > expires_at)
+        } else {
+            // If no expiry info, assume valid (shouldn't happen in normal flow)
+            Ok(false)
+        }
+    }
+
+    /// Check if token expires within the specified buffer time (in seconds)
+    pub fn expires_soon(&self, buffer_seconds: i64) -> Result<bool> {
+        let tokens = self.load_tokens()?;
+        if let Some(expires_at_ms) = tokens.access_token_expiry {
+            let expires_at = chrono::DateTime::from_timestamp_millis(expires_at_ms)
+                .ok_or_else(|| anyhow::anyhow!("Invalid expiration timestamp"))?;
+            let buffer_time = Utc::now() + chrono::Duration::seconds(buffer_seconds);
+            Ok(buffer_time > expires_at)
+        } else {
+            Ok(false)
+        }
+    }
 }

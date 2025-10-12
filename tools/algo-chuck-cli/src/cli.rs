@@ -36,6 +36,12 @@ pub fn build_cli() -> Command {
                                 .long("callback-url")
                                 .value_name("URL")
                                 .help("Set OAuth2 callback URL"),
+                        )
+                        .arg(
+                            Arg::new("auto-refresh")
+                                .long("auto-refresh")
+                                .value_name("BOOL")
+                                .help("Enable/disable automatic token refresh (true/false)"),
                         ),
                 )
                 .subcommand(Command::new("reset").about("Reset configuration and clear all tokens"))
