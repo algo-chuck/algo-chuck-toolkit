@@ -3,8 +3,10 @@ use rcgen::generate_simple_self_signed;
 use rustls::{Certificate, PrivateKey, ServerConfig};
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{TcpListener as TokioTcpListener, TcpStream as TokioTcpStream};
+use tokio::time::timeout;
 use tokio_rustls::{TlsAcceptor, server::TlsStream};
 use url::Url;
 
@@ -47,26 +49,39 @@ pub async fn start_callback_server(config: &SchwabConfig) -> Result<(String, Str
         config.api.callback_address
     );
     println!("📡 Waiting for OAuth2 callback...");
+    println!("⏰ Timeout: {} seconds", config.preferences.browser_timeout);
 
-    loop {
-        let (stream, _addr) = listener
-            .accept()
-            .await
-            .context("Failed to accept connection")?;
-        let acceptor = acceptor.clone();
-        let config = config.clone();
+    let timeout_duration = Duration::from_secs(config.preferences.browser_timeout as u64);
 
-        match acceptor.accept(stream).await {
-            Ok(tls_stream) => {
-                if let Ok((code, state)) = handle_callback(tls_stream, &config).await {
-                    return Ok((code, state));
+    let server_future = async {
+        loop {
+            let (stream, _addr) = listener
+                .accept()
+                .await
+                .context("Failed to accept connection")?;
+            let acceptor = acceptor.clone();
+            let config = config.clone();
+
+            match acceptor.accept(stream).await {
+                Ok(tls_stream) => {
+                    if let Ok((code, state)) = handle_callback(tls_stream, &config).await {
+                        return Ok((code, state));
+                    }
+                }
+                Err(e) => {
+                    eprintln!("TLS handshake failed: {}", e);
+                    continue;
                 }
             }
-            Err(e) => {
-                eprintln!("TLS handshake failed: {}", e);
-                continue;
-            }
         }
+    };
+
+    match timeout(timeout_duration, server_future).await {
+        Ok(result) => result,
+        Err(_) => Err(anyhow::anyhow!(
+            "OAuth2 callback timeout after {} seconds. Please try again or check your browser.",
+            config.preferences.browser_timeout
+        )),
     }
 }
 
