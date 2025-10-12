@@ -43,7 +43,3 @@ rand = "0.8"
 # Logging and tracing
 # tracing = "0.1"
 # tracing-subscriber = { version = "0.3", default-features = false }
-
-# Unix-specific for file permissions
-[target.'cfg(unix)'.dependencies]
-nix = "0.27"
