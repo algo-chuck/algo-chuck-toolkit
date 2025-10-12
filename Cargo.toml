@@ -1,5 +1,6 @@
 [workspace]
 members = [ 
+  "crates/schwab-api", 
   "crates/schwab-api-core", 
   "crates/schwab-api-marketdata", 
   "crates/schwab-api-oauth", 
@@ -80,4 +81,33 @@ rc_mutex = "deny"
 unsafe_code = "forbid"
 missing_docs = "warn"
 rust_2018_idioms = { level = "warn", priority = -1 }
+
+# Root package for examples and integration testing
+[package]
+name = "algo-chuck-toolkit"
+edition.workspace = true
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Examples and integration for the Schwab API toolkit"
+publish = false
+
+[features]
+default = ["oauth", "marketdata", "trader"]
+oauth = ["schwab-api/oauth"]
+marketdata = ["schwab-api/marketdata"]
+trader = ["schwab-api/trader"]
+full = ["oauth", "marketdata", "trader"]
+
+[dependencies]
+# Use the facade crate for examples
+schwab-api = { path = "crates/schwab-api" }
+tokio = { workspace = true, features = ["full"] }
+
+# Individual crates for direct usage examples
+schwab-api-core = { path = "crates/schwab-api-core" }
+schwab-api-types = { path = "crates/schwab-api-types" }
+schwab-api-oauth = { path = "crates/schwab-api-oauth" }
+schwab-api-marketdata = { path = "crates/schwab-api-marketdata" }
+schwab-api-trader = { path = "crates/schwab-api-trader" }
 

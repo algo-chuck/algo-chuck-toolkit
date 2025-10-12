@@ -1,0 +1,29 @@
+[package]
+name = "schwab-api"
+edition.workspace = true
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Unified facade crate for the Schwab API toolkit - provides a single entry point for all Schwab API functionality"
+keywords = ["schwab", "trading", "finance", "api", "stocks"]
+categories = ["api-bindings", "web-programming::http-client"]
+repository = "https://github.com/algo-chuck/algo-chuck-toolkit"
+
+[features]
+default = ["marketdata", "trader", "oauth"]
+marketdata = ["schwab-api-marketdata"]
+trader = ["schwab-api-trader"]
+oauth = ["schwab-api-oauth"]
+full = ["marketdata", "trader", "oauth"]
+
+[dependencies]
+# Core dependencies (always included)
+schwab-api-types = { path = "../schwab-api-types" }
+schwab-api-core = { path = "../schwab-api-core" }
+
+# Optional feature-gated dependencies
+schwab-api-oauth = { path = "../schwab-api-oauth", optional = true }
+schwab-api-marketdata = { path = "../schwab-api-marketdata", optional = true }
+schwab-api-trader = { path = "../schwab-api-trader", optional = true }
+
+
