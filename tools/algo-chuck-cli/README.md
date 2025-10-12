@@ -31,6 +31,15 @@ A professional-grade Rust CLI tool for secure Schwab Developer API OAuth2 authen
 - **HTTPS Callback Server** - Local TLS server with self-signed certificates
 - **Browser Integration** - Automatic OAuth URL opening
 - **Token Management** - Secure storage and automatic refresh handling
+- **Auto-Refresh** - Configurable automatic token renewal when expired
+- **Timeout Protection** - Configurable browser timeout prevents hanging
+
+### 🤖 **Intelligent Token Management**
+
+- **Automatic Refresh** - Seamlessly refreshes expired tokens in background
+- **Expiration Detection** - Smart detection of token expiration with buffer time
+- **User Control** - Enable/disable auto-refresh for debugging or manual control
+- **Status Monitoring** - Clear visibility into token status and refresh activities
 
 ## 📋 **Prerequisites**
 
@@ -139,6 +148,44 @@ chuck refresh
 chuck info
 ```
 
+### 🤖 **Automatic Token Refresh**
+
+The CLI includes intelligent auto-refresh functionality:
+
+```bash
+# Check current auto-refresh status
+chuck config show
+
+# Enable auto-refresh (recommended for production use)
+chuck config set --auto-refresh true
+
+# Disable auto-refresh (useful for debugging)
+chuck config set --auto-refresh false
+```
+
+**How Auto-Refresh Works:**
+
+- **Automatic Detection** - Checks token expiration before operations
+- **Background Refresh** - Seamlessly refreshes expired tokens using refresh token
+- **5-Minute Buffer** - Proactively refreshes tokens that expire within 5 minutes
+- **Graceful Fallback** - Clear error messages if refresh fails
+- **User Control** - Can be disabled for debugging or manual token management
+
+**Auto-Refresh in Action:**
+
+```bash
+# With auto-refresh enabled
+chuck info
+🔄 Auto-refresh: ✅ Enabled
+🔄 Access token expired, auto-refreshing...
+✅ Token refreshed successfully
+
+# With auto-refresh disabled
+chuck info
+🔄 Auto-refresh: ❌ Disabled
+⚠️  Access token is expired - run 'chuck refresh'
+```
+
 ### ⚙️ **Configuration Management**
 
 ```bash
@@ -151,6 +198,10 @@ chuck config set --client-secret "YOUR_SECRET"
 
 # Set custom callback URL
 chuck config set --callback-url "https://localhost:8080/callback"
+
+# Configure automatic token refresh
+chuck config set --auto-refresh true   # Enable automatic refresh (default)
+chuck config set --auto-refresh false  # Disable for manual control
 
 # Reset configuration and clear all data (keeps directories)
 chuck config reset
@@ -168,6 +219,12 @@ chuck --help
 # Command-specific help
 chuck config --help
 chuck config set --help
+
+# Check current configuration and auto-refresh status
+chuck config show
+
+# Monitor token status and auto-refresh activity
+chuck info
 ```
 
 ## 🔐 **Security Features**
@@ -194,13 +251,15 @@ chuck config set --help
 
 ### **What's Encrypted vs Plain Text**
 
-| Data Type          | Storage           | Security                            |
-| ------------------ | ----------------- | ----------------------------------- |
-| Client Secret      | `credentials.enc` | 🔐 **Encrypted**                    |
-| OAuth2 Tokens      | `tokens.enc`      | 🔐 **Encrypted**                    |
-| Encryption Key     | `.algo_chuck_key` | 🔒 **Secure permissions**           |
-| Client ID          | `config.toml`     | 📄 **Plain text** (low sensitivity) |
-| URLs & Preferences | `config.toml`     | 📄 **Plain text** (non-sensitive)   |
+| Data Type            | Storage           | Security                            |
+| -------------------- | ----------------- | ----------------------------------- |
+| Client Secret        | `credentials.enc` | 🔐 **Encrypted**                    |
+| OAuth2 Tokens        | `tokens.enc`      | 🔐 **Encrypted**                    |
+| Encryption Key       | `.algo_chuck_key` | 🔒 **Secure permissions**           |
+| Client ID            | `config.toml`     | 📄 **Plain text** (low sensitivity) |
+| URLs & Preferences   | `config.toml`     | 📄 **Plain text** (non-sensitive)   |
+| Auto-refresh setting | `config.toml`     | 📄 **Plain text** (non-sensitive)   |
+| Browser timeout      | `config.toml`     | 📄 **Plain text** (non-sensitive)   |
 
 ## 🔍 **Troubleshooting**
 
@@ -227,6 +286,20 @@ chuck config set --client-secret "YOUR_SECRET"
 - Check if port 6309 is available
 - Verify firewall settings allow localhost connections
 - Try a different callback URL: `--callback-url "https://localhost:8080/callback"`
+
+**"OAuth timeout" or "Browser doesn't complete authentication"**
+
+- Default timeout is 300 seconds (5 minutes)
+- Browser timeout protects against hanging processes
+- If timeout occurs, simply run `chuck login` again
+- Check that you complete the OAuth flow within the time limit
+
+**"Auto-refresh not working"**
+
+- Verify auto-refresh is enabled: `chuck config show`
+- Enable with: `chuck config set --auto-refresh true`
+- Ensure refresh token is still valid (7-day expiry)
+- If refresh token expired, run `chuck login` to re-authenticate
 
 **"Permission denied" errors**
 
@@ -264,6 +337,9 @@ src/
 ├── oauth.rs             # OAuth2 flow
 ├── server.rs            # HTTPS callback server
 ├── display.rs           # Display utilities
+├── auth/                # Authentication system
+│   ├── mod.rs           # Auth module exports
+│   └── auto_refresh.rs  # Automatic token refresh logic
 ├── commands/            # Command handlers
 │   ├── login.rs
 │   ├── refresh.rs
