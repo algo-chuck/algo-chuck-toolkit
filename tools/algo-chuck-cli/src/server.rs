@@ -15,6 +15,9 @@ use crate::config::SchwabConfig;
 
 /// Create TLS configuration with self-signed certificate
 pub fn create_tls_config() -> Result<ServerConfig> {
+    // Install the default crypto provider (ring) for rustls
+    let _ = rustls::crypto::ring::default_provider().install_default();
+
     let subject_alt_names = vec!["localhost".to_string(), "127.0.0.1".to_string()];
     let cert = generate_simple_self_signed(subject_alt_names)
         .context("Failed to generate self-signed certificate")?;
