@@ -89,6 +89,16 @@ export SCHWAB_CLIENT_SECRET="YOUR_APP_SECRET"
 export SCHWAB_CALLBACK_URL="https://127.0.0.1:6309/oauth/callback"  # optional
 ```
 
+### ⚙️ **Configuration Options**
+
+| Option           | Type    | Description                              | Default                                 |
+| ---------------- | ------- | ---------------------------------------- | --------------------------------------- |
+| `client_id`      | String  | Charles Schwab application Client ID     | Required                                |
+| `client_secret`  | String  | Charles Schwab application Client Secret | Required                                |
+| `callback_url`   | String  | OAuth redirect URI                       | `https://127.0.0.1:6309/oauth/callback` |
+| `auto_refresh`   | Boolean | Enable automatic token refresh           | `true`                                  |
+| `refresh_buffer` | Integer | Token refresh buffer time in seconds     | `300`                                   |
+
 ### 📁 **Configuration Files**
 
 The tool automatically creates platform-appropriate directories:
@@ -167,7 +177,7 @@ chuck config set --auto-refresh false
 
 - **Automatic Detection** - Checks token expiration before operations
 - **Background Refresh** - Seamlessly refreshes expired tokens using refresh token
-- **5-Minute Buffer** - Proactively refreshes tokens that expire within 5 minutes
+- **Configurable Buffer** - Proactively refreshes tokens that expire within configurable buffer time (default: 300 seconds)
 - **Graceful Fallback** - Clear error messages if refresh fails
 - **User Control** - Can be disabled for debugging or manual token management
 
@@ -208,6 +218,10 @@ chuck config set --callback-url "https://localhost:8080/callback"
 # Configure automatic token refresh
 chuck config set --auto-refresh true   # Enable automatic refresh (default)
 chuck config set --auto-refresh false  # Disable for manual control
+
+# Configure token refresh timing
+chuck config set --refresh-buffer 300  # Refresh tokens within 300 seconds of expiry (default)
+chuck config set --refresh-buffer 600  # Refresh tokens within 10 minutes of expiry
 
 # Reset configuration and clear all data (keeps directories)
 chuck config reset
