@@ -17,28 +17,28 @@ path = "src/main.rs"
 # schwab-api-marketdata = { path = "../../crates/schwab-api-marketdata" }
 # schwab-api-trader = { path = "../../crates/schwab-api-trader" }
 anyhow = { workspace = true }
-base64 = "0.21"
+base64 = { workspace = true }
 chrono = { workspace = true, features = ["serde", "clock"] }
 clap = { version = "4.4", features = ["derive"] }
 config = "0.13"
 dirs = "5.0"
 rcgen = "0.11"
-reqwest = { version = "0.11", features = ["json"] }
+reqwest = { workspace = true, features = ["json"] }
 rustls = "0.21"
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 tokio = { workspace = true, features = ["full"] }
 tokio-rustls = "0.24"
 toml = "0.8"
-url = "2.4"
+url = { workspace = true }
 urlencoding = "2.1"
-uuid = { version = "1.0", features = ["v4"] }
+uuid = { workspace = true, features = ["v4"] }
 webbrowser = "0.8"
 
 # Encryption dependencies
 chacha20poly1305 = "0.10"
 argon2 = "0.5"
-rand = "0.8"
+rand = { workspace = true }
 
 # Logging and tracing
 # tracing = "0.1"
