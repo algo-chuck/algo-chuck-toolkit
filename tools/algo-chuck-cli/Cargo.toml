@@ -11,11 +11,6 @@ name = "chuck"
 path = "src/main.rs"
 
 [dependencies]
-# schwab-api-types = { path = "../../crates/schwab-api-types" }
-# schwab-api-core = { path = "../../crates/schwab-api-core" }
-# schwab-api-oauth = { path = "../../crates/schwab-api-oauth" }
-# schwab-api-marketdata = { path = "../../crates/schwab-api-marketdata" }
-# schwab-api-trader = { path = "../../crates/schwab-api-trader" }
 anyhow = { workspace = true }
 base64 = { workspace = true }
 chrono = { workspace = true, features = ["serde", "clock"] }
