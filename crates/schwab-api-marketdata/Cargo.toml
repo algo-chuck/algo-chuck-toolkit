@@ -13,5 +13,5 @@ schwab-api-oauth = { path = "../schwab-api-oauth" }
 serde = { workspace = true, features = ["derive"] }
 thiserror = { workspace = true }
 tokio = { workspace = true, features = ["full"] }
-reqwest = { workspace = true, features = ["json", "rustls-tls"] }
+reqwest = { workspace = true }
 async-trait = { workspace = true }

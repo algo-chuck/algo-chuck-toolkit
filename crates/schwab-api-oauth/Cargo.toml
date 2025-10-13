@@ -12,7 +12,7 @@ schwab-api-core = { path = "../schwab-api-core" }
 serde = { workspace = true, features = ["derive"] }
 thiserror = { workspace = true }
 tokio = { workspace = true, features = ["full"] }
-reqwest = { workspace = true, features = ["json", "rustls-tls"] }
+reqwest = { workspace = true }
 url = { workspace = true }
 base64 = { workspace = true }
 rand = { workspace = true }

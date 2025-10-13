@@ -11,6 +11,6 @@ schwab-api-types = { path = "../schwab-api-types" }
 serde = { workspace = true, features = ["derive"] }
 thiserror = { workspace = true }
 tokio = { workspace = true, features = ["full"] }
-reqwest = { workspace = true, features = ["json", "rustls-tls"] }
+reqwest = { workspace = true }
 url = { workspace = true }
 async-trait = { workspace = true }

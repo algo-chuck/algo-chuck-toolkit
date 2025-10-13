@@ -23,7 +23,7 @@ clap = { version = "4.4", features = ["derive"] }
 config = "0.15"
 dirs = "6.0"
 rcgen = "0.14"
-reqwest = { workspace = true, features = ["json"] }
+reqwest = { workspace = true }
 rustls = "0.23"
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
