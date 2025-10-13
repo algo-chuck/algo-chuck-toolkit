@@ -1,6 +1,7 @@
 use anyhow::{Context, Result};
 use rcgen::generate_simple_self_signed;
-use rustls::{Certificate, PrivateKey, ServerConfig};
+use rustls::ServerConfig;
+use rustls::pki_types::{CertificateDer, PrivateKeyDer};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
@@ -18,16 +19,14 @@ pub fn create_tls_config() -> Result<ServerConfig> {
     let cert = generate_simple_self_signed(subject_alt_names)
         .context("Failed to generate self-signed certificate")?;
 
-    let cert_der = cert
-        .serialize_der()
-        .context("Failed to serialize certificate")?;
-    let private_key_der = cert.serialize_private_key_der();
+    let cert_der = cert.cert.der().to_vec();
+    let private_key_der = cert.signing_key.serialize_der();
 
-    let cert_chain = vec![Certificate(cert_der)];
-    let private_key = PrivateKey(private_key_der);
+    let cert_chain = vec![CertificateDer::from(cert_der)];
+    let private_key = PrivateKeyDer::try_from(private_key_der)
+        .map_err(|e| anyhow::anyhow!("Failed to convert private key: {}", e))?;
 
     let config = ServerConfig::builder()
-        .with_safe_defaults()
         .with_no_client_auth()
         .with_single_cert(cert_chain, private_key)
         .context("Failed to build TLS config")?;

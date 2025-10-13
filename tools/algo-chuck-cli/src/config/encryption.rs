@@ -29,7 +29,7 @@ impl EncryptionManager {
 
     fn generate_key() -> Result<[u8; 32]> {
         let mut key = [0u8; 32];
-        rand::thread_rng().fill(&mut key);
+        rand::rng().fill(&mut key);
         Ok(key)
     }
 
@@ -61,7 +61,7 @@ impl EncryptionManager {
         let cipher = ChaCha20Poly1305::new_from_slice(&self.encryption_key)
             .map_err(|e| anyhow::anyhow!("Failed to create cipher: {}", e))?;
         let mut nonce_bytes = [0u8; 12];
-        rand::thread_rng().fill(&mut nonce_bytes);
+        rand::rng().fill(&mut nonce_bytes);
         let nonce = Nonce::from_slice(&nonce_bytes);
 
         let ciphertext = cipher
