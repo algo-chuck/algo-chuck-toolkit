@@ -50,7 +50,7 @@ async fn install_macos_ca(ca_manager: &CaManager) -> Result<()> {
     println!("📋 Installing CA certificate in macOS keychain...");
     println!("   This requires administrator privileges and will prompt for your password.");
 
-    // Use sudo with security command to add certificate to system keychain
+    // Use sudo with security command to add certificate to system keychain with broader trust
     let output = Command::new("sudo")
         .args([
             "security",
@@ -380,7 +380,7 @@ pub fn prompt_ca_installation() -> Result<bool> {
     println!("   • Can be easily removed later with 'chuck ca uninstall'");
     println!();
     println!("🔒 Security notes:");
-    println!("   • CA is only used for localhost:8443 (127.0.0.1:8443) connections");
+    println!("   • CA is only used for localhost (127.0.0.1) connections");
     println!("   • Private key stays on your machine and is not shared");
     println!("   • Only affects this application's OAuth flow");
     println!("   • Similar to development tools like mkcert");

@@ -3,7 +3,7 @@
 use super::{CaInfo, CaManager, CaMetadata, ServerCertMetadata, ServerCertificate};
 use anyhow::{Context, Result};
 use chrono::{Duration, Utc};
-use rcgen::{CertificateParams, DistinguishedName, DnType, KeyPair};
+use rcgen::{CertificateParams, DistinguishedName, DnType, KeyPair, Issuer};
 use sha2::{Digest, Sha256};
 use time;
 
@@ -76,6 +76,27 @@ pub async fn generate_ca(ca_manager: &CaManager) -> Result<CaInfo> {
 pub async fn generate_server_certificate(ca_manager: &CaManager) -> Result<ServerCertificate> {
     println!("📜 Generating server certificate...");
 
+    // Load CA certificate and private key
+    let ca_cert_pem = std::fs::read_to_string(ca_manager.ca_cert_path())
+        .with_context(|| "Failed to read CA certificate")?;
+    let ca_key_pem = std::fs::read_to_string(ca_manager.ca_key_path())
+        .with_context(|| "Failed to read CA private key")?;
+
+    // Load CA key pair from PEM
+    let ca_key_pair = KeyPair::from_pem(&ca_key_pem)
+        .with_context(|| "Failed to load CA private key")?;
+
+    // Recreate the CA certificate from stored parameters
+    let mut ca_params = CertificateParams::default();
+    let mut ca_distinguished_name = DistinguishedName::new();
+    ca_distinguished_name.push(DnType::CommonName, "Algo Chuck Local CA");
+    ca_distinguished_name.push(DnType::OrganizationName, "Algo Chuck");
+    ca_params.distinguished_name = ca_distinguished_name;
+    ca_params.is_ca = rcgen::IsCa::Ca(rcgen::BasicConstraints::Unconstrained);
+    
+    // Create an Issuer from the CA parameters and key pair
+    let ca_issuer = rcgen::Issuer::new(ca_params, ca_key_pair);
+
     // Create proper certificate parameters for server
     let mut params = CertificateParams::default();
 
@@ -97,17 +118,15 @@ pub async fn generate_server_certificate(ca_manager: &CaManager) -> Result<Serve
     params.not_before = time::OffsetDateTime::from_unix_timestamp(now.timestamp()).unwrap();
     params.not_after = time::OffsetDateTime::from_unix_timestamp(expires_at.timestamp()).unwrap();
 
-    // Generate key pair and certificate
-    let key_pair = KeyPair::generate()?;
-    let cert = params.self_signed(&key_pair)?;
+    // Generate key pair for server certificate
+    let server_key_pair = KeyPair::generate()?;
+    
+    // Sign the server certificate with the CA
+    let cert = params.signed_by(&server_key_pair, &ca_issuer)?;
 
     // Get certificate and key in PEM format
     let server_cert_pem = cert.pem();
-    let server_key_pem = key_pair.serialize_pem();
-
-    // Load CA certificate for the chain
-    let ca_cert_pem = std::fs::read_to_string(ca_manager.ca_cert_path())
-        .with_context(|| "Failed to read CA certificate")?;
+    let server_key_pem = server_key_pair.serialize_pem();
 
     // Save server certificate and key to disk
     save_server_files(ca_manager, &server_cert_pem, &server_key_pem).await?;
