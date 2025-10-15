@@ -1,20 +1,9 @@
-use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SchwabConfig {
-    pub api: ApiConfig,
     pub client: ClientConfig,
     pub preferences: PreferencesConfig,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ApiConfig {
-    pub auth_url: String,
-    pub token_url: String,
-    pub callback_url: String,
-    pub callback_address: String,
-    pub callback_path: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -50,13 +39,6 @@ pub struct EncryptedCredentials {
 impl Default for SchwabConfig {
     fn default() -> Self {
         Self {
-            api: ApiConfig {
-                auth_url: "https://api.schwabapi.com/v1/oauth/authorize".to_string(),
-                token_url: "https://api.schwabapi.com/v1/oauth/token".to_string(),
-                callback_url: "https://127.0.0.1:6309/oauth/callback".to_string(),
-                callback_address: "127.0.0.1:6309".to_string(),
-                callback_path: "/oauth/callback".to_string(),
-            },
             client: ClientConfig {
                 client_id: None,
                 client_secret: None, // Will be populated from encrypted storage
@@ -72,29 +54,19 @@ impl Default for SchwabConfig {
 }
 
 impl SchwabConfig {
-    pub fn parse_callback_url(&mut self) -> Result<()> {
-        let url = url::Url::parse(&self.api.callback_url).context(format!(
-            "Invalid callback URL format: {}",
-            self.api.callback_url
-        ))?;
+    /// OAuth2 callback URL used by the application
+    /// This is the URL that should be registered in the Schwab Developer Portal
+    pub const CALLBACK_URL: &str = "https://127.0.0.1:8443/oauth/schwab/callback";
 
-        let host = url
-            .host_str()
-            .ok_or_else(|| anyhow::anyhow!("Callback URL must include a host"))?
-            .to_string();
+    /// Callback server bind address
+    pub const CALLBACK_ADDRESS: &str = "127.0.0.1:8443";
 
-        let port = url.port();
-        let address = if let Some(port) = port {
-            format!("{}:{}", host, port)
-        } else {
-            host
-        };
+    /// Callback path for OAuth2 responses
+    pub const CALLBACK_PATH: &str = "/oauth/schwab/callback";
 
-        let path = url.path().to_string();
+    /// Schwab authorization url to start the oath precess
+    pub const SCHWAB_AUTH_URL: &str = "https://api.schwabapi.com/v1/oauth/authorize";
 
-        self.api.callback_address = address;
-        self.api.callback_path = path;
-
-        Ok(())
-    }
+    /// Schwab token url to exchange authorization code for tokens
+    pub const SCHWAB_TOKEN_URL: &str = "https://api.schwabapi.com/v1/oauth/token";
 }

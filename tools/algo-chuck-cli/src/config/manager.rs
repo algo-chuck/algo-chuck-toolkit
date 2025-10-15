@@ -9,7 +9,7 @@ use std::path::PathBuf;
 use std::os::unix::fs::PermissionsExt;
 
 use super::credentials::CredentialsManager;
-use super::types::{ApiConfig, ClientConfig, PreferencesConfig, SchwabConfig};
+use super::types::{ClientConfig, PreferencesConfig, SchwabConfig};
 
 pub struct ConfigManager {
     config_dir: PathBuf,
@@ -78,9 +78,6 @@ impl ConfigManager {
                 .add_source(File::from(config_file).required(false))
                 .build()?;
 
-            if let Ok(api) = file_config.get::<ApiConfig>("api") {
-                config.api = api;
-            }
             if let Ok(client) = file_config.get::<ClientConfig>("client") {
                 config.client = client;
             }
@@ -102,25 +99,13 @@ impl ConfigManager {
         // 4. Override with CLI arguments
         self.apply_cli_overrides(&mut config, matches)?;
 
-        // 5. Parse callback URL to extract address and path
-        config.parse_callback_url()?;
-
-        // 6. Validate required fields
+        // 5. Validate required fields
         self.validate_config(&config)?;
 
         Ok(config)
     }
 
     fn apply_env_overrides(&self, config: &mut SchwabConfig) -> Result<()> {
-        if let Ok(auth_url) = std::env::var("SCHWAB_AUTH_URL") {
-            config.api.auth_url = auth_url;
-        }
-        if let Ok(token_url) = std::env::var("SCHWAB_TOKEN_URL") {
-            config.api.token_url = token_url;
-        }
-        if let Ok(callback_url) = std::env::var("SCHWAB_CALLBACK_URL") {
-            config.api.callback_url = callback_url;
-        }
         if let Ok(client_id) = std::env::var("SCHWAB_CLIENT_ID") {
             config.client.client_id = Some(client_id);
         }

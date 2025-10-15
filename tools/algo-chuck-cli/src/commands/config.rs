@@ -63,11 +63,6 @@ async fn handle_config_show() -> Result<()> {
         client_secret_status, client_secret_source
     );
 
-    println!("\nAPI Configuration:");
-    println!("  Auth URL: {}", config.api.auth_url);
-    println!("  Token URL: {}", config.api.token_url);
-    println!("  Callback URL: {}", config.api.callback_url);
-
     println!("\nPreferences:");
     println!(
         "  Auto-refresh: {}",
@@ -140,13 +135,6 @@ async fn handle_config_set(matches: &ArgMatches) -> Result<()> {
         updated = true;
     }
 
-    if let Some(callback_url) = matches.get_one::<String>("callback-url") {
-        config.api.callback_url = callback_url.clone();
-        config.parse_callback_url()?; // Update derived fields
-        println!("✅ Callback URL updated");
-        updated = true;
-    }
-
     if let Some(auto_refresh) = matches.get_one::<String>("auto-refresh") {
         let auto_refresh_bool = match auto_refresh.to_lowercase().as_str() {
             "true" | "1" | "yes" | "on" => true,
@@ -176,7 +164,7 @@ async fn handle_config_set(matches: &ArgMatches) -> Result<()> {
         println!("\n🔧 Configuration saved successfully!");
     } else if !credentials_updated {
         eprintln!("❌ No configuration values provided to set");
-        eprintln!("Use --client-id, --client-secret, or --callback-url to set values");
+        eprintln!("Use --client-id or --client-secret to set values");
     }
 
     if credentials_updated && !updated {

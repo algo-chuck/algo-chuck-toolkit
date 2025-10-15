@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Authentication Successful - Algo Chuck</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+          sans-serif;
+        max-width: 600px;
+        margin: 50px auto;
+        padding: 20px;
+        text-align: center;
+        background-color: #f5f5f5;
+      }
+      .container {
+        background: white;
+        padding: 40px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      h1 {
+        color: #28a745;
+        margin-bottom: 20px;
+      }
+      p {
+        color: #666;
+        line-height: 1.6;
+        margin-bottom: 15px;
+      }
+      .success-icon {
+        font-size: 48px;
+        margin-bottom: 20px;
+      }
+      .brand {
+        color: #999;
+        font-size: 14px;
+        margin-top: 30px;
+      }
+      .session-info {
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 5px;
+        padding: 15px;
+        margin: 20px 0;
+        font-family: monospace;
+        font-size: 12px;
+        color: #495057;
+      }
+      .session-info .label {
+        font-weight: bold;
+        color: #343a40;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="success-icon">✅</div>
+      <h1>Authentication Successful!</h1>
+      <p>You have successfully authenticated with Schwab.</p>
+      <div class="session-info">
+        <div><span class="label">Session ID:</span> {{SESSION_ID}}</div>
+        <div><span class="label">Timestamp:</span> {{TIMESTAMP}}</div>
+      </div>
+      <p>You can now close this browser window and return to the terminal.</p>
+      <div class="brand">Algo Chuck</div>
+    </div>
+  </body>
+</html>

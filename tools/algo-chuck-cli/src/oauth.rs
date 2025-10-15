@@ -25,20 +25,14 @@ pub fn generate_state() -> String {
 }
 
 /// Build the Schwab OAuth2 authorization URL
-pub fn build_schwab_auth_url(config: &SchwabConfig, state: &str) -> Result<String> {
-    let mut auth_url =
-        Url::parse(&config.api.auth_url).context("Failed to parse Schwab authorization URL")?;
-
-    let client_id = config
-        .client
-        .client_id
-        .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("Client ID not configured"))?;
+pub fn build_schwab_auth_url(client_id: &str, state: &str) -> Result<String> {
+    let mut auth_url = Url::parse(SchwabConfig::SCHWAB_AUTH_URL)
+        .context("Failed to parse Schwab authorization URL")?;
 
     let params = vec![
         ("response_type", "code"),
         ("client_id", client_id),
-        ("redirect_uri", &config.api.callback_url),
+        ("redirect_uri", SchwabConfig::CALLBACK_URL),
         ("scope", "readonly"),
         ("state", state),
     ];
@@ -76,10 +70,10 @@ pub async fn exchange_code_for_token(
     let mut form = HashMap::new();
     form.insert("grant_type", "authorization_code");
     form.insert("code", code);
-    form.insert("redirect_uri", &config.api.callback_url);
+    form.insert("redirect_uri", SchwabConfig::CALLBACK_URL);
 
     let response = client
-        .post(&config.api.token_url)
+        .post(SchwabConfig::SCHWAB_TOKEN_URL)
         .header("Authorization", auth_header)
         .header("Content-Type", "application/x-www-form-urlencoded")
         .form(&form)
@@ -136,7 +130,7 @@ pub async fn refresh_access_token(
     form.insert("refresh_token", refresh_token);
 
     let response = client
-        .post(&config.api.token_url)
+        .post(SchwabConfig::SCHWAB_TOKEN_URL)
         .header("Authorization", auth_header)
         .header("Content-Type", "application/x-www-form-urlencoded")
         .form(&form)

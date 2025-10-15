@@ -1,8 +1,10 @@
+pub mod ca;
 pub mod config;
 pub mod info;
 pub mod login;
 pub mod refresh;
 
+pub use ca::handle_ca_command;
 pub use config::handle_config_command;
 pub use info::handle_info_command;
 pub use login::handle_login_command;

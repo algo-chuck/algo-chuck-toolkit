@@ -1,13 +1,35 @@
 use anyhow::Result;
 use clap::ArgMatches;
 
-use crate::config::{ConfigManager, TokenManager};
+use crate::ca::{CaManager, installer};
+use crate::config::{ConfigManager, SchwabConfig, TokenManager};
 use crate::oauth::{build_schwab_auth_url, exchange_code_for_token, generate_state};
 use crate::server::start_callback_server;
 
 /// Handle the login command for OAuth2 authentication
 pub async fn handle_login_command(_matches: &ArgMatches) -> Result<()> {
     println!("🔐 Algo Chuck CLI - Login");
+
+    // Setup Certificate Authority for seamless HTTPS
+    let ca_manager = CaManager::new()?;
+    if !ca_manager.ca_exists() {
+        println!("\n🔐 Setting up Certificate Authority for seamless HTTPS...");
+
+        // Generate CA certificate
+        ca_manager.generate_ca().await?;
+
+        // Prompt user to install CA in system trust store
+        if installer::prompt_ca_installation()? {
+            ca_manager.install_system_ca().await?;
+            println!("✅ Certificate Authority installed successfully!");
+            println!("   Future OAuth logins will not show certificate warnings.");
+        } else {
+            eprintln!("⚠️  CA not installed in system trust store.");
+            eprintln!("   You may see certificate warnings during OAuth flow.");
+            eprintln!("   Run 'chuck ca install' later to eliminate warnings.");
+        }
+        println!();
+    }
 
     // Load configuration using ConfigManager
     let config_manager = ConfigManager::new()?;
@@ -30,11 +52,11 @@ pub async fn handle_login_command(_matches: &ArgMatches) -> Result<()> {
         println!("🔑 Using Client ID: {}", client_id);
     }
 
-    println!("🌐 Callback URL: {}", config.api.callback_url);
+    println!("🌐 Callback URL: {}", SchwabConfig::CALLBACK_URL);
 
     // Generate state parameter and build authorization URL
     let state = generate_state();
-    let auth_url = build_schwab_auth_url(&config, &state)?;
+    let auth_url = build_schwab_auth_url(&client_id, &state)?;
 
     println!("\n🚀 Opening browser for Schwab authentication...");
     if let Err(e) = webbrowser::open(&auth_url) {

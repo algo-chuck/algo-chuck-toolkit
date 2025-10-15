@@ -32,12 +32,6 @@ pub fn build_cli() -> Command {
                                 .help("Set Schwab API client secret"),
                         )
                         .arg(
-                            Arg::new("callback-url")
-                                .long("callback-url")
-                                .value_name("URL")
-                                .help("Set OAuth2 callback URL"),
-                        )
-                        .arg(
                             Arg::new("auto-refresh")
                                 .long("auto-refresh")
                                 .value_name("BOOL")
@@ -84,7 +78,14 @@ pub fn build_cli() -> Command {
                 )
                 .subcommand(
                     Command::new("test")
-                        .about("Test certificate by opening browser to HTTPS server"),
+                        .about("Test certificate by opening browser to HTTPS server")
+                        .arg(
+                            Arg::new("port")
+                                .long("port")
+                                .help("Port to run the test server on")
+                                .default_value("8443")
+                                .value_parser(clap::value_parser!(u16)),
+                        ),
                 ),
         )
 }
