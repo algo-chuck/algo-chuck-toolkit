@@ -5,8 +5,8 @@ use crate::auth::AutoRefresher;
 use crate::config::{ConfigManager, TokenManager};
 use crate::display::display_encrypted_token_info;
 
-/// Handle the info command to display token status
-pub async fn handle_info_command(matches: &ArgMatches) -> Result<()> {
+/// Handle the status command to display token status
+pub async fn handle_status_command(matches: &ArgMatches) -> Result<()> {
     println!("🔍 Schwab OAuth2 Token Information\n");
 
     // Load configuration to create TokenManager

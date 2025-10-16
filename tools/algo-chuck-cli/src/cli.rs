@@ -9,7 +9,7 @@ pub fn build_cli() -> Command {
         .arg_required_else_help(true)
         .subcommand(Command::new("login").about("Perform initial OAuth2 authentication"))
         .subcommand(Command::new("refresh").about("Refresh access token using refresh token"))
-        .subcommand(Command::new("info").about("Display current token status and expiry times"))
+        .subcommand(Command::new("status").about("Display current token status and expiry times"))
         .subcommand(
             Command::new("config")
                 .about("Manage configuration settings")
