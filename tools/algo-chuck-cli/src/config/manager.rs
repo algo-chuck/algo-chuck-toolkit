@@ -10,11 +10,11 @@ use std::os::unix::fs::PermissionsExt;
 
 use super::credentials::CredentialsManager;
 use super::types::{ClientConfig, PreferencesConfig, SchwabConfig};
-
+#[allow(dead_code)]
 pub struct ConfigManager {
     config_dir: PathBuf,
     data_dir: PathBuf,
-    cache_dir: PathBuf,
+    cache_dir: PathBuf, // Not currently used but reserved for future use
 }
 
 impl ConfigManager {

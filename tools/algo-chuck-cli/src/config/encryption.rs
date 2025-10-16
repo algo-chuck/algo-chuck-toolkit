@@ -1,3 +1,6 @@
+#![allow(deprecated)]
+// Nonce::from_slice is deprecated, create needs to upgrade to generic-array 1.x
+
 use anyhow::Result;
 use chacha20poly1305::{
     ChaCha20Poly1305, Nonce,
