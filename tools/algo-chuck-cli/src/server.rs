@@ -12,12 +12,11 @@ use tokio::time::timeout;
 use tokio_rustls::{TlsAcceptor, server::TlsStream};
 use url::Url;
 
-// Embed HTML templates at compile time
-const SUCCESS_HTML_TEMPLATE: &str = include_str!("../templates/oauth_success.html");
-const NOT_FOUND_HTML_TEMPLATE: &str = include_str!("../templates/oauth_404.html");
-
 use crate::ca::CaManager;
 use crate::config::SchwabConfig;
+
+const SUCCESS_HTML_TEMPLATE: &str = include_str!("../templates/oauth_success.html");
+const NOT_FOUND_HTML_TEMPLATE: &str = include_str!("../templates/oauth_404.html");
 
 /// Create TLS configuration with CA-generated certificate
 pub async fn create_tls_config() -> Result<ServerConfig> {
@@ -105,14 +104,13 @@ fn create_success_response(session_id: &str) -> String {
         .replace("{{SESSION_ID}}", session_id)
         .replace("{{TIMESTAMP}}", &timestamp);
 
-    let content_length = html_content.len();
-
     format!(
         "HTTP/1.1 200 OK\r\n\
          Content-Type: text/html; charset=utf-8\r\n\
          Content-Length: {}\r\n\
          \r\n{}",
-        content_length, html_content
+        html_content.len(),
+        html_content
     )
 }
 
@@ -125,14 +123,13 @@ fn create_not_found_response(requested_path: &str) -> String {
         .replace("{{EXPECTED_PATH}}", SchwabConfig::CALLBACK_PATH)
         .replace("{{TIMESTAMP}}", &timestamp);
 
-    let content_length = html_content.len();
-
     format!(
         "HTTP/1.1 404 Not Found\r\n\
          Content-Type: text/html; charset=utf-8\r\n\
          Content-Length: {}\r\n\
          \r\n{}",
-        content_length, html_content
+        html_content.len(),
+        html_content
     )
 }
 

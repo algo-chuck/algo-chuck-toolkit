@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>🔒 Certificate Test - Algo Chuck CLI</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+          sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 2rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        min-height: 100vh;
+      }
+      .container {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 2rem;
+        border-radius: 10px;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      }
+      h1 {
+        color: #fff;
+        margin-bottom: 1rem;
+        text-align: center;
+      }
+      .status {
+        padding: 1rem;
+        border-radius: 5px;
+        margin: 1rem 0;
+      }
+      .info {
+        background: rgba(33, 150, 243, 0.3);
+        border-left: 4px solid #2196f3;
+      }
+      .code {
+        background: rgba(0, 0, 0, 0.2);
+        padding: 0.5rem;
+        border-radius: 3px;
+        font-family: monospace;
+      }
+      ul {
+        text-align: left;
+      }
+      .center {
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🔒 HTTPS Certificate Test</h1>
+      <h2 class="center">Algo Chuck CLI Certificate Authority</h2>
+
+      <div class="status info">
+        <h3>📋 Certificate Validation Test</h3>
+        <p>
+          If you can see this page without security warnings, your certificate
+          is working correctly!
+        </p>
+        <p>
+          <strong>Check your browser's address bar for a lock icon 🔒</strong>
+        </p>
+      </div>
+
+      <div class="status info">
+        <h3>🛠️ Certificate Information</h3>
+        <p><strong>Subject:</strong> CN=Algo Chuck HTTPS Server</p>
+        <p><strong>Issuer:</strong> CN=Algo Chuck Local CA</p>
+        <p><strong>Valid for:</strong></p>
+        <ul>
+          <li>https://localhost:8443</li>
+          <li>https://127.0.0.1:8443</li>
+        </ul>
+      </div>
+
+      <div class="center">
+        <p>
+          🚀 <strong>Test successful!</strong> Your certificate setup is working
+          correctly.
+        </p>
+        <p>
+          Stop the server with <span class="code">Ctrl+C</span> in the terminal
+        </p>
+      </div>
+    </div>
+  </body>
+</html>

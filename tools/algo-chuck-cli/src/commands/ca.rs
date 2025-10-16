@@ -1,9 +1,16 @@
 //! Certificate Authority management commands
 
 use crate::ca::{CaManager, installer};
+use crate::server::create_tls_config;
 use anyhow::Result;
 use clap::ArgMatches;
 use std::process::Command;
+use std::sync::Arc;
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+use tokio::net::TcpListener;
+use tokio_rustls::{TlsAcceptor, server::TlsStream};
+
+const CA_TEST_TEMPLATE: &str = include_str!("../../templates/ca_test.html");
 
 /// Handle CA subcommands
 pub async fn handle_ca_command(matches: &ArgMatches) -> Result<()> {
@@ -328,18 +335,11 @@ async fn handle_ca_test_server(port: u16) -> Result<()> {
 
 /// Start a simple test server on the specified port
 async fn start_test_server(port: u16) -> Result<()> {
-    use crate::server::create_tls_config;
-    use std::sync::Arc;
-    use tokio::net::TcpListener;
-    use tokio_rustls::TlsAcceptor;
-    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-
     let tls_config = create_tls_config().await?;
     let acceptor = TlsAcceptor::from(Arc::new(tls_config));
-    
     let address = format!("127.0.0.1:{}", port);
     let listener = TcpListener::bind(&address).await?;
-    
+
     println!("🔒 Test server listening on port {} with HTTPS", port);
 
     loop {
@@ -360,9 +360,7 @@ async fn start_test_server(port: u16) -> Result<()> {
 }
 
 /// Handle a test HTTPS connection
-async fn handle_test_connection_https(mut stream: tokio_rustls::server::TlsStream<tokio::net::TcpStream>) -> Result<()> {
-    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-    
+async fn handle_test_connection_https(mut stream: TlsStream<tokio::net::TcpStream>) -> Result<()> {
     let mut reader = BufReader::new(&mut stream);
     let mut request_line = String::new();
     reader.read_line(&mut request_line).await?;
@@ -376,70 +374,14 @@ async fn handle_test_connection_https(mut stream: tokio_rustls::server::TlsStrea
 
 /// Create a simple HTTP response with test content
 fn create_test_response() -> String {
-    let html = r#"<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🔒 Certificate Test - Algo Chuck CLI</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 2rem;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            min-height: 100vh;
-        }
-        .container {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 2rem;
-            border-radius: 10px;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-        }
-        h1 { color: #fff; margin-bottom: 1rem; text-align: center; }
-        .status { padding: 1rem; border-radius: 5px; margin: 1rem 0; }
-        .info { background: rgba(33, 150, 243, 0.3); border-left: 4px solid #2196F3; }
-        .code { background: rgba(0, 0, 0, 0.2); padding: 0.5rem; border-radius: 3px; font-family: monospace; }
-        ul { text-align: left; }
-        .center { text-align: center; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>🔒 HTTPS Certificate Test</h1>
-        <h2 class="center">Algo Chuck CLI Certificate Authority</h2>
-        
-        <div class="status info">
-            <h3>📋 Certificate Validation Test</h3>
-            <p>If you can see this page without security warnings, your certificate is working correctly!</p>
-            <p><strong>Check your browser's address bar for a lock icon 🔒</strong></p>
-        </div>
-        
-        <div class="status info">
-            <h3>🛠️ Certificate Information</h3>
-            <p><strong>Subject:</strong> CN=Algo Chuck HTTPS Server</p>
-            <p><strong>Issuer:</strong> CN=Algo Chuck Local CA</p>
-            <p><strong>Valid for:</strong></p>
-            <ul>
-                <li>https://localhost:8443</li>
-                <li>https://127.0.0.1:8443</li>
-            </ul>
-        </div>
-
-        <div class="center">
-            <p>🚀 <strong>Test successful!</strong> Your certificate setup is working correctly.</p>
-            <p>Stop the server with <span class="code">Ctrl+C</span> in the terminal</p>
-        </div>
-    </div>
-</body>
-</html>"#;
+    let html_content = CA_TEST_TEMPLATE;
 
     format!(
-        "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: {}\r\n\r\n{}",
-        html.len(),
-        html
+        "HTTP/1.1 200 OK\r\n\
+         Content-Type: text/html; charset=utf-8\r\n\
+         Content-Length: {}\r\n\
+         \r\n{}",
+        html_content.len(),
+        html_content
     )
 }
