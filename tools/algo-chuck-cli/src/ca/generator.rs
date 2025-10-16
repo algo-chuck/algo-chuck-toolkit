@@ -3,7 +3,7 @@
 use super::{CaInfo, CaManager, CaMetadata, ServerCertMetadata, ServerCertificate};
 use anyhow::{Context, Result};
 use chrono::{Duration, Utc};
-use rcgen::{CertificateParams, DistinguishedName, DnType, KeyPair, Issuer};
+use rcgen::{CertificateParams, DistinguishedName, DnType, KeyPair};
 use sha2::{Digest, Sha256};
 use time;
 
@@ -83,8 +83,8 @@ pub async fn generate_server_certificate(ca_manager: &CaManager) -> Result<Serve
         .with_context(|| "Failed to read CA private key")?;
 
     // Load CA key pair from PEM
-    let ca_key_pair = KeyPair::from_pem(&ca_key_pem)
-        .with_context(|| "Failed to load CA private key")?;
+    let ca_key_pair =
+        KeyPair::from_pem(&ca_key_pem).with_context(|| "Failed to load CA private key")?;
 
     // Recreate the CA certificate from stored parameters
     let mut ca_params = CertificateParams::default();
@@ -93,7 +93,7 @@ pub async fn generate_server_certificate(ca_manager: &CaManager) -> Result<Serve
     ca_distinguished_name.push(DnType::OrganizationName, "Algo Chuck");
     ca_params.distinguished_name = ca_distinguished_name;
     ca_params.is_ca = rcgen::IsCa::Ca(rcgen::BasicConstraints::Unconstrained);
-    
+
     // Create an Issuer from the CA parameters and key pair
     let ca_issuer = rcgen::Issuer::new(ca_params, ca_key_pair);
 
@@ -120,7 +120,7 @@ pub async fn generate_server_certificate(ca_manager: &CaManager) -> Result<Serve
 
     // Generate key pair for server certificate
     let server_key_pair = KeyPair::generate()?;
-    
+
     // Sign the server certificate with the CA
     let cert = params.signed_by(&server_key_pair, &ca_issuer)?;
 
@@ -147,11 +147,12 @@ pub async fn generate_server_certificate(ca_manager: &CaManager) -> Result<Serve
     ca_manager.save_ca_info(&ca_info)?;
 
     println!("✅ Server certificate generated successfully");
+    // Create full certificate chain: server cert + CA cert
+    let full_chain = format!("{}\n{}", server_cert_pem, ca_cert_pem);
 
     Ok(ServerCertificate {
-        cert_pem: server_cert_pem,
         key_pem: server_key_pem,
-        cert_chain: vec![ca_cert_pem],
+        full_chain,
     })
 }
 

@@ -30,17 +30,10 @@ pub async fn create_tls_config() -> Result<ServerConfig> {
         // Use CA-generated server certificate
         match ca_manager.get_or_create_server_cert().await {
             Ok(server_cert) => {
-                // Create full certificate chain: server cert + CA cert
-                let ca_cert_pem = std::fs::read_to_string(ca_manager.ca_cert_path())
-                    .context("Failed to read CA certificate")?;
-                let full_chain = format!("{}\n{}", server_cert.cert_pem, ca_cert_pem);
-                return create_tls_config_from_pem(&full_chain, &server_cert.key_pem);
+                return create_tls_config_from_pem(&server_cert.full_chain, &server_cert.key_pem);
             }
             Err(e) => {
-                eprintln!(
-                    "⚠️  Failed to use CA certificate, falling back to self-signed: {}",
-                    e
-                );
+                eprintln!("⚠️  Failed to use CA certificate, falling back to self-signed: {e}");
             }
         }
     }

@@ -45,9 +45,8 @@ pub struct ServerCertMetadata {
 /// Server certificate bundle for HTTPS server
 #[derive(Debug)]
 pub struct ServerCertificate {
-    pub cert_pem: String,
     pub key_pem: String,
-    pub cert_chain: Vec<String>,
+    pub full_chain: String,
 }
 
 impl CaManager {
@@ -57,14 +56,6 @@ impl CaManager {
         let ca_dir = config_dir.join("ca");
 
         // Create CA directory if it doesn't exist
-        std::fs::create_dir_all(&ca_dir)
-            .with_context(|| format!("Failed to create CA directory: {}", ca_dir.display()))?;
-
-        Ok(Self { ca_dir })
-    }
-
-    /// Create a CA manager with a custom directory (for testing)
-    pub fn with_directory(ca_dir: PathBuf) -> Result<Self> {
         std::fs::create_dir_all(&ca_dir)
             .with_context(|| format!("Failed to create CA directory: {}", ca_dir.display()))?;
 
@@ -188,11 +179,12 @@ impl CaManager {
 
         let ca_cert_pem = std::fs::read_to_string(self.ca_cert_path())
             .with_context(|| "Failed to read CA certificate")?;
+        // Create full certificate chain: server cert + CA cert
+        let full_chain = format!("{}\n{}", cert_pem, ca_cert_pem);
 
         Ok(ServerCertificate {
-            cert_pem,
             key_pem,
-            cert_chain: vec![ca_cert_pem],
+            full_chain,
         })
     }
 
