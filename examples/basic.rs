@@ -23,7 +23,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Types module (always available)
     println!("  ✅ schwab::types - API data structures");
-    let types_demo = schwab::types::Candle {
+    let types_demo = schwab::types::marketdata::Candle {
         open: Some(100.0),
         high: Some(110.0),
         low: Some(90.0),
@@ -33,7 +33,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         datetime_iso8601: None,
     };
 
-    println!("     Example: types::Candle = {:#?}", types_demo);
+    println!("     Example: marketdata::Candle = {:#?}", types_demo);
 
     // Feature-gated modules - only try to use them if the features are enabled
     #[cfg(feature = "oauth")]

@@ -54,7 +54,7 @@ pub use schwab_api_trader as trader;
 /// This module will be populated as the individual crates are implemented
 pub mod prelude {
     // Will re-export common types and traits once they're implemented
-    // pub use crate::types::*;
+    // pub use crate::marketdata::*;
     // pub use crate::core::*;
 }
 
@@ -76,6 +76,6 @@ mod tests {
         // Test that we can access the re-exported modules
         // These will contain actual functionality once implemented
         let _ = core::add(1, 1); // Using the placeholder function for now
-        let _ = types::add(1, 1); // Using the placeholder function for now
+        let _ = marketdata::add(1, 1); // Using the placeholder function for now
     }
 }
