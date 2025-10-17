@@ -6,10 +6,6 @@ authors.workspace = true
 license.workspace = true
 description = "Command-line interface for the Schwab API toolkit"
 
-[[bin]]
-name = "chuck"
-path = "src/main.rs"
-
 [dependencies]
 anyhow = { workspace = true }
 base64 = { workspace = true }
