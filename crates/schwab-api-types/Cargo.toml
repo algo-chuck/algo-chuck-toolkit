@@ -8,6 +8,8 @@ description = "Core types and data structures for the Schwab API"
 
 [dependencies]
 serde = { workspace = true, features = ["derive"] }
+serde_with = { version = "3.8", default-features = false, features = ["base64", "std", "macros"] }
+serde_repr = "0.1"
 chrono = { workspace = true, features = ["serde"] }
 uuid = { workspace = true, features = ["serde", "v4"] }
 url = { workspace = true, features = ["serde"] }

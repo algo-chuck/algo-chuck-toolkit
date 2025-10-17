@@ -23,8 +23,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Types module (always available)
     println!("  ✅ schwab::types - API data structures");
-    let types_result = schwab::types::add(5, 7);
-    println!("     Example: types::add(5, 7) = {}", types_result);
+    let types_demo = schwab::types::Candle {
+        open: Some(100.0),
+        high: Some(110.0),
+        low: Some(90.0),
+        close: Some(105.0),
+        volume: Some(1000),
+        datetime: Some(1625247600),
+        datetime_iso8601: None,
+    };
+
+    println!("     Example: types::Candle = {:#?}", types_demo);
 
     // Feature-gated modules - only try to use them if the features are enabled
     #[cfg(feature = "oauth")]
