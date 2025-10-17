@@ -103,3 +103,18 @@ schwab-api-oauth = { path = "crates/schwab-api-oauth" }
 schwab-api-marketdata = { path = "crates/schwab-api-marketdata" }
 schwab-api-trader = { path = "crates/schwab-api-trader" }
 
+[profile.release]
+# Enables Link Time Optimization (LTO). This is often the biggest contributor
+# to reducing binary size, as it allows the linker to optimize across crate boundaries.
+lto = true
+
+# Ensures the compiler removes debug information, resulting in a much smaller file.
+strip = true
+
+# Sets the optimization level higher than the default (level 3).
+# opt-level = 3
+
+# Sets the code generation to optimize for size rather than speed. 
+# While opt-level = 3 is often fine, "s" or "z" can aggressively shrink the binary.
+# opt-level = "s"
+
