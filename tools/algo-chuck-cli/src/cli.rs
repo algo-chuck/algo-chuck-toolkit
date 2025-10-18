@@ -88,4 +88,22 @@ pub fn build_cli() -> Command {
                         ),
                 ),
         )
+        .subcommand(
+            Command::new("fetch")
+                .about("Data fetching with the Schwab Developer API")
+                .subcommand_required(true)
+                .arg_required_else_help(true)
+                .subcommand(
+                    Command::new("trader")
+                        .about(
+                            "Schwab Trader API access to Account, Order entry and User Preferences",
+                        )
+                        .subcommand_required(true)
+                        .arg_required_else_help(true)
+                        .subcommand(
+                            Command::new("user-preference")
+                                .about("Get user preference information for the logged in user."),
+                        ),
+                ),
+        )
 }

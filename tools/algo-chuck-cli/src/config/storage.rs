@@ -90,6 +90,11 @@ impl TokenManager {
         self.save_tokens(&tokens)
     }
 
+    pub fn get_access_token(&self) -> Result<Option<String>> {
+        let tokens = self.load_tokens()?;
+        Ok(tokens.access_token)
+    }
+
     pub fn get_refresh_token(&self) -> Result<Option<String>> {
         let tokens = self.load_tokens()?;
         Ok(tokens.refresh_token)
