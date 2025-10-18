@@ -5,7 +5,7 @@
 //!
 //! Run with: cargo run --example individual_crates
 
-use schwab_api_core as core;
+// use schwab_api_core as core;
 // use schwab_api_marketdata::add;
 
 fn main() {
@@ -18,7 +18,7 @@ fn main() {
     println!();
 
     // Use crates directly
-    let core_result = core::add(10, 20);
+    // let core_result = core::add(10, 20);
     // let types_demo = Candle {
     //     open: Some(100.0),
     //     high: Some(110.0),
@@ -29,7 +29,7 @@ fn main() {
     //     datetime_iso8601: None,
     // };
 
-    println!("🔧 schwab_api_core::add(10, 20) = {}", core_result);
+    // println!("🔧 schwab_api_core::add(10, 20) = {}", core_result);
     // println!("📊 schwab_api_marketdata::Candle = {:#?}", types_demo);
     println!();
 

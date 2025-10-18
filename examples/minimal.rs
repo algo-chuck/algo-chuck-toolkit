@@ -5,7 +5,7 @@
 //!
 //! Run with: cargo run --example minimal --no-default-features
 
-use schwab_api::{VERSION, core, types::Candle};
+use schwab_api::{VERSION, types::Candle};
 
 fn main() {
     println!("🎯 Minimal Schwab API Example");
@@ -21,7 +21,7 @@ fn main() {
     println!();
 
     // Only core and types are available
-    let core_demo = core::add(1, 2);
+    // let core_demo = core::add(1, 2);
     let types_demo = Candle {
         open: Some(100.0),
         high: Some(110.0),
@@ -32,7 +32,7 @@ fn main() {
         datetime_iso8601: None,
     };
 
-    println!("🔧 Core example: {}", core_demo);
+    // println!("🔧 Core example: {}", core_demo);
     println!("📊 Types example: {:#?}", types_demo);
     println!();
     println!("💡 This minimal setup is perfect for:");

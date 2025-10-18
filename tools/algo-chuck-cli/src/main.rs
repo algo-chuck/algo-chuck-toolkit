@@ -6,7 +6,6 @@ mod config;
 mod display;
 mod oauth;
 mod server;
-mod trader;
 
 use anyhow::Result;
 use commands::{

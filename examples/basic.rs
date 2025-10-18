@@ -18,8 +18,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Core module (always available)
     println!("  ✅ schwab::core - Core functionality");
-    let core_result = schwab::core::add(2, 3);
-    println!("     Example: core::add(2, 3) = {}", core_result);
+    // let core_result = schwab::core::add(2, 3);
+    // println!("     Example: core::add(2, 3) = {}", core_result);
 
     // Types module (always available)
     println!("  ✅ schwab::types - API data structures");
@@ -67,8 +67,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         println!("  ✅ schwab::trader - Trader API (feature enabled)");
         // Note: Individual modules will have actual functionality once implemented
-        let trader_result = schwab::trader::add(5, 7);
-        println!("     Example: trader::add(5, 7) = {}", trader_result);
+        // let trader_result = schwab::trader::add(5, 7);
+        // println!("     Example: trader::add(5, 7) = {}", trader_result);
     }
     #[cfg(not(feature = "trader"))]
     {
