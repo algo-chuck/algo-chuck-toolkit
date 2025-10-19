@@ -57,6 +57,7 @@ impl<T: AsyncClient> TraderClient<T> {
         &self,
         access_token: &str,
     ) -> Result<UserPreference, HttpError> {
+        // TODO: Add Trader Manager
         let url = self.build_url("/userPreference", None);
         let bearer_token = format!("Bearer {access_token}");
         let result = Request::builder()
@@ -68,7 +69,7 @@ impl<T: AsyncClient> TraderClient<T> {
         match result {
             Ok(request) => {
                 let response = self.client.execute(request).await?;
-                let typed: UserPreference = response.json()?;
+                let typed = response.json()?;
                 Ok(typed)
             }
             Err(_) => Err(HttpError::RequestFailed("Failed to build request".into())),
