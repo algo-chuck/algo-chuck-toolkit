@@ -45,13 +45,6 @@ impl<T> TraderClient<T> {
         }
     }
 
-    pub fn with_base_url(http_client: T, base_url: impl Into<String>) -> Self {
-        Self {
-            http_client: HttpClient::new(http_client),
-            base_url: base_url.into(),
-        }
-    }
-
     fn build_url(&self, path: &str, query: Option<&QueryParams>) -> String {
         let query_string = query.map(|q| q.to_query_string()).unwrap_or_default();
         format!("{}{}{}", self.base_url, path, query_string)
@@ -64,10 +57,7 @@ impl<T: AsyncClient + Send + Sync> TraderClient<T> {
         access_token: &str,
     ) -> Result<UserPreference, HttpError> {
         let url = self.build_url("/userPreference", None);
-        let token = format!("Bearer {}", access_token);
-        // Build an `http::Request<String>` using the standard builder API.
-        // Build a Request<String> by creating an empty request and updating parts.
-        let request = schwab_api_core::request_with_bearer(HttpMethod::GET, url, &token);
+        let request = schwab_api_core::request_with_bearer(HttpMethod::GET, url, &access_token);
         let response = self.http_client.execute_async(request).await?;
         let typed: UserPreference = response.json()?;
         Ok(typed)

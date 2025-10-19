@@ -28,14 +28,18 @@ pub type HttpResponse = Response<String>;
 
 /// Build an `HttpRequest` with a Bearer Authorization header.
 /// `token` should be the raw token (the function adds the "Bearer " prefix).
-pub fn request_with_bearer(method: HttpMethod, url: impl Into<String>, token: &str) -> HttpRequest {
+pub fn request_with_bearer(
+    method: HttpMethod,
+    url: impl Into<String>,
+    access_token: &str,
+) -> HttpRequest {
     let req = HttpRequest::new(String::new());
     let (mut parts, body) = req.into_parts();
     parts.method = method;
     parts.uri = url.into().parse().expect("invalid url");
     parts.headers.insert(
         HeaderName::from_static("authorization"),
-        format!("Bearer {}", token)
+        format!("Bearer {}", access_token)
             .parse()
             .expect("invalid header value"),
     );
