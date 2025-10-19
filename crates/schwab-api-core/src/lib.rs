@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 use thiserror::Error;
 
 use schwab_api_types::ServiceError;
@@ -39,14 +40,20 @@ pub enum HttpError {
     Api(SchwabError),
 }
 
-// Re-exported `HttpMethod` above for downstream consumers.
-pub type HttpMethod = http::Method;
+#[derive(Debug)]
+pub struct RequestParams<'a> {
+    pub access_token: &'a str,
+    pub body: Option<Cow<'static, str>>,
+    pub method: http::Method,
+    pub path: &'a str,
+    pub query: Option<&'a str>,
+}
 
-// Use the standard `http::Request<String>` as our public request type.
-pub type Request = http::Request<String>;
+// Use the standard `http::Request<String>` as our request type.
+type Request = http::Request<String>;
 
-// Use the standard `http::Response<String>` as our public response type.
-pub type Response = http::Response<String>;
+// Use the standard `http::Response<String>` as our response type.
+type Response = http::Response<String>;
 
 /// Small extension trait for `HttpResponse` to keep caller code concise.
 pub trait HttpResponse {

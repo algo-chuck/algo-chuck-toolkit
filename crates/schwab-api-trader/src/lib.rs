@@ -1,38 +1,11 @@
-use http::{Method, Request};
+use http::{Method, Request, Response};
 use serde::de::{DeserializeOwned, Error};
-use std::collections::HashMap;
+use std::borrow::Cow;
 
-use schwab_api_core::{AsyncClient, HttpClient, HttpError, HttpResponse, Response, SchwabSuccess};
+use schwab_api_core::{
+    AsyncClient, HttpClient, HttpError, HttpResponse, RequestParams, SchwabSuccess,
+};
 use schwab_api_types::UserPreference;
-
-#[derive(Debug, Default)]
-pub struct QueryParams {
-    params: HashMap<String, String>,
-}
-
-impl QueryParams {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn insert(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
-        self.params.insert(key.into(), value.into());
-        self
-    }
-
-    pub fn to_query_string(&self) -> String {
-        if self.params.is_empty() {
-            String::new()
-        } else {
-            let params: Vec<String> = self
-                .params
-                .iter()
-                .map(|(k, v)| format!("{}={}", k, v))
-                .collect();
-            format!("?{}", params.join("&"))
-        }
-    }
-}
 
 pub struct TraderClient<T> {
     client: HttpClient<T>,
@@ -47,9 +20,40 @@ impl<T> TraderClient<T> {
         }
     }
 
-    fn build_url(&self, path: &str, query: Option<&QueryParams>) -> String {
-        let query_string = query.map(|q| q.to_query_string()).unwrap_or_default();
-        format!("{}{}{}", self.base_url, path, query_string)
+    fn build_url(&self, path: &str, query_string_opt: Option<&str>) -> String {
+        let query_prefix = match query_string_opt {
+            // Check if the string exists and is not empty.
+            Some(value) if !value.is_empty() => format!("?{value}"),
+            // If it's None or empty, use an empty string.
+            _ => String::new(),
+        };
+
+        // Combine base URL, path, and the (optionally prefixed) query string.
+        format!("{}{}{}", self.base_url, path, query_prefix)
+    }
+
+    fn build_request(&self, params: &RequestParams) -> Result<Request<String>, HttpError> {
+        let url = self.build_url(params.path, params.query);
+        let bearer_token = format!("Bearer {}", params.access_token);
+
+        // Determine the body content
+        let final_body = params
+            .body
+            .as_ref()
+            .unwrap_or(&Cow::from(""))
+            .clone()
+            .into_owned();
+
+        Request::builder()
+            .uri(url)
+            .method(params.method.clone())
+            .header("Authorization", bearer_token)
+            // .header("Content-Type", "application/json") // Causing 400 error, need to fix for POST
+            .body(final_body)
+            // The request building error (http::Error) is handled explicitly
+            // by mapping it to an appropriate HttpError variant, avoiding the need for
+            // a global From<http::Error> implementation.
+            .map_err(|e| HttpError::RequestFailed(format!("Request builder failed: {}", e)))
     }
 }
 
@@ -59,7 +63,7 @@ where
     HttpError: From<T::Error>,
 {
     // This method performs the robust deserialization, logging, and error conversion.
-    fn parse_ok_response<R: DeserializeOwned>(response: &Response) -> Result<R, HttpError> {
+    fn parse_ok_response<R: DeserializeOwned>(response: &Response<String>) -> Result<R, HttpError> {
         // Perform robust parsing into the GENERIC wrapper type.
         let ok_result = response.json()?;
 
@@ -67,16 +71,16 @@ where
         match ok_result {
             SchwabSuccess::Ok(data) => Ok(data),
             SchwabSuccess::MismatchedResponse(value) => {
-                // Log the anomaly: API returned 2xx, but structure was mismatched
+                // Log the anomaly: API returned 2xx, but structure was mismatched.
                 eprintln!(
                     "WARNING: API returned status {}, but response body was mismatched:\n {:#?}",
                     response.status(),
                     value
                 );
 
-                // Treat the unexpected structure as a serialization failure
+                // Treat the unexpected structure as a serialization failure.
                 Err(HttpError::SerializationError(
-                    // Generate a serde_json error object detailing the issue
+                    // Generate a serde_json error object detailing the issue.
                     serde_json::Error::custom(format!(
                         "Received mismatched {} response structure:\n {:#?}",
                         response.status(),
@@ -90,22 +94,18 @@ where
     pub async fn get_user_preference(
         &self,
         access_token: &str,
-    ) -> Result<Vec<UserPreference>, HttpError> {
-        // TODO: Add Trader Manager
-        let url = self.build_url("/userPreference", None);
-        let bearer_token = format!("Bearer {access_token}");
+    ) -> Result<UserPreference, HttpError> {
+        let params = RequestParams {
+            access_token,
+            body: None,
+            method: Method::GET,
+            path: "/userPreference",
+            query: None,
+        };
 
-        // The request building error (http::Error) is now handled explicitly
-        // by mapping it to an appropriate HttpError variant, avoiding the need for
-        // a global From<http::Error> implementation.
-        let request = Request::builder()
-            .uri(url)
-            .method(Method::GET)
-            .header("Authorization", bearer_token)
-            .body(String::new())
-            .map_err(|e| HttpError::RequestFailed(format!("Request builder failed: {}", e)))?;
+        let request = self.build_request(&params)?;
 
-        // Success path continues immediately:
+        // Success path continues immediately.
         let response = self
             .client
             .execute(request)
