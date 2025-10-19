@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use schwab_api_core::{AsyncClient, HttpClient, HttpError, HttpMethod, HttpRequest};
+use schwab_api_core::{AsyncClient, HttpClient, HttpError, HttpMethod, HttpResponseExt};
 use schwab_api_types::UserPreference;
 
 #[derive(Debug, Default)]
@@ -67,22 +67,9 @@ impl<T: AsyncClient + Send + Sync> TraderClient<T> {
         let token = format!("Bearer {}", access_token);
         // Build an `http::Request<String>` using the standard builder API.
         // Build a Request<String> by creating an empty request and updating parts.
-        let req = HttpRequest::new(String::new());
-        let (mut parts, body) = req.into_parts();
-        parts.method = HttpMethod::GET;
-        parts.uri = url.parse().expect("invalid url");
-        // Insert the Authorization header by parsing header name/value from strings.
-        parts.headers.insert(
-            schwab_api_core::HeaderName::from_static("authorization"),
-            token.parse().expect("invalid header value"),
-        );
-        let request = HttpRequest::from_parts(parts, body);
-
+        let request = schwab_api_core::request_with_bearer(HttpMethod::GET, url, &token);
         let response = self.http_client.execute_async(request).await?;
-
-        // Deserialize the response body (http::Response<String>) into the typed model
-        let body_str: &str = response.body();
-        let typed: UserPreference = serde_json::from_str(body_str)?;
+        let typed: UserPreference = response.json()?;
         Ok(typed)
     }
 }

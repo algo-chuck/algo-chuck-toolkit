@@ -2,6 +2,7 @@ use async_trait::async_trait;
 pub use http::Method as HttpMethod;
 pub use http::header::HeaderName;
 use http::{Request, Response};
+use serde::de::DeserializeOwned;
 pub use serde::{Deserialize, Serialize};
 pub use std::collections::HashMap;
 pub use thiserror::Error;
@@ -24,6 +25,72 @@ pub type HttpRequest = Request<String>;
 
 // Use the standard `http::Response<String>` as our public response type.
 pub type HttpResponse = Response<String>;
+
+// --- Convenience constructors and helpers to keep caller code concise ---
+
+/// Build a simple GET `HttpRequest` for the given URL.
+pub fn request_get(url: impl Into<String>) -> HttpRequest {
+    let req = HttpRequest::new(String::new());
+    let (mut parts, body) = req.into_parts();
+    parts.method = HttpMethod::GET;
+    parts.uri = url.into().parse().expect("invalid url");
+    HttpRequest::from_parts(parts, body)
+}
+
+/// Build an `HttpRequest` with a Bearer Authorization header.
+/// `token` should be the raw token (the function adds the "Bearer " prefix).
+pub fn request_with_bearer(method: HttpMethod, url: impl Into<String>, token: &str) -> HttpRequest {
+    let req = HttpRequest::new(String::new());
+    let (mut parts, body) = req.into_parts();
+    parts.method = method;
+    parts.uri = url.into().parse().expect("invalid url");
+    parts.headers.insert(
+        HeaderName::from_static("authorization"),
+        format!("Bearer {}", token)
+            .parse()
+            .expect("invalid header value"),
+    );
+    HttpRequest::from_parts(parts, body)
+}
+
+/// Build an `HttpRequest` with a JSON body and Content-Type header.
+pub fn request_json<T: Serialize>(
+    method: HttpMethod,
+    url: impl Into<String>,
+    body: &T,
+) -> Result<HttpRequest, HttpError> {
+    let body_str = serde_json::to_string(body)?;
+    let req = HttpRequest::new(String::new());
+    let (mut parts, _old_body) = req.into_parts();
+    parts.method = method;
+    parts.uri = url.into().parse().expect("invalid url");
+    parts.headers.insert(
+        HeaderName::from_static("content-type"),
+        "application/json".parse().unwrap(),
+    );
+    Ok(HttpRequest::from_parts(parts, body_str))
+}
+
+/// Small extension trait for `HttpResponse` to keep caller code concise.
+pub trait HttpResponseExt {
+    fn body_str(&self) -> &str;
+    fn json<T: DeserializeOwned>(&self) -> Result<T, HttpError>;
+    fn is_success(&self) -> bool;
+}
+
+impl HttpResponseExt for HttpResponse {
+    fn body_str(&self) -> &str {
+        self.body()
+    }
+
+    fn json<T: DeserializeOwned>(&self) -> Result<T, HttpError> {
+        serde_json::from_str(self.body()).map_err(HttpError::SerializationError)
+    }
+
+    fn is_success(&self) -> bool {
+        (200..300).contains(&self.status().as_u16())
+    }
+}
 
 // Generic HTTP client that can work with either sync or async implementations
 pub struct HttpClient<T> {
