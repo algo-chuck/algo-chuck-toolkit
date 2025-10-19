@@ -1,8 +1,30 @@
 use async_trait::async_trait;
 use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-// Error types for our HTTP client
+use schwab_api_types::ServiceError;
+
+/// Errors returned by the Trader API (parsed from non-success HTTP responses).
+#[derive(Error, Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum SchwabTraderError {
+    #[error("400: {0:?}")]
+    Status400(ServiceError),
+    #[error("401: {0:?}")]
+    Status401(ServiceError),
+    #[error("403: {0:?}")]
+    Status403(ServiceError),
+    #[error("404: {0:?}")]
+    Status404(ServiceError),
+    #[error("500: {0:?}")]
+    Status500(ServiceError),
+    #[error("503: {0:?}")]
+    Status503(ServiceError),
+    #[error("Unknown value: {0}")]
+    UnknownValue(serde_json::Value),
+}
+
 #[derive(Error, Debug)]
 pub enum HttpError {
     #[error("Request failed: {0}")]
@@ -11,6 +33,8 @@ pub enum HttpError {
     SerializationError(#[from] serde_json::Error),
     #[error("Network error: {0}")]
     NetworkError(String),
+    #[error("API error: {0}")]
+    Api(SchwabTraderError),
 }
 
 // Re-exported `HttpMethod` above for downstream consumers.
@@ -98,7 +122,8 @@ impl AsyncClient for reqwest::Client {
             .await
             .map_err(|e| HttpError::NetworkError(e.to_string()))?;
 
-        let mut builder = http::Response::builder().status(resp.status());
+        let status = resp.status();
+        let mut builder = http::Response::builder().status(status);
         for (name, value) in resp.headers().iter() {
             builder = builder.header(name, value.to_str().unwrap_or_default());
         }
@@ -107,6 +132,31 @@ impl AsyncClient for reqwest::Client {
             .text()
             .await
             .map_err(|e| HttpError::NetworkError(e.to_string()))?;
+
+        if !status.is_success() {
+            // Try parse ServiceError -> SchwabTraderError, fallback to JSON or raw string
+            let parsed = match serde_json::from_str::<ServiceError>(&body_text) {
+                Ok(se) => match status.as_u16() {
+                    400 => SchwabTraderError::Status400(se),
+                    401 => SchwabTraderError::Status401(se),
+                    403 => SchwabTraderError::Status403(se),
+                    404 => SchwabTraderError::Status404(se),
+                    500 => SchwabTraderError::Status500(se),
+                    503 => SchwabTraderError::Status503(se),
+                    _ => SchwabTraderError::UnknownValue(serde_json::Value::String(
+                        body_text.clone(),
+                    )),
+                },
+                Err(_) => match serde_json::from_str::<serde_json::Value>(&body_text) {
+                    Ok(v) => SchwabTraderError::UnknownValue(v),
+                    Err(_) => SchwabTraderError::UnknownValue(serde_json::Value::String(
+                        body_text.clone(),
+                    )),
+                },
+            };
+
+            return Err(HttpError::Api(parsed));
+        }
 
         let response = builder
             .body(body_text)
