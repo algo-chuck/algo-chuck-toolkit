@@ -52,7 +52,11 @@ impl<T> TraderClient<T> {
     }
 }
 
-impl<T: AsyncClient> TraderClient<T> {
+impl<T> TraderClient<T>
+where
+    T: AsyncClient,
+    HttpError: From<T::Error>,
+{
     pub async fn get_user_preference(
         &self,
         access_token: &str,
@@ -60,19 +64,27 @@ impl<T: AsyncClient> TraderClient<T> {
         // TODO: Add Trader Manager
         let url = self.build_url("/userPreference", None);
         let bearer_token = format!("Bearer {access_token}");
-        let result = Request::builder()
+
+        // The request building error (http::Error) is now handled explicitly
+        // by mapping it to an appropriate HttpError variant, avoiding the need for
+        // a global From<http::Error> implementation.
+        let request = Request::builder()
             .uri(url)
             .method(Method::GET)
             .header("Authorization", bearer_token)
-            .body(String::new());
+            .body(String::new())
+            .map_err(|e| HttpError::RequestFailed(format!("Request builder failed: {}", e)))?;
 
-        match result {
-            Ok(request) => {
-                let response = self.client.execute(request).await?;
-                let typed = response.json()?;
-                Ok(typed)
-            }
-            Err(_) => Err(HttpError::RequestFailed("Failed to build request".into())),
-        }
+        // Success path continues immediately:
+        let response = self
+            .client
+            .execute(request)
+            .await
+            // Use HttpError::from to explicitly tell the compiler the target type.
+            .map_err(HttpError::from)?;
+
+        // Assuming response.json() returns an error that converts to HttpError
+        let typed = response.json()?;
+        Ok(typed)
     }
 }

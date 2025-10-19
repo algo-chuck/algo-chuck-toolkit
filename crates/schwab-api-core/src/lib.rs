@@ -8,20 +8,13 @@ use schwab_api_types::ServiceError;
 /// Errors returned by the Trader API (parsed from non-success HTTP responses).
 #[derive(Error, Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
-pub enum SchwabTraderError {
-    #[error("400: {0:?}")]
-    Status400(ServiceError),
-    #[error("401: {0:?}")]
-    Status401(ServiceError),
-    #[error("403: {0:?}")]
-    Status403(ServiceError),
-    #[error("404: {0:?}")]
-    Status404(ServiceError),
-    #[error("500: {0:?}")]
-    Status500(ServiceError),
-    #[error("503: {0:?}")]
-    Status503(ServiceError),
-    #[error("Unknown value: {0}")]
+pub enum SchwabError {
+    #[error("Trader API Error ({status}): {detail:?}")]
+    Trader {
+        status: u16, // Add the status code here
+        detail: ServiceError,
+    },
+    #[error("Unknown Schwab API response structure: {0}")]
     UnknownValue(serde_json::Value),
 }
 
@@ -33,8 +26,8 @@ pub enum HttpError {
     SerializationError(#[from] serde_json::Error),
     #[error("Network error: {0}")]
     NetworkError(String),
-    #[error("API error: {0}")]
-    Api(SchwabTraderError),
+    #[error("Schwab Error: {0}")]
+    Api(SchwabError),
 }
 
 // Re-exported `HttpMethod` above for downstream consumers.
@@ -86,34 +79,42 @@ impl<T> HttpClient<T> {
 
 #[async_trait]
 pub trait AsyncClient: Send + Sync {
-    async fn execute(&self, request: Request) -> Result<Response, HttpError>;
+    type Error: std::error::Error + Send + Sync + 'static;
+
+    async fn execute(&self, request: Request) -> Result<Response, Self::Error>;
 
     // Associated function for common error parsing with a default implementation
-    fn parse_api_error(status: http::StatusCode, body_text: &str) -> SchwabTraderError {
+    fn parse_api_error(status: http::StatusCode, body_text: &str) -> SchwabError {
+        let status_code = status.as_u16();
+
+        // Attempt 1: Try to parse the body as the expected structured ServiceError.
         match serde_json::from_str::<ServiceError>(&body_text) {
-            Ok(se) => match status.as_u16() {
-                400 => SchwabTraderError::Status400(se),
-                401 => SchwabTraderError::Status401(se),
-                403 => SchwabTraderError::Status403(se),
-                404 => SchwabTraderError::Status404(se),
-                500 => SchwabTraderError::Status500(se),
-                503 => SchwabTraderError::Status503(se),
-                _ => SchwabTraderError::UnknownValue(serde_json::Value::String(
-                    body_text.to_string(),
-                )),
-            },
-            Err(_) => match serde_json::from_str::<serde_json::Value>(&body_text) {
-                Ok(v) => SchwabTraderError::UnknownValue(v),
-                Err(_) => SchwabTraderError::UnknownValue(serde_json::Value::String(
-                    body_text.to_string(),
-                )),
-            },
+            Ok(se) => {
+                // If parsing is successful, wrap the error and the status code
+                SchwabError::Trader {
+                    status: status_code,
+                    detail: se,
+                }
+            }
+            // Attempt 2: If structured parsing fails, assume it's an unknown/unstructured error.
+            Err(_) => {
+                // Try to parse it as generic JSON value for better debugging output.
+                match serde_json::from_str::<serde_json::Value>(&body_text) {
+                    Ok(v) => SchwabError::UnknownValue(v),
+
+                    // Fallback: If it's not even valid JSON, just store the raw text.
+                    Err(_) => SchwabError::UnknownValue(serde_json::Value::String(format!(
+                        "Raw text (status {status_code}): {}",
+                        body_text
+                    ))),
+                }
+            }
         }
     }
 }
 
 impl<T: AsyncClient> HttpClient<T> {
-    pub async fn execute(&self, request: Request) -> Result<Response, HttpError> {
+    pub async fn execute(&self, request: Request) -> Result<Response, T::Error> {
         self.client.execute(request).await
     }
 }
@@ -122,54 +123,82 @@ impl<T: AsyncClient> HttpClient<T> {
 // adapter can be used directly with the higher-level clients.
 #[async_trait]
 impl AsyncClient for reqwest::Client {
-    async fn execute(&self, request: Request) -> Result<Response, HttpError> {
-        // Build the reqwest request based on our HttpRequest wrapper.
-        // Convert http::Method -> reqwest::Method and use the uri from the request.
-        let req_method = match reqwest::Method::from_bytes(request.method().as_str().as_bytes()) {
-            Ok(m) => m,
-            Err(e) => return Err(HttpError::RequestFailed(format!("invalid method: {}", e))),
-        };
+    type Error = HttpError;
 
-        // Use the request URI as a string
-        let url = request.uri().to_string();
+    async fn execute(&self, request: Request) -> Result<Response, Self::Error> {
+        // --- 1. Safely convert http::Request fields to reqwest::Request parts ---
+
+        // Deconstruct Request (assuming it's http::Request<String> or similar)
+        let (parts, body_ref) = request.into_parts(); // Assuming Request has into_parts()
+
+        // Safely convert Method and URI
+        let req_method =
+            parts
+                .method
+                .as_str()
+                .parse()
+                .map_err(|e: http::method::InvalidMethod| {
+                    HttpError::RequestFailed(format!("Invalid HTTP method: {}", e))
+                })?;
+
+        let url = parts.uri.to_string();
+
+        // Start building the reqwest request
         let mut rb = self.request(req_method, url);
 
-        // Add headers from the http::HeaderMap
-        for (name, value) in request.headers().iter() {
-            let v = value.to_str().unwrap_or_default();
-            rb = rb.header(name.as_str(), v);
+        // Add headers from http::HeaderMap
+        // reqwest::RequestBuilder::headers() takes HeaderMap, allowing zero-copy or efficient copy.
+        // If your request.headers() returns &HeaderMap, use clone() if ownership is required later.
+        // Assuming parts.headers is HeaderMap:
+        rb = rb.headers(parts.headers);
+
+        // Add body: Convert String body (body_ref) into reqwest's body type (Bytes or String)
+        if !body_ref.is_empty() {
+            // Using into_inner() to take ownership of the inner String is best for performance,
+            // avoiding an unnecessary clone() if the inner type is String.
+            rb = rb.body(body_ref);
         }
 
-        // Add body if non-empty (http::Request::body returns &String)
-        let body_ref = request.body();
-        if !body_ref.is_empty() {
-            rb = rb.body(body_ref.clone());
-        }
+        // --- 2. Send request and handle network errors ---
 
         let resp = rb
             .send()
             .await
-            .map_err(|e| HttpError::NetworkError(e.to_string()))?;
+            .map_err(|e| HttpError::NetworkError(e.to_string()))?; // Use reqwest::Error::to_string()
 
         let status = resp.status();
-        let mut builder = http::Response::builder().status(status);
-        for (name, value) in resp.headers().iter() {
-            builder = builder.header(name, value.to_str().unwrap_or_default());
-        }
+        let headers = resp.headers().clone();
 
+        // --- 3. Extract body text and handle API errors ---
+
+        // We read the body into a String regardless of success/failure,
+        // as we need the body text for error parsing or successful response.
         let body_text = resp
             .text()
             .await
-            .map_err(|e| HttpError::NetworkError(e.to_string()))?;
+            .map_err(|e| HttpError::NetworkError(format!("Failed to read response body: {}", e)))?;
 
+        // Handle API failure using the extracted helper function
         if !status.is_success() {
             let parsed = Self::parse_api_error(status, &body_text);
             return Err(HttpError::Api(parsed));
         }
 
-        let response = builder
-            .body(body_text)
-            .map_err(|e| HttpError::RequestFailed(format!("failed to build response: {}", e)))?;
+        // --- 4. Build and return the high-level Response ---
+
+        // Reuse parts.headers as reqwest::Response::headers() is less robust than the builder pattern.
+        let mut builder = http::Response::builder().status(status);
+
+        // Get headers from the reqwest response and copy/convert them
+        for (name, value) in headers.iter() {
+            // reqwest::header::HeaderName and http::header::HeaderName are the same type.
+            builder = builder.header(name, value);
+        }
+
+        // Build the final Response<String>
+        let response = builder.body(body_text).map_err(|e| {
+            HttpError::RequestFailed(format!("Failed to build final Response: {}", e))
+        })?;
 
         Ok(response)
     }
