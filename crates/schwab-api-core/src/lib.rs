@@ -1,4 +1,7 @@
 use async_trait::async_trait;
+pub use http::Method as HttpMethod;
+pub use http::header::HeaderName;
+use http::{Request, Response};
 pub use serde::{Deserialize, Serialize};
 pub use std::collections::HashMap;
 pub use thiserror::Error;
@@ -14,70 +17,13 @@ pub enum HttpError {
     NetworkError(String),
 }
 
-// HTTP Methods
-#[derive(Debug, Clone)]
-pub enum HttpMethod {
-    Get,
-    Post,
-    Put,
-    Delete,
-    Patch,
-}
+// Re-exported `HttpMethod` above for downstream consumers.
 
-// Request structure
-#[derive(Debug, Clone)]
-pub struct HttpRequest {
-    pub url: String,
-    pub method: HttpMethod,
-    pub headers: HashMap<String, String>,
-    pub body: Option<String>,
-}
+// Use the standard `http::Request<String>` as our public request type.
+pub type HttpRequest = Request<String>;
 
-impl HttpRequest {
-    pub fn new(method: HttpMethod, url: impl Into<String>) -> Self {
-        Self {
-            url: url.into(),
-            method,
-            headers: HashMap::new(),
-            body: None,
-        }
-    }
-
-    pub fn header(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
-        self.headers.insert(key.into(), value.into());
-        self
-    }
-
-    pub fn json_body<T: Serialize>(mut self, body: &T) -> Result<Self, HttpError> {
-        self.body = Some(serde_json::to_string(body)?);
-        self.headers
-            .insert("Content-Type".to_string(), "application/json".to_string());
-        Ok(self)
-    }
-
-    pub fn body(mut self, body: impl Into<String>) -> Self {
-        self.body = Some(body.into());
-        self
-    }
-}
-
-// Response structure
-#[derive(Debug)]
-pub struct HttpResponse {
-    pub status: u16,
-    pub headers: HashMap<String, String>,
-    pub body: String,
-}
-
-impl HttpResponse {
-    pub fn json<T: for<'de> Deserialize<'de>>(&self) -> Result<T, HttpError> {
-        Ok(serde_json::from_str(&self.body)?)
-    }
-
-    pub fn is_success(&self) -> bool {
-        (200..300).contains(&self.status)
-    }
-}
+// Use the standard `http::Response<String>` as our public response type.
+pub type HttpResponse = Response<String>;
 
 // Generic HTTP client that can work with either sync or async implementations
 pub struct HttpClient<T> {
@@ -87,16 +33,6 @@ pub struct HttpClient<T> {
 impl<T> HttpClient<T> {
     pub fn new(client: T) -> Self {
         Self { client }
-    }
-}
-
-pub trait SyncClient {
-    fn execute(&self, request: HttpRequest) -> Result<HttpResponse, HttpError>;
-}
-
-impl<T: SyncClient> HttpClient<T> {
-    pub fn execute_sync(&self, request: HttpRequest) -> Result<HttpResponse, HttpError> {
-        self.client.execute(request)
     }
 }
 
@@ -116,39 +52,37 @@ impl<T: AsyncClient> HttpClient<T> {
 #[async_trait]
 impl AsyncClient for reqwest::Client {
     async fn execute(&self, request: HttpRequest) -> Result<HttpResponse, HttpError> {
-        // Build the reqwest request based on our HttpRequest
-        let builder = match request.method {
-            HttpMethod::Get => self.get(&request.url),
-            HttpMethod::Post => self.post(&request.url),
-            HttpMethod::Put => self.put(&request.url),
-            HttpMethod::Delete => self.delete(&request.url),
-            HttpMethod::Patch => self.patch(&request.url),
+        // Build the reqwest request based on our HttpRequest wrapper.
+        // Convert http::Method -> reqwest::Method and use the uri from the request.
+        let req_method = match reqwest::Method::from_bytes(request.method().as_str().as_bytes()) {
+            Ok(m) => m,
+            Err(e) => return Err(HttpError::RequestFailed(format!("invalid method: {}", e))),
         };
 
-        // Add headers
-        let mut rb = builder;
-        for (k, v) in request.headers.iter() {
-            rb = rb.header(k, v);
+        // Use the request URI as a string
+        let url = request.uri().to_string();
+        let mut rb = self.request(req_method, url);
+
+        // Add headers from the http::HeaderMap
+        for (name, value) in request.headers().iter() {
+            let v = value.to_str().unwrap_or_default();
+            rb = rb.header(name.as_str(), v);
         }
 
-        // Add body if present
-        let rb = match request.body {
-            Some(ref body) => rb.body(body.clone()),
-            None => rb,
-        };
+        // Add body if non-empty (http::Request::body returns &String)
+        let body_ref = request.body();
+        if !body_ref.is_empty() {
+            rb = rb.body(body_ref.clone());
+        }
 
         let resp = rb
             .send()
             .await
             .map_err(|e| HttpError::NetworkError(e.to_string()))?;
 
-        let status = resp.status().as_u16();
-        let mut headers_map = HashMap::new();
+        let mut builder = Response::builder().status(resp.status());
         for (name, value) in resp.headers().iter() {
-            headers_map.insert(
-                name.to_string(),
-                value.to_str().unwrap_or_default().to_string(),
-            );
+            builder = builder.header(name, value.to_str().unwrap_or_default());
         }
 
         let body_text = resp
@@ -156,10 +90,10 @@ impl AsyncClient for reqwest::Client {
             .await
             .map_err(|e| HttpError::NetworkError(e.to_string()))?;
 
-        Ok(HttpResponse {
-            status,
-            headers: headers_map,
-            body: body_text,
-        })
+        let response = builder
+            .body(body_text)
+            .map_err(|e| HttpError::RequestFailed(format!("failed to build response: {}", e)))?;
+
+        Ok(response)
     }
 }
