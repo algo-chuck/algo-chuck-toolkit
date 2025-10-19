@@ -5,11 +5,20 @@ use thiserror::Error;
 
 use schwab_api_types::ServiceError;
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum SchwabSuccess<T> {
+    // Tries to parse the expected struct T first.
+    Ok(T),
+    // If the data doesn't match T, it falls back to capturing the raw JSON
+    MismatchedResponse(serde_json::Value),
+}
+
 /// Errors returned by the Trader API (parsed from non-success HTTP responses).
 #[derive(Error, Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum SchwabError {
-    #[error("Trader API Error ({status}): {detail:?}")]
+    #[error("Trader API Error ({status}): {detail:#?}")]
     Trader {
         status: u16, // Add the status code here
         detail: ServiceError,
