@@ -26,17 +26,6 @@ pub type HttpRequest = Request<String>;
 // Use the standard `http::Response<String>` as our public response type.
 pub type HttpResponse = Response<String>;
 
-// --- Convenience constructors and helpers to keep caller code concise ---
-
-/// Build a simple GET `HttpRequest` for the given URL.
-pub fn request_get(url: impl Into<String>) -> HttpRequest {
-    let req = HttpRequest::new(String::new());
-    let (mut parts, body) = req.into_parts();
-    parts.method = HttpMethod::GET;
-    parts.uri = url.into().parse().expect("invalid url");
-    HttpRequest::from_parts(parts, body)
-}
-
 /// Build an `HttpRequest` with a Bearer Authorization header.
 /// `token` should be the raw token (the function adds the "Bearer " prefix).
 pub fn request_with_bearer(method: HttpMethod, url: impl Into<String>, token: &str) -> HttpRequest {
@@ -51,24 +40,6 @@ pub fn request_with_bearer(method: HttpMethod, url: impl Into<String>, token: &s
             .expect("invalid header value"),
     );
     HttpRequest::from_parts(parts, body)
-}
-
-/// Build an `HttpRequest` with a JSON body and Content-Type header.
-pub fn request_json<T: Serialize>(
-    method: HttpMethod,
-    url: impl Into<String>,
-    body: &T,
-) -> Result<HttpRequest, HttpError> {
-    let body_str = serde_json::to_string(body)?;
-    let req = HttpRequest::new(String::new());
-    let (mut parts, _old_body) = req.into_parts();
-    parts.method = method;
-    parts.uri = url.into().parse().expect("invalid url");
-    parts.headers.insert(
-        HeaderName::from_static("content-type"),
-        "application/json".parse().unwrap(),
-    );
-    Ok(HttpRequest::from_parts(parts, body_str))
 }
 
 /// Small extension trait for `HttpResponse` to keep caller code concise.
