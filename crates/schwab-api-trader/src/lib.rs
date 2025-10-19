@@ -1,6 +1,7 @@
+use http::{Method, Request};
 use std::collections::HashMap;
 
-use schwab_api_core::{AsyncClient, HttpClient, HttpError, HttpMethod, HttpResponseExt};
+use schwab_api_core::{AsyncClient, HttpClient, HttpError, HttpResponse};
 use schwab_api_types::UserPreference;
 
 #[derive(Debug, Default)]
@@ -33,14 +34,14 @@ impl QueryParams {
 }
 
 pub struct TraderClient<T> {
-    http_client: HttpClient<T>,
+    client: HttpClient<T>,
     base_url: String,
 }
 
 impl<T> TraderClient<T> {
-    pub fn new(http_client: T) -> Self {
+    pub fn new(client: T) -> Self {
         Self {
-            http_client: HttpClient::new(http_client),
+            client: HttpClient::new(client),
             base_url: "https://api.schwabapi.com/trader/v1".to_owned(),
         }
     }
@@ -51,15 +52,26 @@ impl<T> TraderClient<T> {
     }
 }
 
-impl<T: AsyncClient + Send + Sync> TraderClient<T> {
+impl<T: AsyncClient> TraderClient<T> {
     pub async fn get_user_preference(
         &self,
         access_token: &str,
     ) -> Result<UserPreference, HttpError> {
         let url = self.build_url("/userPreference", None);
-        let request = schwab_api_core::request_with_bearer(HttpMethod::GET, url, &access_token);
-        let response = self.http_client.execute_async(request).await?;
-        let typed: UserPreference = response.json()?;
-        Ok(typed)
+        let bearer_token = format!("Bearer {access_token}");
+        let result = Request::builder()
+            .uri(url)
+            .method(Method::GET)
+            .header("Authorization", bearer_token)
+            .body(String::new());
+
+        match result {
+            Ok(request) => {
+                let response = self.client.execute(request).await?;
+                let typed: UserPreference = response.json()?;
+                Ok(typed)
+            }
+            Err(_) => Err(HttpError::RequestFailed("Failed to build request".into())),
+        }
     }
 }

@@ -1,11 +1,6 @@
 use async_trait::async_trait;
-pub use http::Method as HttpMethod;
-pub use http::header::HeaderName;
-use http::{Request, Response};
 use serde::de::DeserializeOwned;
-pub use serde::{Deserialize, Serialize};
-pub use std::collections::HashMap;
-pub use thiserror::Error;
+use thiserror::Error;
 
 // Error types for our HTTP client
 #[derive(Error, Debug)]
@@ -19,41 +14,22 @@ pub enum HttpError {
 }
 
 // Re-exported `HttpMethod` above for downstream consumers.
+pub type HttpMethod = http::Method;
 
 // Use the standard `http::Request<String>` as our public request type.
-pub type HttpRequest = Request<String>;
+pub type Request = http::Request<String>;
 
 // Use the standard `http::Response<String>` as our public response type.
-pub type HttpResponse = Response<String>;
-
-/// Build an `HttpRequest` with a Bearer Authorization header.
-/// `token` should be the raw token (the function adds the "Bearer " prefix).
-pub fn request_with_bearer(
-    method: HttpMethod,
-    url: impl Into<String>,
-    access_token: &str,
-) -> HttpRequest {
-    let req = HttpRequest::new(String::new());
-    let (mut parts, body) = req.into_parts();
-    parts.method = method;
-    parts.uri = url.into().parse().expect("invalid url");
-    parts.headers.insert(
-        HeaderName::from_static("authorization"),
-        format!("Bearer {}", access_token)
-            .parse()
-            .expect("invalid header value"),
-    );
-    HttpRequest::from_parts(parts, body)
-}
+pub type Response = http::Response<String>;
 
 /// Small extension trait for `HttpResponse` to keep caller code concise.
-pub trait HttpResponseExt {
+pub trait HttpResponse {
     fn body_str(&self) -> &str;
     fn json<T: DeserializeOwned>(&self) -> Result<T, HttpError>;
     fn is_success(&self) -> bool;
 }
 
-impl HttpResponseExt for HttpResponse {
+impl HttpResponse for Response {
     fn body_str(&self) -> &str {
         self.body()
     }
@@ -79,12 +55,12 @@ impl<T> HttpClient<T> {
 }
 
 #[async_trait]
-pub trait AsyncClient {
-    async fn execute(&self, request: HttpRequest) -> Result<HttpResponse, HttpError>;
+pub trait AsyncClient: Send + Sync {
+    async fn execute(&self, request: Request) -> Result<Response, HttpError>;
 }
 
 impl<T: AsyncClient> HttpClient<T> {
-    pub async fn execute_async(&self, request: HttpRequest) -> Result<HttpResponse, HttpError> {
+    pub async fn execute(&self, request: Request) -> Result<Response, HttpError> {
         self.client.execute(request).await
     }
 }
@@ -93,7 +69,7 @@ impl<T: AsyncClient> HttpClient<T> {
 // adapter can be used directly with the higher-level clients.
 #[async_trait]
 impl AsyncClient for reqwest::Client {
-    async fn execute(&self, request: HttpRequest) -> Result<HttpResponse, HttpError> {
+    async fn execute(&self, request: Request) -> Result<Response, HttpError> {
         // Build the reqwest request based on our HttpRequest wrapper.
         // Convert http::Method -> reqwest::Method and use the uri from the request.
         let req_method = match reqwest::Method::from_bytes(request.method().as_str().as_bytes()) {
@@ -122,7 +98,7 @@ impl AsyncClient for reqwest::Client {
             .await
             .map_err(|e| HttpError::NetworkError(e.to_string()))?;
 
-        let mut builder = Response::builder().status(resp.status());
+        let mut builder = http::Response::builder().status(resp.status());
         for (name, value) in resp.headers().iter() {
             builder = builder.header(name, value.to_str().unwrap_or_default());
         }
