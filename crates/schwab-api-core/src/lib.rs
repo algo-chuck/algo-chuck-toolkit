@@ -9,10 +9,10 @@ use schwab_api_types::ServiceError;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
-pub enum SchwabSuccess<T> {
-    // Tries to parse the expected struct T first.
-    Ok(T),
-    // If the data doesn't match T, it falls back to capturing the raw JSON
+pub enum SchwabSuccess<J> {
+    // Tries to parse the expected struct J first.
+    Ok(J),
+    // If the data doesn't match J, it falls back to capturing the raw J
     MismatchedResponse(serde_json::Value),
 }
 
@@ -56,7 +56,7 @@ pub trait HttpResponse {
 
     fn body_str(&self) -> &str;
 
-    fn json<T: DeserializeOwned>(&self) -> Result<T, Self::ParsingError>;
+    fn json<J: DeserializeOwned>(&self) -> Result<J, Self::ParsingError>;
 
     fn is_success(&self) -> bool;
 }
@@ -68,7 +68,7 @@ impl HttpResponse for Response<String> {
         self.body()
     }
 
-    fn json<T: DeserializeOwned>(&self) -> Result<T, Self::ParsingError> {
+    fn json<J: DeserializeOwned>(&self) -> Result<J, Self::ParsingError> {
         serde_json::from_str(self.body())
     }
 
@@ -78,12 +78,12 @@ impl HttpResponse for Response<String> {
 }
 
 // Generic HTTP client that can work with either sync or async implementations
-pub struct HttpClient<T> {
-    client: T,
+pub struct HttpClient<C> {
+    client: C,
 }
 
-impl<T> HttpClient<T> {
-    pub fn new(client: T) -> Self {
+impl<C> HttpClient<C> {
+    pub fn new(client: C) -> Self {
         Self { client }
     }
 }
@@ -124,8 +124,8 @@ pub trait AsyncClient: Send + Sync {
     }
 }
 
-impl<T: AsyncClient> HttpClient<T> {
-    pub async fn execute(&self, request: Request<String>) -> Result<Response<String>, T::Error> {
+impl<C: AsyncClient> HttpClient<C> {
+    pub async fn execute(&self, request: Request<String>) -> Result<Response<String>, C::Error> {
         self.client.execute(request).await
     }
 }

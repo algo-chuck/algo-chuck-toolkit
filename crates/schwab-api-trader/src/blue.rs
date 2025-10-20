@@ -5,10 +5,10 @@ use serde::de::DeserializeOwned;
 use crate::client::TraderClient;
 use crate::params::TraderParams;
 
-impl<T> TraderClient<T>
+impl<C> TraderClient<C>
 where
-    T: AsyncClient,
-    HttpError: From<T::Error>,
+    C: AsyncClient,
+    HttpError: From<C::Error>,
 {
     async fn fetch<'a, R>(&self, params: &'a RequestParams<'a>) -> Result<R, HttpError>
     where
@@ -33,7 +33,7 @@ where
         &self,
         access_token: &str,
     ) -> Result<UserPreference, HttpError> {
-        let params = TraderClient::<T>::user_preference_params(access_token);
+        let params = TraderClient::<C>::user_preference_params(access_token);
         self.fetch(&params).await
     }
 }

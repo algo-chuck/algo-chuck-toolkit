@@ -5,15 +5,15 @@ use std::borrow::Cow;
 
 use crate::params::TraderParams;
 
-pub struct TraderClient<T> {
-    pub client: HttpClient<T>,
+pub struct TraderClient<C> {
+    pub client: HttpClient<C>,
     base_url: &'static str,
 }
 
-impl<T> TraderParams for TraderClient<T> {}
+impl<C> TraderParams for TraderClient<C> {}
 
-impl<T> TraderClient<T> {
-    pub fn new(client: T) -> Self {
+impl<C> TraderClient<C> {
+    pub fn new(client: C) -> Self {
         Self {
             client: HttpClient::new(client),
             base_url: "https://api.schwabapi.com/trader/v1",
