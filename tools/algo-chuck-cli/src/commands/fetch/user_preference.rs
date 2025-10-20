@@ -6,7 +6,7 @@ use schwab_api_trader::TraderClient;
 
 /// Handle the user preference command for data retrieval
 pub async fn handle_user_preference_command(_matches: &ArgMatches) -> Result<()> {
-    println!("🚀 Fetching Logged In Users Preferences");
+    println!("🚀 Fetching Logged In User's Preference");
     // Implement the logic to fetch user preferences here
 
     // Load configuration and TokenManager
