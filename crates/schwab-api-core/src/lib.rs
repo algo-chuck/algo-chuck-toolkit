@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use http::{Request, Response};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
@@ -49,12 +50,6 @@ pub struct RequestParams<'a> {
     pub query: Option<&'a str>,
 }
 
-// Use the standard `http::Request<String>` as our request type.
-type Request = http::Request<String>;
-
-// Use the standard `http::Response<String>` as our response type.
-type Response = http::Response<String>;
-
 /// Small extension trait for `HttpResponse` to keep caller code concise.
 pub trait HttpResponse {
     type ParsingError: std::error::Error + Send + Sync + 'static;
@@ -66,7 +61,7 @@ pub trait HttpResponse {
     fn is_success(&self) -> bool;
 }
 
-impl HttpResponse for Response {
+impl HttpResponse for Response<String> {
     type ParsingError = serde_json::Error;
 
     fn body_str(&self) -> &str {
@@ -97,7 +92,7 @@ impl<T> HttpClient<T> {
 pub trait AsyncClient: Send + Sync {
     type Error: std::error::Error + Send + Sync + 'static;
 
-    async fn execute(&self, request: Request) -> Result<Response, Self::Error>;
+    async fn execute(&self, request: Request<String>) -> Result<Response<String>, Self::Error>;
 
     // Associated function for common error parsing with a default implementation
     fn parse_api_error(status: http::StatusCode, body_text: &str) -> SchwabError {
@@ -130,7 +125,7 @@ pub trait AsyncClient: Send + Sync {
 }
 
 impl<T: AsyncClient> HttpClient<T> {
-    pub async fn execute(&self, request: Request) -> Result<Response, T::Error> {
+    pub async fn execute(&self, request: Request<String>) -> Result<Response<String>, T::Error> {
         self.client.execute(request).await
     }
 }
@@ -141,7 +136,7 @@ impl<T: AsyncClient> HttpClient<T> {
 impl AsyncClient for reqwest::Client {
     type Error = HttpError;
 
-    async fn execute(&self, request: Request) -> Result<Response, Self::Error> {
+    async fn execute(&self, request: Request<String>) -> Result<Response<String>, Self::Error> {
         // --- 1. Safely convert http::Request fields to reqwest::Request parts ---
 
         // Deconstruct Request (assuming it's http::Request<String> or similar)
