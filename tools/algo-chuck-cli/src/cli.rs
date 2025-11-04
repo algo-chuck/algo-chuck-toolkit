@@ -104,6 +104,9 @@ pub fn build_cli() -> Command {
                             Command::new("account-numbers")
                                 .about("Get list of account numbers and their encrypted values."),
                         )
+                        .subcommand(Command::new("accounts").about(
+                            "Get linked account(s) balances and positions for the logged in user.",
+                        ))
                         .subcommand(
                             Command::new("user-preference")
                                 .about("Get user preference information for the logged in user."),
