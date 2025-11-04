@@ -31,6 +31,17 @@ where
         Ok(typed)
     }
 
+    async fn execute<'a>(&self, params: &'a RequestParams<'a>) -> Result<(), HttpError> {
+        let request = self.build_request(params)?;
+
+        self.client
+            .execute(request)
+            .await
+            .map_err(HttpError::from)?;
+
+        Ok(())
+    }
+
     // Accounts
 
     pub async fn get_account_numbers(
@@ -118,14 +129,7 @@ where
     ) -> Result<(), HttpError> {
         let params =
             TraderClient::<C>::place_order_params(access_token, account_number, order_json);
-        let request = self.build_request(&params)?;
-
-        self.client
-            .execute(request)
-            .await
-            .map_err(HttpError::from)?;
-
-        Ok(())
+        self.execute(&params).await
     }
 
     pub async fn cancel_order(
@@ -135,14 +139,7 @@ where
         order_id: i64,
     ) -> Result<(), HttpError> {
         let params = TraderClient::<C>::cancel_order_params(access_token, account_number, order_id);
-        let request = self.build_request(&params)?;
-
-        self.client
-            .execute(request)
-            .await
-            .map_err(HttpError::from)?;
-
-        Ok(())
+        self.execute(&params).await
     }
 
     pub async fn replace_order(
@@ -158,14 +155,7 @@ where
             order_id,
             order_json,
         );
-        let request = self.build_request(&params)?;
-
-        self.client
-            .execute(request)
-            .await
-            .map_err(HttpError::from)?;
-
-        Ok(())
+        self.execute(&params).await
     }
 
     pub async fn preview_order(
