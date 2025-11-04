@@ -104,9 +104,34 @@ pub fn build_cli() -> Command {
                             Command::new("account-numbers")
                                 .about("Get list of account numbers and their encrypted values."),
                         )
-                        .subcommand(Command::new("accounts").about(
-                            "Get linked account(s) balances and positions for the logged in user.",
-                        ))
+                        .subcommand(
+                            Command::new("accounts")
+                                .about("Get linked account(s) balances and positions for the logged in user.")
+                                .arg(
+                                    Arg::new("fields")
+                                        .long("fields")
+                                        .value_name("FIELDS")
+                                        .help("Fields to include in response (e.g., 'positions')"),
+                                ),
+                        )
+                        .subcommand(
+                            Command::new("account")
+                                .about("Get a specific account balance and positions for the logged in user.")
+                                .arg(
+                                    Arg::new("account-number")
+                                        .long("account-number")
+                                        .short('a')
+                                        .value_name("ACCOUNT_NUMBER")
+                                        .help("The encrypted ID of the account")
+                                        .required(true),
+                                )
+                                .arg(
+                                    Arg::new("fields")
+                                        .long("fields")
+                                        .value_name("FIELDS")
+                                        .help("Fields to include in response (e.g., 'positions')"),
+                                ),
+                        )
                         .subcommand(
                             Command::new("user-preference")
                                 .about("Get user preference information for the logged in user."),

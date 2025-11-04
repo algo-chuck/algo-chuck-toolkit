@@ -29,6 +29,8 @@ where
         Ok(typed)
     }
 
+    // Accounts
+
     pub async fn get_account_numbers(
         &self,
         access_token: &str,
@@ -45,6 +47,18 @@ where
         let params = TraderClient::<C>::get_accounts_params(access_token, fields);
         self.fetch(&params).await
     }
+
+    pub async fn get_account(
+        &self,
+        access_token: &str,
+        account_number: &str,
+        fields: Option<&str>,
+    ) -> Result<Account, HttpError> {
+        let params = TraderClient::<C>::get_account_params(access_token, account_number, fields);
+        self.fetch(&params).await
+    }
+
+    // User Preference
 
     pub async fn get_user_preference(
         &self,

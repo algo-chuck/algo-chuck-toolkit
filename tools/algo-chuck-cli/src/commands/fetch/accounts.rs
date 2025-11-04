@@ -26,9 +26,8 @@ pub async fn handle_account_numbers_command(_matches: &ArgMatches) -> Result<()>
 }
 
 /// Handle the accounts command for data retrieval
-pub async fn handle_accounts_command(_matches: &ArgMatches) -> Result<()> {
+pub async fn handle_accounts_command(matches: &ArgMatches) -> Result<()> {
     println!("🚀 Fetching Accounts");
-    // Implement the logic to fetch accounts here
 
     // Load configuration and TokenManager
     let config_manager = ConfigManager::new()?;
@@ -39,9 +38,40 @@ pub async fn handle_accounts_command(_matches: &ArgMatches) -> Result<()> {
         .get_access_token()?
         .ok_or_else(|| anyhow::anyhow!("No access token found. Please run 'chuck login' first."))?;
 
+    // Get optional fields parameter
+    let fields = matches.get_one::<String>("fields").map(|s| s.as_str());
+
+    let client = TraderClient::new(reqwest::Client::new());
+    let data = client.get_accounts(&access_token, fields).await?;
+    println!("{:#?}", data);
+
+    Ok(())
+}
+
+/// Handle the account command for data retrieval
+pub async fn handle_account_command(matches: &ArgMatches) -> Result<()> {
+    println!("🚀 Fetching Account");
+
+    // Load configuration and TokenManager
+    let config_manager = ConfigManager::new()?;
+    let token_manager = TokenManager::new(&config_manager)?;
+
+    // Get access token from TokenManager
+    let access_token = token_manager
+        .get_access_token()?
+        .ok_or_else(|| anyhow::anyhow!("No access token found. Please run 'chuck login' first."))?;
+
+    // Get required account number parameter
+    let account_number = matches
+        .get_one::<String>("account-number")
+        .ok_or_else(|| anyhow::anyhow!("Account number is required"))?;
+
+    // Get optional fields parameter
+    let fields = matches.get_one::<String>("fields").map(|s| s.as_str());
+
     let client = TraderClient::new(reqwest::Client::new());
     let data = client
-        .get_accounts(&access_token, Some("positions"))
+        .get_account(&access_token, account_number, fields)
         .await?;
     println!("{:#?}", data);
 
