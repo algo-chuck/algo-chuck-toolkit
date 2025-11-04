@@ -36,7 +36,7 @@ impl<C> TraderClient<C> {
         &self,
         params: &RequestParams<B>,
     ) -> Result<Request<String>, HttpError> {
-        let url = self.build_url(params.path, params.query);
+        let url = self.build_url(&params.path, params.query.as_deref());
         let bearer_token = format!("Bearer {}", params.access_token);
 
         // Serialize the body if present

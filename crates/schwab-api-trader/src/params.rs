@@ -9,18 +9,18 @@ pub trait TraderParams {
         RequestParams {
             access_token,
             body: None,
-            path: "/accounts/accountNumbers",
+            path: "/accounts/accountNumbers".to_string(),
             method: Method::GET,
             query: None,
         }
     }
 
     fn get_accounts_params<'a>(access_token: &'a str, fields: Option<&str>) -> RequestParams<'a> {
-        let query = fields.map(|f| Box::leak(format!("fields={}", f).into_boxed_str()) as &str);
+        let query = fields.map(|f| format!("fields={}", f));
         RequestParams {
             access_token,
             body: None,
-            path: "/accounts",
+            path: "/accounts".to_string(),
             method: Method::GET,
             query,
         }
@@ -31,8 +31,8 @@ pub trait TraderParams {
         account_number: &str,
         fields: Option<&str>,
     ) -> RequestParams<'a> {
-        let path = Box::leak(format!("/accounts/{}", account_number).into_boxed_str()) as &str;
-        let query = fields.map(|f| Box::leak(format!("fields={}", f).into_boxed_str()) as &str);
+        let path = format!("/accounts/{}", account_number);
+        let query = fields.map(|f| format!("fields={}", f));
         RequestParams {
             access_token,
             body: None,
@@ -51,8 +51,7 @@ pub trait TraderParams {
         max_results: Option<i64>,
         status: Option<&str>,
     ) -> RequestParams<'a> {
-        let path =
-            Box::leak(format!("/accounts/{}/orders", account_number).into_boxed_str()) as &str;
+        let path = format!("/accounts/{}/orders", account_number);
         let mut query_parts = vec![
             format!("fromEnteredTime={}", from_entered_time),
             format!("toEnteredTime={}", to_entered_time),
@@ -63,7 +62,7 @@ pub trait TraderParams {
         if let Some(s) = status {
             query_parts.push(format!("status={}", s));
         }
-        let query = Box::leak(query_parts.join("&").into_boxed_str()) as &str;
+        let query = query_parts.join("&");
         RequestParams {
             access_token,
             body: None,
@@ -78,8 +77,7 @@ pub trait TraderParams {
         account_number: &str,
         order: &'a OrderRequest,
     ) -> RequestParams<'a, &'a OrderRequest> {
-        let path =
-            Box::leak(format!("/accounts/{}/orders", account_number).into_boxed_str()) as &str;
+        let path = format!("/accounts/{}/orders", account_number);
         RequestParams {
             access_token,
             body: Some(order),
@@ -94,9 +92,7 @@ pub trait TraderParams {
         account_number: &str,
         order_id: i64,
     ) -> RequestParams<'a> {
-        let path =
-            Box::leak(format!("/accounts/{}/orders/{}", account_number, order_id).into_boxed_str())
-                as &str;
+        let path = format!("/accounts/{}/orders/{}", account_number, order_id);
         RequestParams {
             access_token,
             body: None,
@@ -111,9 +107,7 @@ pub trait TraderParams {
         account_number: &str,
         order_id: i64,
     ) -> RequestParams<'a> {
-        let path =
-            Box::leak(format!("/accounts/{}/orders/{}", account_number, order_id).into_boxed_str())
-                as &str;
+        let path = format!("/accounts/{}/orders/{}", account_number, order_id);
         RequestParams {
             access_token,
             body: None,
@@ -129,9 +123,7 @@ pub trait TraderParams {
         order_id: i64,
         order: &'a OrderRequest,
     ) -> RequestParams<'a, &'a OrderRequest> {
-        let path =
-            Box::leak(format!("/accounts/{}/orders/{}", account_number, order_id).into_boxed_str())
-                as &str;
+        let path = format!("/accounts/{}/orders/{}", account_number, order_id);
         RequestParams {
             access_token,
             body: Some(order),
@@ -158,11 +150,11 @@ pub trait TraderParams {
         if let Some(s) = status {
             query_parts.push(format!("status={}", s));
         }
-        let query = Box::leak(query_parts.join("&").into_boxed_str()) as &str;
+        let query = query_parts.join("&");
         RequestParams {
             access_token,
             body: None,
-            path: "/orders",
+            path: "/orders".to_string(),
             method: Method::GET,
             query: Some(query),
         }
@@ -173,8 +165,7 @@ pub trait TraderParams {
         account_number: &str,
         preview: &'a PreviewOrder,
     ) -> RequestParams<'a, &'a PreviewOrder> {
-        let path = Box::leak(format!("/accounts/{}/previewOrder", account_number).into_boxed_str())
-            as &str;
+        let path = format!("/accounts/{}/previewOrder", account_number);
         RequestParams {
             access_token,
             body: Some(preview),
@@ -193,8 +184,7 @@ pub trait TraderParams {
         types: &str,
         symbol: Option<&str>,
     ) -> RequestParams<'a> {
-        let path = Box::leak(format!("/accounts/{}/transactions", account_number).into_boxed_str())
-            as &str;
+        let path = format!("/accounts/{}/transactions", account_number);
         let mut query_parts = vec![
             format!("startDate={}", start_date),
             format!("endDate={}", end_date),
@@ -203,7 +193,7 @@ pub trait TraderParams {
         if let Some(sym) = symbol {
             query_parts.push(format!("symbol={}", sym));
         }
-        let query = Box::leak(query_parts.join("&").into_boxed_str()) as &str;
+        let query = query_parts.join("&");
         RequestParams {
             access_token,
             body: None,
@@ -218,13 +208,10 @@ pub trait TraderParams {
         account_number: &str,
         transaction_id: i64,
     ) -> RequestParams<'a> {
-        let path = Box::leak(
-            format!(
-                "/accounts/{}/transactions/{}",
-                account_number, transaction_id
-            )
-            .into_boxed_str(),
-        ) as &str;
+        let path = format!(
+            "/accounts/{}/transactions/{}",
+            account_number, transaction_id
+        );
         RequestParams {
             access_token,
             body: None,
@@ -239,7 +226,7 @@ pub trait TraderParams {
         RequestParams {
             access_token,
             body: None,
-            path: "/userPreference",
+            path: "/userPreference".to_string(),
             method: Method::GET,
             query: None,
         }

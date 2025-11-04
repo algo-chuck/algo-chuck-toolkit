@@ -45,8 +45,8 @@ pub struct RequestParams<'a, B = ()> {
     pub access_token: &'a str,
     pub body: Option<B>,
     pub method: http::Method,
-    pub path: &'a str,
-    pub query: Option<&'a str>,
+    pub path: String,
+    pub query: Option<String>,
 }
 
 /// Small extension trait for `HttpResponse` to keep caller code concise.
