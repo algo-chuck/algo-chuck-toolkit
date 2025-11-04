@@ -243,11 +243,11 @@ pub async fn handle_preview_order_command(matches: &ArgMatches) -> Result<()> {
     let order_json = read_order_json(matches)?;
 
     let client = TraderClient::new(reqwest::Client::new());
-    client
+    let preview = client
         .preview_order(&access_token, account_number, order_json)
         .await?;
 
-    println!("✅ Order preview completed successfully");
+    println!("{:#?}", preview);
 
     Ok(())
 }

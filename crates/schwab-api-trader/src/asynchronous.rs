@@ -1,5 +1,7 @@
 use schwab_api_core::{AsyncClient, HttpError, RequestParams};
-use schwab_api_types::{Account, AccountNumberHash, Order, Transaction, UserPreference};
+use schwab_api_types::{
+    Account, AccountNumberHash, Order, PreviewOrder, Transaction, UserPreference,
+};
 use serde::de::DeserializeOwned;
 
 use crate::client::TraderClient;
@@ -171,21 +173,10 @@ where
         access_token: &str,
         account_number: &str,
         order_json: String,
-    ) -> Result<(), HttpError> {
+    ) -> Result<PreviewOrder, HttpError> {
         let params =
             TraderClient::<C>::preview_order_params(access_token, account_number, order_json);
-        let request = self.build_request(&params)?;
-
-        let response = self
-            .client
-            .execute(request)
-            .await
-            .map_err(HttpError::from)?;
-
-        // Preview order returns data, so we parse it (even though we're not returning it for now)
-        let _preview_result: serde_json::Value = self.parse_ok_response(&response)?;
-
-        Ok(())
+        self.fetch(&params).await
     }
 
     // Transactions
