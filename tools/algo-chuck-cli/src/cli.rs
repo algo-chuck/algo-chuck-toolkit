@@ -212,6 +212,117 @@ pub fn build_cli() -> Command {
                 ),
         )
         .subcommand(
+            Command::new("place-order")
+                .about("Place order for a specific account.")
+                .arg(
+                    Arg::new("account-number")
+                        .long("account-number")
+                        .short('a')
+                        .value_name("ACCOUNT_NUMBER")
+                        .help("The encrypted ID of the account")
+                        .required(true),
+                )
+                .arg(
+                    Arg::new("order-file")
+                        .long("order-file")
+                        .short('f')
+                        .value_name("FILE")
+                        .help("Path to JSON file containing order request")
+                        .conflicts_with("stdin"),
+                )
+                .arg(
+                    Arg::new("stdin")
+                        .long("stdin")
+                        .help("Read order JSON from stdin")
+                        .action(clap::ArgAction::SetTrue)
+                        .conflicts_with("order-file"),
+                ),
+        )
+        .subcommand(
+            Command::new("cancel-order")
+                .about("Cancel an order for a specific account")
+                .arg(
+                    Arg::new("account-number")
+                        .long("account-number")
+                        .short('a')
+                        .value_name("ACCOUNT_NUMBER")
+                        .help("The encrypted ID of the account")
+                        .required(true),
+                )
+                .arg(
+                    Arg::new("order-id")
+                        .long("order-id")
+                        .short('o')
+                        .value_name("ORDER_ID")
+                        .help("The ID of the order to cancel")
+                        .required(true)
+                        .value_parser(clap::value_parser!(i64)),
+                ),
+        )
+        .subcommand(
+            Command::new("replace-order")
+                .about("Replace order for a specific account")
+                .arg(
+                    Arg::new("account-number")
+                        .long("account-number")
+                        .short('a')
+                        .value_name("ACCOUNT_NUMBER")
+                        .help("The encrypted ID of the account")
+                        .required(true),
+                )
+                .arg(
+                    Arg::new("order-id")
+                        .long("order-id")
+                        .short('o')
+                        .value_name("ORDER_ID")
+                        .help("The ID of the order to replace")
+                        .required(true)
+                        .value_parser(clap::value_parser!(i64)),
+                )
+                .arg(
+                    Arg::new("order-file")
+                        .long("order-file")
+                        .short('f')
+                        .value_name("FILE")
+                        .help("Path to JSON file containing replacement order request")
+                        .conflicts_with("stdin"),
+                )
+                .arg(
+                    Arg::new("stdin")
+                        .long("stdin")
+                        .help("Read order JSON from stdin")
+                        .action(clap::ArgAction::SetTrue)
+                        .conflicts_with("order-file"),
+                ),
+        )
+        .subcommand(
+            Command::new("preview-order")
+                .about("Preview order for a specific account. **Coming Soon**.")
+                .arg(
+                    Arg::new("account-number")
+                        .long("account-number")
+                        .short('a')
+                        .value_name("ACCOUNT_NUMBER")
+                        .help("The encrypted ID of the account")
+                        .required(true),
+                )
+                .arg(
+                    Arg::new("order-file")
+                        .long("order-file")
+                        .short('f')
+                        .value_name("FILE")
+                        .help("Path to JSON file containing order request")
+                        .conflicts_with("stdin"),
+                )
+                .arg(
+                    Arg::new("stdin")
+                        .long("stdin")
+                        .help("Read order JSON from stdin")
+                        .action(clap::ArgAction::SetTrue)
+                        .conflicts_with("order-file"),
+                ),
+        )
+        .subcommand(
             Command::new("transactions")
                 .about("Get all transactions information for a specific account.")
                 .arg(

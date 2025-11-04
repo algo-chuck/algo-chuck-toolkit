@@ -11,9 +11,10 @@ use anyhow::Result;
 use commands::{
     handle_account_command, handle_account_numbers_command, handle_account_order_command,
     handle_account_orders_command, handle_accounts_command, handle_ca_command,
-    handle_config_command, handle_login_command, handle_orders_command, handle_refresh_command,
-    handle_status_command, handle_transaction_command, handle_transactions_command,
-    handle_user_preference_command,
+    handle_cancel_order_command, handle_config_command, handle_login_command,
+    handle_orders_command, handle_place_order_command, handle_preview_order_command,
+    handle_refresh_command, handle_replace_order_command, handle_status_command,
+    handle_transaction_command, handle_transactions_command, handle_user_preference_command,
 };
 
 #[tokio::main]
@@ -32,6 +33,10 @@ async fn main() -> Result<()> {
         Some(("account-orders", sub_matches)) => handle_account_orders_command(sub_matches).await,
         Some(("account-order", sub_matches)) => handle_account_order_command(sub_matches).await,
         Some(("orders", sub_matches)) => handle_orders_command(sub_matches).await,
+        Some(("place-order", sub_matches)) => handle_place_order_command(sub_matches).await,
+        Some(("cancel-order", sub_matches)) => handle_cancel_order_command(sub_matches).await,
+        Some(("replace-order", sub_matches)) => handle_replace_order_command(sub_matches).await,
+        Some(("preview-order", sub_matches)) => handle_preview_order_command(sub_matches).await,
         Some(("transactions", sub_matches)) => handle_transactions_command(sub_matches).await,
         Some(("transaction", sub_matches)) => handle_transaction_command(sub_matches).await,
         Some(("user-preference", sub_matches)) => handle_user_preference_command(sub_matches).await,

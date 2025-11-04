@@ -1,5 +1,6 @@
 use anyhow::Result;
 use clap::ArgMatches;
+use std::io::Read;
 
 use crate::config::{ConfigManager, TokenManager};
 use schwab_api_trader::TraderClient;
@@ -120,4 +121,152 @@ pub async fn handle_orders_command(matches: &ArgMatches) -> Result<()> {
     println!("{:#?}", data);
 
     Ok(())
+}
+
+/// Handle the place order command
+pub async fn handle_place_order_command(matches: &ArgMatches) -> Result<()> {
+    println!("🚀 Placing Order");
+
+    // Load configuration and TokenManager
+    let config_manager = ConfigManager::new()?;
+    let token_manager = TokenManager::new(&config_manager)?;
+
+    // Get access token from TokenManager
+    let access_token = token_manager
+        .get_access_token()?
+        .ok_or_else(|| anyhow::anyhow!("No access token found. Please run 'chuck login' first."))?;
+
+    // Get required parameters
+    let account_number = matches
+        .get_one::<String>("account-number")
+        .ok_or_else(|| anyhow::anyhow!("Account number is required"))?;
+
+    // Read order JSON from file or stdin
+    let order_json = read_order_json(matches)?;
+
+    let client = TraderClient::new(reqwest::Client::new());
+    client
+        .place_order(&access_token, account_number, order_json)
+        .await?;
+
+    println!("✅ Order placed successfully");
+
+    Ok(())
+}
+
+/// Handle the cancel order command
+pub async fn handle_cancel_order_command(matches: &ArgMatches) -> Result<()> {
+    println!("🚀 Canceling Order");
+
+    // Load configuration and TokenManager
+    let config_manager = ConfigManager::new()?;
+    let token_manager = TokenManager::new(&config_manager)?;
+
+    // Get access token from TokenManager
+    let access_token = token_manager
+        .get_access_token()?
+        .ok_or_else(|| anyhow::anyhow!("No access token found. Please run 'chuck login' first."))?;
+
+    // Get required parameters
+    let account_number = matches
+        .get_one::<String>("account-number")
+        .ok_or_else(|| anyhow::anyhow!("Account number is required"))?;
+
+    let order_id = matches
+        .get_one::<i64>("order-id")
+        .ok_or_else(|| anyhow::anyhow!("Order ID is required"))?;
+
+    let client = TraderClient::new(reqwest::Client::new());
+    client
+        .cancel_order(&access_token, account_number, *order_id)
+        .await?;
+
+    println!("✅ Order canceled successfully");
+
+    Ok(())
+}
+
+/// Handle the replace order command
+pub async fn handle_replace_order_command(matches: &ArgMatches) -> Result<()> {
+    println!("🚀 Replacing Order");
+
+    // Load configuration and TokenManager
+    let config_manager = ConfigManager::new()?;
+    let token_manager = TokenManager::new(&config_manager)?;
+
+    // Get access token from TokenManager
+    let access_token = token_manager
+        .get_access_token()?
+        .ok_or_else(|| anyhow::anyhow!("No access token found. Please run 'chuck login' first."))?;
+
+    // Get required parameters
+    let account_number = matches
+        .get_one::<String>("account-number")
+        .ok_or_else(|| anyhow::anyhow!("Account number is required"))?;
+
+    let order_id = matches
+        .get_one::<i64>("order-id")
+        .ok_or_else(|| anyhow::anyhow!("Order ID is required"))?;
+
+    // Read order JSON from file or stdin
+    let order_json = read_order_json(matches)?;
+
+    let client = TraderClient::new(reqwest::Client::new());
+    client
+        .replace_order(&access_token, account_number, *order_id, order_json)
+        .await?;
+
+    println!("✅ Order replaced successfully");
+
+    Ok(())
+}
+
+/// Handle the preview order command
+pub async fn handle_preview_order_command(matches: &ArgMatches) -> Result<()> {
+    println!("🚀 Previewing Order");
+
+    // Load configuration and TokenManager
+    let config_manager = ConfigManager::new()?;
+    let token_manager = TokenManager::new(&config_manager)?;
+
+    // Get access token from TokenManager
+    let access_token = token_manager
+        .get_access_token()?
+        .ok_or_else(|| anyhow::anyhow!("No access token found. Please run 'chuck login' first."))?;
+
+    // Get required parameters
+    let account_number = matches
+        .get_one::<String>("account-number")
+        .ok_or_else(|| anyhow::anyhow!("Account number is required"))?;
+
+    // Read order JSON from file or stdin
+    let order_json = read_order_json(matches)?;
+
+    let client = TraderClient::new(reqwest::Client::new());
+    client
+        .preview_order(&access_token, account_number, order_json)
+        .await?;
+
+    println!("✅ Order preview completed successfully");
+
+    Ok(())
+}
+
+/// Helper function to read order JSON from file or stdin
+fn read_order_json(matches: &ArgMatches) -> Result<String> {
+    if let Some(file_path) = matches.get_one::<String>("order-file") {
+        // Read from file
+        std::fs::read_to_string(file_path)
+            .map_err(|e| anyhow::anyhow!("Failed to read order file '{}': {}", file_path, e))
+    } else if matches.get_flag("stdin") {
+        // Read from stdin
+        let mut buffer = String::new();
+        Read::read_to_string(&mut std::io::stdin(), &mut buffer)
+            .map_err(|e| anyhow::anyhow!("Failed to read from stdin: {}", e))?;
+        Ok(buffer)
+    } else {
+        Err(anyhow::anyhow!(
+            "Order JSON must be provided via --order-file or --stdin"
+        ))
+    }
 }
