@@ -2,7 +2,6 @@ use async_trait::async_trait;
 use http::{Request, Response};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
-use std::borrow::Cow;
 use thiserror::Error;
 
 use schwab_api_types::ServiceError;
@@ -42,9 +41,9 @@ pub enum HttpError {
 }
 
 #[derive(Debug)]
-pub struct RequestParams<'a> {
+pub struct RequestParams<'a, B = ()> {
     pub access_token: &'a str,
-    pub body: Option<Cow<'static, str>>,
+    pub body: Option<B>,
     pub method: http::Method,
     pub path: &'a str,
     pub query: Option<&'a str>,

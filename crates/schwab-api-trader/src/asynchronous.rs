@@ -1,7 +1,8 @@
 use schwab_api_core::{AsyncClient, HttpError, RequestParams};
 use schwab_api_types::{
-    Account, AccountNumberHash, Order, PreviewOrder, Transaction, UserPreference,
+    Account, AccountNumberHash, Order, OrderRequest, PreviewOrder, Transaction, UserPreference,
 };
+use serde::Serialize;
 use serde::de::DeserializeOwned;
 
 use crate::client::TraderClient;
@@ -12,9 +13,10 @@ where
     C: AsyncClient,
     HttpError: From<C::Error>,
 {
-    async fn fetch<'a, R>(&self, params: &'a RequestParams<'a>) -> Result<R, HttpError>
+    async fn fetch<'a, R, B>(&self, params: &'a RequestParams<'a, B>) -> Result<R, HttpError>
     where
         R: DeserializeOwned,
+        B: Serialize,
     {
         let request = self.build_request(params)?;
 
@@ -31,7 +33,10 @@ where
         Ok(typed)
     }
 
-    async fn execute<'a>(&self, params: &'a RequestParams<'a>) -> Result<(), HttpError> {
+    async fn execute<'a, B>(&self, params: &'a RequestParams<'a, B>) -> Result<(), HttpError>
+    where
+        B: Serialize,
+    {
         let request = self.build_request(params)?;
 
         self.client
@@ -125,10 +130,9 @@ where
         &self,
         access_token: &str,
         account_number: &str,
-        order_json: String,
+        order: &OrderRequest,
     ) -> Result<(), HttpError> {
-        let params =
-            TraderClient::<C>::place_order_params(access_token, account_number, order_json);
+        let params = TraderClient::<C>::place_order_params(access_token, account_number, order);
         self.execute(&params).await
     }
 
@@ -147,14 +151,10 @@ where
         access_token: &str,
         account_number: &str,
         order_id: i64,
-        order_json: String,
+        order: &OrderRequest,
     ) -> Result<(), HttpError> {
-        let params = TraderClient::<C>::replace_order_params(
-            access_token,
-            account_number,
-            order_id,
-            order_json,
-        );
+        let params =
+            TraderClient::<C>::replace_order_params(access_token, account_number, order_id, order);
         self.execute(&params).await
     }
 
@@ -162,10 +162,9 @@ where
         &self,
         access_token: &str,
         account_number: &str,
-        order_json: String,
+        preview: &PreviewOrder,
     ) -> Result<PreviewOrder, HttpError> {
-        let params =
-            TraderClient::<C>::preview_order_params(access_token, account_number, order_json);
+        let params = TraderClient::<C>::preview_order_params(access_token, account_number, preview);
         self.fetch(&params).await
     }
 

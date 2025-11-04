@@ -1,5 +1,6 @@
 use anyhow::Result;
 use clap::ArgMatches;
+use serde::de::DeserializeOwned;
 use std::io::Read;
 
 use crate::config::{ConfigManager, TokenManager};
@@ -142,11 +143,11 @@ pub async fn handle_place_order_command(matches: &ArgMatches) -> Result<()> {
         .ok_or_else(|| anyhow::anyhow!("Account number is required"))?;
 
     // Read order JSON from file or stdin
-    let order_json = read_order_json(matches)?;
+    let order_json = read_json(matches)?;
 
     let client = TraderClient::new(reqwest::Client::new());
     client
-        .place_order(&access_token, account_number, order_json)
+        .place_order(&access_token, account_number, &order_json)
         .await?;
 
     println!("✅ Order placed successfully");
@@ -209,11 +210,11 @@ pub async fn handle_replace_order_command(matches: &ArgMatches) -> Result<()> {
         .ok_or_else(|| anyhow::anyhow!("Order ID is required"))?;
 
     // Read order JSON from file or stdin
-    let order_json = read_order_json(matches)?;
+    let order_json = read_json(matches)?;
 
     let client = TraderClient::new(reqwest::Client::new());
     client
-        .replace_order(&access_token, account_number, *order_id, order_json)
+        .replace_order(&access_token, account_number, *order_id, &order_json)
         .await?;
 
     println!("✅ Order replaced successfully");
@@ -239,12 +240,12 @@ pub async fn handle_preview_order_command(matches: &ArgMatches) -> Result<()> {
         .get_one::<String>("account-number")
         .ok_or_else(|| anyhow::anyhow!("Account number is required"))?;
 
-    // Read order JSON from file or stdin
-    let order_json = read_order_json(matches)?;
+    // Read preview JSON from file or stdin
+    let preview_json = read_json(matches)?;
 
     let client = TraderClient::new(reqwest::Client::new());
     let preview = client
-        .preview_order(&access_token, account_number, order_json)
+        .preview_order(&access_token, account_number, &preview_json)
         .await?;
 
     println!("{:#?}", preview);
@@ -252,21 +253,24 @@ pub async fn handle_preview_order_command(matches: &ArgMatches) -> Result<()> {
     Ok(())
 }
 
-/// Helper function to read order JSON from file or stdin
-fn read_order_json(matches: &ArgMatches) -> Result<String> {
-    if let Some(file_path) = matches.get_one::<String>("order-file") {
+/// Generic helper function to read and parse JSON from file or stdin
+fn read_json<T: DeserializeOwned>(matches: &ArgMatches) -> Result<T> {
+    let json_str = if let Some(file_path) = matches.get_one::<String>("order-file") {
         // Read from file
         std::fs::read_to_string(file_path)
-            .map_err(|e| anyhow::anyhow!("Failed to read order file '{}': {}", file_path, e))
+            .map_err(|e| anyhow::anyhow!("Failed to read file '{}': {}", file_path, e))?
     } else if matches.get_flag("stdin") {
         // Read from stdin
         let mut buffer = String::new();
         Read::read_to_string(&mut std::io::stdin(), &mut buffer)
             .map_err(|e| anyhow::anyhow!("Failed to read from stdin: {}", e))?;
-        Ok(buffer)
+        buffer
     } else {
-        Err(anyhow::anyhow!(
-            "Order JSON must be provided via --order-file or --stdin"
-        ))
-    }
+        return Err(anyhow::anyhow!(
+            "JSON must be provided via --order-file or --stdin"
+        ));
+    };
+
+    // Parse JSON string into type T
+    serde_json::from_str(&json_str).map_err(|e| anyhow::anyhow!("Failed to parse JSON: {}", e))
 }

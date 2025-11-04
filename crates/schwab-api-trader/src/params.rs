@@ -1,7 +1,7 @@
 use http::Method;
-use std::borrow::Cow;
 
 use schwab_api_core::RequestParams;
+use schwab_api_types::{OrderRequest, PreviewOrder};
 
 pub trait TraderParams {
     // Accounts
@@ -76,13 +76,13 @@ pub trait TraderParams {
     fn place_order_params<'a>(
         access_token: &'a str,
         account_number: &str,
-        body: String,
-    ) -> RequestParams<'a> {
+        order: &'a OrderRequest,
+    ) -> RequestParams<'a, &'a OrderRequest> {
         let path =
             Box::leak(format!("/accounts/{}/orders", account_number).into_boxed_str()) as &str;
         RequestParams {
             access_token,
-            body: Some(Cow::Owned(body)),
+            body: Some(order),
             path,
             method: Method::POST,
             query: None,
@@ -127,14 +127,14 @@ pub trait TraderParams {
         access_token: &'a str,
         account_number: &str,
         order_id: i64,
-        body: String,
-    ) -> RequestParams<'a> {
+        order: &'a OrderRequest,
+    ) -> RequestParams<'a, &'a OrderRequest> {
         let path =
             Box::leak(format!("/accounts/{}/orders/{}", account_number, order_id).into_boxed_str())
                 as &str;
         RequestParams {
             access_token,
-            body: Some(Cow::Owned(body)),
+            body: Some(order),
             path,
             method: Method::PUT,
             query: None,
@@ -171,13 +171,13 @@ pub trait TraderParams {
     fn preview_order_params<'a>(
         access_token: &'a str,
         account_number: &str,
-        body: String,
-    ) -> RequestParams<'a> {
+        preview: &'a PreviewOrder,
+    ) -> RequestParams<'a, &'a PreviewOrder> {
         let path = Box::leak(format!("/accounts/{}/previewOrder", account_number).into_boxed_str())
             as &str;
         RequestParams {
             access_token,
-            body: Some(Cow::Owned(body)),
+            body: Some(preview),
             path,
             method: Method::POST,
             query: None,

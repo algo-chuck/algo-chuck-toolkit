@@ -1,7 +1,7 @@
 use http::{Request, Response};
 use schwab_api_core::{HttpClient, HttpError, HttpResponse, RequestParams, SchwabSuccess};
+use serde::Serialize;
 use serde::de::{DeserializeOwned, Error};
-use std::borrow::Cow;
 
 use crate::params::TraderParams;
 
@@ -32,17 +32,18 @@ impl<C> TraderClient<C> {
         format!("{}{}{}", self.base_url, path, query_prefix)
     }
 
-    pub fn build_request(&self, params: &RequestParams) -> Result<Request<String>, HttpError> {
+    pub fn build_request<B: Serialize>(
+        &self,
+        params: &RequestParams<B>,
+    ) -> Result<Request<String>, HttpError> {
         let url = self.build_url(params.path, params.query);
         let bearer_token = format!("Bearer {}", params.access_token);
 
-        // Determine the body content
-        let final_body = params
-            .body
-            .as_ref()
-            .unwrap_or(&Cow::from(""))
-            .clone()
-            .into_owned();
+        // Serialize the body if present
+        let final_body = match &params.body {
+            Some(body) => serde_json::to_string(body)?,
+            None => String::new(),
+        };
 
         Request::builder()
             .uri(url)
