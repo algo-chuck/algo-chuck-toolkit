@@ -5,6 +5,7 @@ use trader::handle_trader_command;
 
 mod accounts;
 mod trader;
+mod transactions;
 mod user_preference;
 
 /// Handle the fetch command for data retrieval
