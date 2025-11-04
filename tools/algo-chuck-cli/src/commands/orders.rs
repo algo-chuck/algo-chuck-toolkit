@@ -38,7 +38,7 @@ pub async fn handle_account_orders_command(matches: &ArgMatches) -> Result<()> {
 
     let client = TraderClient::new(reqwest::Client::new());
     let data = client
-        .get_orders_by_path_param(
+        .get_orders_by_path(
             &access_token,
             account_number,
             from_entered_time,
@@ -111,7 +111,7 @@ pub async fn handle_orders_command(matches: &ArgMatches) -> Result<()> {
 
     let client = TraderClient::new(reqwest::Client::new());
     let data = client
-        .get_orders_by_query_param(
+        .get_orders_by_query(
             &access_token,
             from_entered_time,
             to_entered_time,

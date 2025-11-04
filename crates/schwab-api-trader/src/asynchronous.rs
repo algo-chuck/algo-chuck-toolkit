@@ -78,7 +78,7 @@ where
 
     // Orders
 
-    pub async fn get_orders_by_path_param(
+    pub async fn get_orders_by_path(
         &self,
         access_token: &str,
         account_number: &str,
@@ -87,7 +87,7 @@ where
         max_results: Option<i64>,
         status: Option<&str>,
     ) -> Result<Vec<Order>, HttpError> {
-        let params = TraderClient::<C>::get_orders_by_path_param_params(
+        let params = TraderClient::<C>::get_orders_by_path_params(
             access_token,
             account_number,
             from_entered_time,
@@ -108,7 +108,7 @@ where
         self.fetch(&params).await
     }
 
-    pub async fn get_orders_by_query_param(
+    pub async fn get_orders_by_query(
         &self,
         access_token: &str,
         from_entered_time: &str,
@@ -116,7 +116,7 @@ where
         max_results: Option<i64>,
         status: Option<&str>,
     ) -> Result<Vec<Order>, HttpError> {
-        let params = TraderClient::<C>::get_orders_by_query_param_params(
+        let params = TraderClient::<C>::get_orders_by_query_params(
             access_token,
             from_entered_time,
             to_entered_time,
