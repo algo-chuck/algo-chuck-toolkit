@@ -101,6 +101,10 @@ pub fn build_cli() -> Command {
                         .subcommand_required(true)
                         .arg_required_else_help(true)
                         .subcommand(
+                            Command::new("account-numbers")
+                                .about("Get list of account numbers and their encrypted values."),
+                        )
+                        .subcommand(
                             Command::new("user-preference")
                                 .about("Get user preference information for the logged in user."),
                         ),

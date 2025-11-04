@@ -1,4 +1,4 @@
-mod blue;
+mod asynchronous;
 mod client;
 mod params;
 

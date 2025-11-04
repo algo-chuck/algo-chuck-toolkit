@@ -1,5 +1,5 @@
 use schwab_api_core::{AsyncClient, HttpError, RequestParams};
-use schwab_api_types::UserPreference;
+use schwab_api_types::{AccountNumberHash, UserPreference};
 use serde::de::DeserializeOwned;
 
 use crate::client::TraderClient;
@@ -29,11 +29,19 @@ where
         Ok(typed)
     }
 
+    pub async fn get_account_numbers(
+        &self,
+        access_token: &str,
+    ) -> Result<Vec<AccountNumberHash>, HttpError> {
+        let params = TraderClient::<C>::get_account_numbers_params(access_token);
+        self.fetch(&params).await
+    }
+
     pub async fn get_user_preference(
         &self,
         access_token: &str,
     ) -> Result<UserPreference, HttpError> {
-        let params = TraderClient::<C>::user_preference_params(access_token);
+        let params = TraderClient::<C>::get_user_preference_params(access_token);
         self.fetch(&params).await
     }
 }

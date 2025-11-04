@@ -3,8 +3,9 @@ use clap::ArgMatches;
 
 use trader::handle_trader_command;
 
+mod accounts;
 mod trader;
-pub mod user_preference;
+mod user_preference;
 
 /// Handle the fetch command for data retrieval
 pub async fn handle_fetch_command(matches: &ArgMatches) -> Result<()> {
