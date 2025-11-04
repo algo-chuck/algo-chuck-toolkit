@@ -297,7 +297,7 @@ pub fn build_cli() -> Command {
         )
         .subcommand(
             Command::new("preview-order")
-                .about("Preview order for a specific account. **Coming Soon**.")
+                .about("Preview order for a specific account.")
                 .arg(
                     Arg::new("account-number")
                         .long("account-number")
