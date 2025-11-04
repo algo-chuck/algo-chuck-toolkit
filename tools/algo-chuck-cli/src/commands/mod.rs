@@ -1,12 +1,12 @@
-pub mod accounts;
-pub mod ca;
-pub mod config;
-pub mod login;
-pub mod orders;
-pub mod refresh;
-pub mod status;
-pub mod transactions;
-pub mod user_preference;
+mod accounts;
+mod ca;
+mod config;
+mod login;
+mod orders;
+mod refresh;
+mod status;
+mod transactions;
+mod user_preference;
 
 pub use accounts::{
     handle_account_command, handle_account_numbers_command, handle_accounts_command,
