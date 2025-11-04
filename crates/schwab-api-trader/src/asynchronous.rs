@@ -1,5 +1,5 @@
 use schwab_api_core::{AsyncClient, HttpError, RequestParams};
-use schwab_api_types::{Account, AccountNumberHash, Transaction, UserPreference};
+use schwab_api_types::{Account, AccountNumberHash, Order, Transaction, UserPreference};
 use serde::de::DeserializeOwned;
 
 use crate::client::TraderClient;
@@ -59,6 +59,54 @@ where
     }
 
     // Orders
+
+    pub async fn get_orders_by_path_param(
+        &self,
+        access_token: &str,
+        account_number: &str,
+        from_entered_time: &str,
+        to_entered_time: &str,
+        max_results: Option<i64>,
+        status: Option<&str>,
+    ) -> Result<Vec<Order>, HttpError> {
+        let params = TraderClient::<C>::get_orders_by_path_param_params(
+            access_token,
+            account_number,
+            from_entered_time,
+            to_entered_time,
+            max_results,
+            status,
+        );
+        self.fetch(&params).await
+    }
+
+    pub async fn get_order(
+        &self,
+        access_token: &str,
+        account_number: &str,
+        order_id: i64,
+    ) -> Result<Order, HttpError> {
+        let params = TraderClient::<C>::get_order_params(access_token, account_number, order_id);
+        self.fetch(&params).await
+    }
+
+    pub async fn get_orders_by_query_param(
+        &self,
+        access_token: &str,
+        from_entered_time: &str,
+        to_entered_time: &str,
+        max_results: Option<i64>,
+        status: Option<&str>,
+    ) -> Result<Vec<Order>, HttpError> {
+        let params = TraderClient::<C>::get_orders_by_query_param_params(
+            access_token,
+            from_entered_time,
+            to_entered_time,
+            max_results,
+            status,
+        );
+        self.fetch(&params).await
+    }
 
     // Transactions
 

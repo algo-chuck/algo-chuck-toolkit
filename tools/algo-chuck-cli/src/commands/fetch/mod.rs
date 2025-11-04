@@ -4,6 +4,7 @@ use clap::ArgMatches;
 use trader::handle_trader_command;
 
 mod accounts;
+mod orders;
 mod trader;
 mod transactions;
 mod user_preference;
