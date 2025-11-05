@@ -76,6 +76,6 @@ mod tests {
         // Test that we can access the re-exported modules
         // These will contain actual functionality once implemented
         // let _ = core::add(1, 1); // Using the placeholder function for now
-        let _ = marketdata::add(1, 1); // Using the placeholder function for now
+        // let _ = marketdata::add(1, 1); // Using the placeholder function for now
     }
 }

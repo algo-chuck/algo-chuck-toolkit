@@ -52,11 +52,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         println!("  ✅ schwab::marketdata - Market data (feature enabled)");
         // Note: Individual modules will have actual functionality once implemented
-        let market_data_result = schwab::marketdata::add(5, 7);
-        println!(
-            "     Example: marketdata::add(5, 7) = {}",
-            market_data_result
-        );
+        // let market_data_result = schwab::marketdata::add(5, 7);
+        // println!(
+        //     "     Example: marketdata::add(5, 7) = {}",
+        //     market_data_result
+        // );
     }
     #[cfg(not(feature = "marketdata"))]
     {
