@@ -11,7 +11,7 @@ mod orders;
 mod price_history;
 mod quotes;
 mod transactions;
-mod user;
+mod user_preference;
 
 use clap::Command;
 
@@ -53,8 +53,8 @@ pub fn build_cli() -> Command {
         app = app.subcommand(cmd);
     }
 
-    // Add user commands
-    for cmd in user::user_commands() {
+    // Add user preference commands
+    for cmd in user_preference::user_preference_commands() {
         app = app.subcommand(cmd);
     }
 
