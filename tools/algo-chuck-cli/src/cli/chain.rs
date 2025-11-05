@@ -1,8 +1,8 @@
 use clap::{Arg, ArgAction, Command};
 
-pub fn option_chain_commands() -> Vec<Command> {
+pub fn chain_commands() -> Vec<Command> {
     vec![
-        Command::new("option-chain")
+        Command::new("chain")
             .about("Get option chain for an optionable symbol")
             .arg(
                 Arg::new("symbol")

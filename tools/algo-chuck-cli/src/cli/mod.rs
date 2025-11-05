@@ -1,11 +1,11 @@
 mod accounts;
 mod auth;
 mod ca;
+mod chain;
 mod config;
 mod instruments;
 mod market_hours;
 mod movers;
-mod option_chains;
 mod options_expiration_chain;
 mod orders;
 mod price_history;
@@ -63,8 +63,8 @@ pub fn build_cli() -> Command {
         app = app.subcommand(cmd);
     }
 
-    // Add option chains commands
-    for cmd in option_chains::option_chain_commands() {
+    // Add option chain commands
+    for cmd in chain::chain_commands() {
         app = app.subcommand(cmd);
     }
 
