@@ -29,10 +29,15 @@ pub struct OAuthClient {
 }
 
 impl OAuthClient {
-    /// Create a new OAuth client with the given credentials
-    pub fn new(client_id: impl Into<String>, client_secret: impl Into<String>) -> Self {
+    /// Create a new OAuth client with the specified redirect URI.
+    /// Uses default Schwab API endpoints.
+    pub fn new(
+        client_id: impl Into<String>,
+        client_secret: impl Into<String>,
+        redirect_uri: impl Into<String>,
+    ) -> Self {
         Self {
-            config: OAuthConfig::default(),
+            config: OAuthConfig::new(redirect_uri),
             client_id: client_id.into(),
             client_secret: client_secret.into(),
             http_client: Client::new(),

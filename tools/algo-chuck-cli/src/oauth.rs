@@ -10,7 +10,7 @@ pub fn generate_state() -> String {
 
 /// Build the Schwab OAuth2 authorization URL
 pub fn build_schwab_auth_url(client_id: &str, state: &str) -> Result<String> {
-    let config = OAuthConfig::with_redirect_uri(SchwabConfig::CALLBACK_URL);
+    let config = OAuthConfig::new(SchwabConfig::CALLBACK_URL);
     let client = OAuthClient::with_config(config, client_id, "");
 
     client
@@ -32,7 +32,7 @@ pub async fn exchange_code_for_token(config: &SchwabConfig, code: &str) -> Resul
         .as_ref()
         .ok_or_else(|| anyhow::anyhow!("Client secret not configured"))?;
 
-    let oauth_config = OAuthConfig::with_redirect_uri(SchwabConfig::CALLBACK_URL);
+    let oauth_config = OAuthConfig::new(SchwabConfig::CALLBACK_URL);
     let oauth_client = OAuthClient::with_config(oauth_config, client_id, client_secret);
 
     oauth_client
@@ -58,7 +58,7 @@ pub async fn refresh_access_token(
         .as_ref()
         .ok_or_else(|| anyhow::anyhow!("Client secret not configured"))?;
 
-    let oauth_config = OAuthConfig::with_redirect_uri(SchwabConfig::CALLBACK_URL);
+    let oauth_config = OAuthConfig::new(SchwabConfig::CALLBACK_URL);
     let oauth_client = OAuthClient::with_config(oauth_config, client_id, client_secret);
 
     oauth_client

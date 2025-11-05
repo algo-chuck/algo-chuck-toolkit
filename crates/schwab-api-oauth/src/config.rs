@@ -14,31 +14,26 @@ impl OAuthConfig {
     pub const DEFAULT_AUTH_URL: &'static str = "https://api.schwabapi.com/v1/oauth/authorize";
     pub const DEFAULT_TOKEN_URL: &'static str = "https://api.schwabapi.com/v1/oauth/token";
 
-    /// Create a new OAuth configuration with custom settings
-    pub fn new(auth_url: String, token_url: String, redirect_uri: String) -> Self {
-        Self {
-            auth_url,
-            token_url,
-            redirect_uri,
-        }
-    }
-
-    /// Create OAuth configuration with default Schwab endpoints
-    pub fn with_redirect_uri(redirect_uri: impl Into<String>) -> Self {
+    /// Create a new OAuthConfig with the specified redirect URI.
+    /// Uses default Schwab API endpoints for auth_url and token_url.
+    pub fn new(redirect_uri: impl Into<String>) -> Self {
         Self {
             auth_url: Self::DEFAULT_AUTH_URL.to_string(),
             token_url: Self::DEFAULT_TOKEN_URL.to_string(),
             redirect_uri: redirect_uri.into(),
         }
     }
-}
 
-impl Default for OAuthConfig {
-    fn default() -> Self {
+    /// Create a new OAuth configuration with custom settings
+    pub fn with_custom_endpoints(
+        auth_url: impl Into<String>,
+        token_url: impl Into<String>,
+        redirect_uri: impl Into<String>,
+    ) -> Self {
         Self {
-            auth_url: Self::DEFAULT_AUTH_URL.to_string(),
-            token_url: Self::DEFAULT_TOKEN_URL.to_string(),
-            redirect_uri: "https://127.0.0.1:8443/oauth/schwab/callback".to_string(),
+            auth_url: auth_url.into(),
+            token_url: token_url.into(),
+            redirect_uri: redirect_uri.into(),
         }
     }
 }
