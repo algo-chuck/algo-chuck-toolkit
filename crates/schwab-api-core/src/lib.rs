@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use http::{Request, Response};
-use serde::de::DeserializeOwned;
+use serde::de::{DeserializeOwned, Error as DeError};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -137,6 +137,139 @@ pub trait AsyncClient: Send + Sync {
 impl<C: AsyncClient> HttpClient<C> {
     pub async fn execute(&self, request: Request<String>) -> Result<Response<String>, C::Error> {
         self.client.execute(request).await
+    }
+}
+
+impl<C, Cfg> ApiClient<C, Cfg>
+where
+    C: AsyncClient,
+    Cfg: ApiConfig,
+    HttpError: From<C::Error>,
+{
+    /// Helper method to fetch and deserialize a response
+    pub async fn fetch<'a, R, B>(&self, params: &'a RequestParams<'a, B>) -> Result<R, HttpError>
+    where
+        R: DeserializeOwned,
+        B: Serialize,
+    {
+        let request = self.build_request(params)?;
+
+        // Success path continues immediately.
+        let response = self
+            .client
+            .execute(request)
+            .await
+            // Use HttpError::from to explicitly tell the compiler the target type.
+            .map_err(HttpError::from)?;
+
+        // Use the single helper method to handle deserialization, logging, and error conversion.
+        let typed = self.parse_ok_response(&response)?;
+        Ok(typed)
+    }
+
+    /// Helper method to execute a request without parsing a response body
+    pub async fn execute<'a, B>(&self, params: &'a RequestParams<'a, B>) -> Result<(), HttpError>
+    where
+        B: Serialize,
+    {
+        let request = self.build_request(params)?;
+
+        self.client
+            .execute(request)
+            .await
+            .map_err(HttpError::from)?;
+
+        Ok(())
+    }
+}
+
+/// Configuration trait for API-specific clients (Trader, Marketdata, etc.)
+pub trait ApiConfig {
+    /// Base URL for this API (e.g., "https://api.schwabapi.com/trader/v1")
+    fn base_url() -> &'static str;
+}
+
+/// Generic API client that works with any API configuration
+pub struct ApiClient<C, Cfg: ApiConfig> {
+    pub client: HttpClient<C>,
+    _config: std::marker::PhantomData<Cfg>,
+}
+
+impl<C, Cfg: ApiConfig> ApiClient<C, Cfg> {
+    pub fn new(client: C) -> Self {
+        Self {
+            client: HttpClient::new(client),
+            _config: std::marker::PhantomData,
+        }
+    }
+
+    fn build_url(&self, path: &str, query_string_opt: Option<&str>) -> String {
+        let query_prefix = match query_string_opt {
+            // Check if the string exists and is not empty.
+            Some(value) if !value.is_empty() => format!("?{value}"),
+            // If it's None or empty, use an empty string.
+            _ => String::new(),
+        };
+
+        // Combine base URL, path, and the (optionally prefixed) query string.
+        format!("{}{}{}", Cfg::base_url(), path, query_prefix)
+    }
+
+    pub fn build_request<B: Serialize>(
+        &self,
+        params: &RequestParams<B>,
+    ) -> Result<Request<String>, HttpError> {
+        let url = self.build_url(&params.path, params.query.as_deref());
+        let bearer_token = format!("Bearer {}", params.access_token);
+
+        // Serialize the body if present
+        let final_body = match &params.body {
+            Some(body) => serde_json::to_string(body)?,
+            None => String::new(),
+        };
+
+        Request::builder()
+            .uri(url)
+            .method(params.method.clone())
+            .header("Authorization", bearer_token)
+            // .header("Content-Type", "application/json") // Causing 400 error, need to fix for POST
+            .body(final_body)
+            // The request building error (http::Error) is handled explicitly
+            // by mapping it to an appropriate HttpError variant, avoiding the need for
+            // a global From<http::Error> implementation.
+            .map_err(|e| HttpError::RequestFailed(format!("Request builder failed: {}", e)))
+    }
+
+    // This method performs the robust deserialization, logging, and error conversion.
+    pub fn parse_ok_response<R: DeserializeOwned>(
+        &self,
+        response: &Response<String>,
+    ) -> Result<R, HttpError> {
+        // Perform robust parsing into the GENERIC wrapper type.
+        let ok_result = response.json()?;
+
+        // Inspect the result, log the anomaly, and return the final type.
+        match ok_result {
+            SchwabSuccess::Ok(data) => Ok(data),
+            SchwabSuccess::MismatchedResponse(value) => {
+                // Log the anomaly: API returned 2xx, but structure was mismatched.
+                eprintln!(
+                    "WARNING: API returned status {}, but response body was mismatched:\n {:#?}",
+                    response.status(),
+                    value
+                );
+
+                // Treat the unexpected structure as a serialization failure.
+                Err(HttpError::SerializationError(
+                    // Generate a serde_json error object detailing the issue.
+                    DeError::custom(format!(
+                        "Received mismatched {} response structure:\n {:#?}",
+                        response.status(),
+                        value
+                    )),
+                ))
+            }
+        }
     }
 }
 

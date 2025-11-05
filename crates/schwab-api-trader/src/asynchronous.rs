@@ -1,9 +1,7 @@
-use schwab_api_core::{AsyncClient, HttpError, RequestParams};
+use schwab_api_core::{AsyncClient, HttpError};
 use schwab_api_types::{
     Account, AccountNumberHash, Order, OrderRequest, PreviewOrder, Transaction, UserPreference,
 };
-use serde::Serialize;
-use serde::de::DeserializeOwned;
 
 use crate::client::TraderClient;
 use crate::params::TraderParams;
@@ -13,40 +11,6 @@ where
     C: AsyncClient,
     HttpError: From<C::Error>,
 {
-    async fn fetch<'a, R, B>(&self, params: &'a RequestParams<'a, B>) -> Result<R, HttpError>
-    where
-        R: DeserializeOwned,
-        B: Serialize,
-    {
-        let request = self.build_request(params)?;
-
-        // Success path continues immediately.
-        let response = self
-            .client
-            .execute(request)
-            .await
-            // Use HttpError::from to explicitly tell the compiler the target type.
-            .map_err(HttpError::from)?;
-
-        // Use the single helper method to handle deserialization, logging, and error conversion.
-        let typed = self.parse_ok_response(&response)?;
-        Ok(typed)
-    }
-
-    async fn execute<'a, B>(&self, params: &'a RequestParams<'a, B>) -> Result<(), HttpError>
-    where
-        B: Serialize,
-    {
-        let request = self.build_request(params)?;
-
-        self.client
-            .execute(request)
-            .await
-            .map_err(HttpError::from)?;
-
-        Ok(())
-    }
-
     // Accounts
 
     pub async fn get_account_numbers(

@@ -1,10 +1,8 @@
-use schwab_api_core::{AsyncClient, HttpError, RequestParams};
+use schwab_api_core::{AsyncClient, HttpError};
 use schwab_api_types::{
     CandleList, ExpirationChain, GetMovers200Response, Hours, InstrumentResponse, OptionChain,
     QuoteResponseObject,
 };
-use serde::Serialize;
-use serde::de::DeserializeOwned;
 use std::collections::HashMap;
 
 use crate::client::MarketdataClient;
@@ -15,26 +13,6 @@ where
     C: AsyncClient,
     HttpError: From<C::Error>,
 {
-    async fn fetch<'a, R, B>(&self, params: &'a RequestParams<'a, B>) -> Result<R, HttpError>
-    where
-        R: DeserializeOwned,
-        B: Serialize,
-    {
-        let request = self.build_request(params)?;
-
-        // Success path continues immediately.
-        let response = self
-            .client
-            .execute(request)
-            .await
-            // Use HttpError::from to explicitly tell the compiler the target type.
-            .map_err(HttpError::from)?;
-
-        // Use the single helper method to handle deserialization, logging, and error conversion.
-        let typed = self.parse_ok_response(&response)?;
-        Ok(typed)
-    }
-
     // Quotes
 
     /// Get quotes for multiple symbols
