@@ -64,6 +64,27 @@ where
     // Option Chains
 
     /// Get option chain for an optionable symbol
+    ///
+    /// **KNOWN ISSUE**: The generated `OptionChain` type from schwab-api-types has structural
+    /// mismatches with the actual Schwab API response:
+    ///
+    /// 1. **Strike prices map to arrays**: The API returns
+    ///    `HashMap<String, HashMap<String, Vec<OptionContract>>>` but the generated type expects
+    ///    `HashMap<String, HashMap<String, OptionContract>>` (no Vec wrapper).
+    ///
+    /// 2. **Missing fields**: The API returns `assetMainType` and `assetSubType` fields that
+    ///    aren't defined in the generated OptionChain struct.
+    ///
+    /// 3. **Nested structure issues**: Some nested fields in OptionContract or its sub-types
+    ///    may not match the actual API response.
+    ///
+    /// **Result**: This method will trigger a deserialization warning and return an error.
+    /// The warning system will show the raw JSON response for debugging, but the data cannot
+    /// be used in a type-safe manner until the OptionChain type is corrected to match the
+    /// actual API structure.
+    ///
+    /// **Workaround**: Access the raw JSON from the error/warning output, or update the
+    /// schwab-api-types crate with the corrected structure.
     #[allow(clippy::too_many_arguments)]
     pub async fn get_option_chain(
         &self,
@@ -174,7 +195,7 @@ where
         access_token: &str,
         markets: &str,
         date: Option<&str>,
-    ) -> Result<HashMap<String, Hours>, HttpError> {
+    ) -> Result<HashMap<String, HashMap<String, Hours>>, HttpError> {
         let params = MarketdataClient::<C>::get_markets_params(access_token, markets, date);
         self.fetch(&params).await
     }
@@ -185,7 +206,7 @@ where
         access_token: &str,
         market: &str,
         date: Option<&str>,
-    ) -> Result<HashMap<String, Hours>, HttpError> {
+    ) -> Result<HashMap<String, HashMap<String, Hours>>, HttpError> {
         let params = MarketdataClient::<C>::get_market_params(access_token, market, date);
         self.fetch(&params).await
     }
@@ -209,7 +230,7 @@ where
         &self,
         access_token: &str,
         cusip: &str,
-    ) -> Result<Vec<InstrumentResponse>, HttpError> {
+    ) -> Result<HashMap<String, Vec<InstrumentResponse>>, HttpError> {
         let params = MarketdataClient::<C>::get_instrument_by_cusip_params(access_token, cusip);
         self.fetch(&params).await
     }
