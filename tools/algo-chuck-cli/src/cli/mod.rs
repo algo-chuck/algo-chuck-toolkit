@@ -2,7 +2,13 @@ mod accounts;
 mod auth;
 mod ca;
 mod config;
+mod instruments;
+mod market_hours;
+mod movers;
+mod option_chains;
+mod options_expiration_chain;
 mod orders;
+mod price_history;
 mod quotes;
 mod transactions;
 mod user;
@@ -54,6 +60,36 @@ pub fn build_cli() -> Command {
 
     // Add quote commands
     for cmd in quotes::quote_commands() {
+        app = app.subcommand(cmd);
+    }
+
+    // Add option chains commands
+    for cmd in option_chains::option_chain_commands() {
+        app = app.subcommand(cmd);
+    }
+
+    // Add options expiration chain commands
+    for cmd in options_expiration_chain::options_expiration_chain_commands() {
+        app = app.subcommand(cmd);
+    }
+
+    // Add price history commands
+    for cmd in price_history::price_history_commands() {
+        app = app.subcommand(cmd);
+    }
+
+    // Add movers commands
+    for cmd in movers::movers_commands() {
+        app = app.subcommand(cmd);
+    }
+
+    // Add market hours commands
+    for cmd in market_hours::market_hours_commands() {
+        app = app.subcommand(cmd);
+    }
+
+    // Add instruments commands
+    for cmd in instruments::instruments_commands() {
         app = app.subcommand(cmd);
     }
 
