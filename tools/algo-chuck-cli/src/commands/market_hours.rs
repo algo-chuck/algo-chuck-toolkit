@@ -4,8 +4,8 @@ use clap::ArgMatches;
 use crate::config::{ConfigManager, TokenManager};
 use schwab_api_marketdata::MarketdataClient;
 
-/// Handle the markets command
-pub async fn handle_markets_command(matches: &ArgMatches) -> Result<()> {
+/// Handle the market hours command
+pub async fn handle_market_hours_command(matches: &ArgMatches) -> Result<()> {
     println!("🚀 Fetching Market Hours");
 
     let config_manager = ConfigManager::new()?;
@@ -21,15 +21,17 @@ pub async fn handle_markets_command(matches: &ArgMatches) -> Result<()> {
     let date = matches.get_one::<String>("date").map(|s| s.as_str());
 
     let client = MarketdataClient::new(reqwest::Client::new());
-    let data = client.get_markets(&access_token, markets, date).await?;
+    let data = client
+        .get_market_hours(&access_token, markets, date)
+        .await?;
 
     println!("{:#?}", data);
     Ok(())
 }
 
-/// Handle the market command
-pub async fn handle_market_command(matches: &ArgMatches) -> Result<()> {
-    println!("🚀 Fetching Market Hours");
+/// Handle the market hours command
+pub async fn handle_market_hour_command(matches: &ArgMatches) -> Result<()> {
+    println!("🚀 Fetching Market Hour");
 
     let config_manager = ConfigManager::new()?;
     let token_manager = TokenManager::new(&config_manager)?;
@@ -44,7 +46,7 @@ pub async fn handle_market_command(matches: &ArgMatches) -> Result<()> {
     let date = matches.get_one::<String>("date").map(|s| s.as_str());
 
     let client = MarketdataClient::new(reqwest::Client::new());
-    let data = client.get_market(&access_token, market, date).await?;
+    let data = client.get_market_hour(&access_token, market, date).await?;
 
     println!("{:#?}", data);
     Ok(())

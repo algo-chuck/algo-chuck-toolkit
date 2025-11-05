@@ -5,7 +5,7 @@ use crate::config::{ConfigManager, TokenManager};
 use schwab_api_marketdata::MarketdataClient;
 
 /// Handle the option-chain command
-pub async fn handle_option_chain_command(matches: &ArgMatches) -> Result<()> {
+pub async fn handle_chain_command(matches: &ArgMatches) -> Result<()> {
     println!("🚀 Fetching Option Chain");
 
     let config_manager = ConfigManager::new()?;
@@ -52,7 +52,7 @@ pub async fn handle_option_chain_command(matches: &ArgMatches) -> Result<()> {
 
     let client = MarketdataClient::new(reqwest::Client::new());
     let data = client
-        .get_option_chain(
+        .get_chain(
             &access_token,
             symbol,
             contract_type,

@@ -2,7 +2,7 @@ use clap::{Arg, Command};
 
 pub fn market_hours_commands() -> Vec<Command> {
     vec![
-        Command::new("markets")
+        Command::new("market-hours")
             .about("Get market hours for multiple markets")
             .arg(
                 Arg::new("markets")
@@ -16,7 +16,7 @@ pub fn market_hours_commands() -> Vec<Command> {
                     .help("Date (yyyy-MM-dd)")
                     .value_name("DATE"),
             ),
-        Command::new("market")
+        Command::new("market-hour")
             .about("Get market hours for a single market")
             .arg(
                 Arg::new("market")

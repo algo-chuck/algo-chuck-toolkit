@@ -75,7 +75,7 @@ pub trait MarketdataParams {
     /// - days_to_expiration: Days to expiration for ANALYTICAL strategy
     /// - exp_month: Expiration month
     /// - option_type: Option type
-    fn get_option_chain_params<'a>(
+    fn get_chain_params<'a>(
         access_token: &'a str,
         symbol: &str,
         contract_type: Option<&str>,
@@ -273,7 +273,7 @@ pub trait MarketdataParams {
     /// Get market hours for multiple markets
     /// - markets: Comma-separated list of markets (equity, option, bond, future, forex)
     /// - date: Date in YYYY-MM-DD format
-    fn get_markets_params<'a>(
+    fn get_market_hours_params<'a>(
         access_token: &'a str,
         markets: &str,
         date: Option<&str>,
@@ -298,7 +298,7 @@ pub trait MarketdataParams {
     /// Get market hours for a single market
     /// - market: Market (equity, option, bond, future, forex)
     /// - date: Date in YYYY-MM-DD format
-    fn get_market_params<'a>(
+    fn get_market_hour_params<'a>(
         access_token: &'a str,
         market: &str,
         date: Option<&str>,

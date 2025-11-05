@@ -86,7 +86,7 @@ where
     /// **Workaround**: Access the raw JSON from the error/warning output, or update the
     /// schwab-api-types crate with the corrected structure.
     #[allow(clippy::too_many_arguments)]
-    pub async fn get_option_chain(
+    pub async fn get_chain(
         &self,
         access_token: &str,
         symbol: &str,
@@ -106,7 +106,7 @@ where
         exp_month: Option<&str>,
         option_type: Option<&str>,
     ) -> Result<OptionChain, HttpError> {
-        let params = MarketdataClient::<C>::get_option_chain_params(
+        let params = MarketdataClient::<C>::get_chain_params(
             access_token,
             symbol,
             contract_type,
@@ -190,24 +190,24 @@ where
     // Market Hours
 
     /// Get market hours for multiple markets
-    pub async fn get_markets(
+    pub async fn get_market_hours(
         &self,
         access_token: &str,
         markets: &str,
         date: Option<&str>,
     ) -> Result<HashMap<String, HashMap<String, Hours>>, HttpError> {
-        let params = MarketdataClient::<C>::get_markets_params(access_token, markets, date);
+        let params = MarketdataClient::<C>::get_market_hours_params(access_token, markets, date);
         self.fetch(&params).await
     }
 
     /// Get market hours for a single market
-    pub async fn get_market(
+    pub async fn get_market_hour(
         &self,
         access_token: &str,
         market: &str,
         date: Option<&str>,
     ) -> Result<HashMap<String, HashMap<String, Hours>>, HttpError> {
-        let params = MarketdataClient::<C>::get_market_params(access_token, market, date);
+        let params = MarketdataClient::<C>::get_market_hour_params(access_token, market, date);
         self.fetch(&params).await
     }
 
