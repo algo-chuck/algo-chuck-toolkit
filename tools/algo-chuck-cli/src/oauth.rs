@@ -1,56 +1,25 @@
 use anyhow::{Context, Result};
-use base64::Engine as _;
-use base64::engine::general_purpose::STANDARD;
-use reqwest::Client;
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use url::Url;
+use schwab_api_oauth::{OAuthClient, OAuthConfig, TokenResponse};
 
 use crate::config::SchwabConfig;
 
-/// Response structure from Schwab OAuth2 token endpoint
-#[derive(Debug, Serialize, Deserialize)]
-pub struct SchwabTokenResponse {
-    pub access_token: String,
-    pub token_type: String,
-    pub expires_in: u64,
-    pub refresh_token: String,
-    pub scope: String,
-    pub id_token: String,
-}
-
 /// Generate a random state parameter for OAuth2 PKCE
 pub fn generate_state() -> String {
-    uuid::Uuid::new_v4().to_string()
+    OAuthClient::generate_state()
 }
 
 /// Build the Schwab OAuth2 authorization URL
 pub fn build_schwab_auth_url(client_id: &str, state: &str) -> Result<String> {
-    let mut auth_url = Url::parse(SchwabConfig::SCHWAB_AUTH_URL)
-        .context("Failed to parse Schwab authorization URL")?;
+    let config = OAuthConfig::with_redirect_uri(SchwabConfig::CALLBACK_URL);
+    let client = OAuthClient::with_config(config, client_id, "");
 
-    let params = vec![
-        ("response_type", "code"),
-        ("client_id", client_id),
-        ("redirect_uri", SchwabConfig::CALLBACK_URL),
-        ("scope", "readonly"),
-        ("state", state),
-    ];
-
-    for (key, value) in params {
-        auth_url.query_pairs_mut().append_pair(key, value);
-    }
-
-    Ok(auth_url.to_string())
+    client
+        .build_auth_url(state)
+        .context("Failed to build authorization URL")
 }
 
 /// Exchange authorization code for access and refresh tokens
-pub async fn exchange_code_for_token(
-    config: &SchwabConfig,
-    code: &str,
-) -> Result<SchwabTokenResponse> {
-    let client = Client::new();
-
+pub async fn exchange_code_for_token(config: &SchwabConfig, code: &str) -> Result<TokenResponse> {
     let client_id = config
         .client
         .client_id
@@ -63,52 +32,20 @@ pub async fn exchange_code_for_token(
         .as_ref()
         .ok_or_else(|| anyhow::anyhow!("Client secret not configured"))?;
 
-    // Create Basic Auth header
-    let auth_string = format!("{}:{}", client_id, client_secret);
-    let auth_header = format!("Basic {}", STANDARD.encode(auth_string.as_bytes()));
+    let oauth_config = OAuthConfig::with_redirect_uri(SchwabConfig::CALLBACK_URL);
+    let oauth_client = OAuthClient::with_config(oauth_config, client_id, client_secret);
 
-    let mut form = HashMap::new();
-    form.insert("grant_type", "authorization_code");
-    form.insert("code", code);
-    form.insert("redirect_uri", SchwabConfig::CALLBACK_URL);
-
-    let response = client
-        .post(SchwabConfig::SCHWAB_TOKEN_URL)
-        .header("Authorization", auth_header)
-        .header("Content-Type", "application/x-www-form-urlencoded")
-        .form(&form)
-        .send()
+    oauth_client
+        .exchange_code_for_token(code)
         .await
-        .context("Failed to send token request")?;
-
-    if !response.status().is_success() {
-        let status = response.status();
-        let error_text = response
-            .text()
-            .await
-            .unwrap_or_else(|_| "Unknown error".to_string());
-        return Err(anyhow::anyhow!(
-            "Token request failed with status {}: {}",
-            status,
-            error_text
-        ));
-    }
-
-    let token_response: SchwabTokenResponse = response
-        .json()
-        .await
-        .context("Failed to parse token response")?;
-
-    Ok(token_response)
+        .context("Failed to exchange code for token")
 }
 
 /// Refresh an access token using a refresh token
 pub async fn refresh_access_token(
     config: &SchwabConfig,
     refresh_token: &str,
-) -> Result<SchwabTokenResponse> {
-    let client = Client::new();
-
+) -> Result<TokenResponse> {
     let client_id = config
         .client
         .client_id
@@ -121,40 +58,11 @@ pub async fn refresh_access_token(
         .as_ref()
         .ok_or_else(|| anyhow::anyhow!("Client secret not configured"))?;
 
-    // Create Basic Auth header
-    let auth_string = format!("{}:{}", client_id, client_secret);
-    let auth_header = format!("Basic {}", STANDARD.encode(auth_string.as_bytes()));
+    let oauth_config = OAuthConfig::with_redirect_uri(SchwabConfig::CALLBACK_URL);
+    let oauth_client = OAuthClient::with_config(oauth_config, client_id, client_secret);
 
-    let mut form = HashMap::new();
-    form.insert("grant_type", "refresh_token");
-    form.insert("refresh_token", refresh_token);
-
-    let response = client
-        .post(SchwabConfig::SCHWAB_TOKEN_URL)
-        .header("Authorization", auth_header)
-        .header("Content-Type", "application/x-www-form-urlencoded")
-        .form(&form)
-        .send()
+    oauth_client
+        .refresh_access_token(refresh_token)
         .await
-        .context("Failed to send refresh token request")?;
-
-    if !response.status().is_success() {
-        let status = response.status();
-        let error_text = response
-            .text()
-            .await
-            .unwrap_or_else(|_| "Unknown error".to_string());
-        return Err(anyhow::anyhow!(
-            "Refresh token request failed with status {}: {}",
-            status,
-            error_text
-        ));
-    }
-
-    let token_response: SchwabTokenResponse = response
-        .json()
-        .await
-        .context("Failed to parse token refresh response")?;
-
-    Ok(token_response)
+        .context("Failed to refresh access token")
 }

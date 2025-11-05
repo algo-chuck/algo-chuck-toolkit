@@ -64,9 +64,7 @@ impl SchwabConfig {
     /// Callback path for OAuth2 responses
     pub const CALLBACK_PATH: &str = "/oauth/schwab/callback";
 
-    /// Schwab authorization url to start the oath precess
-    pub const SCHWAB_AUTH_URL: &str = "https://api.schwabapi.com/v1/oauth/authorize";
-
-    /// Schwab token url to exchange authorization code for tokens
-    pub const SCHWAB_TOKEN_URL: &str = "https://api.schwabapi.com/v1/oauth/token";
+    // OAuth URLs are now in schwab-api-oauth crate
+    // pub const SCHWAB_AUTH_URL: &str = "https://api.schwabapi.com/v1/oauth/authorize";
+    // pub const SCHWAB_TOKEN_URL: &str = "https://api.schwabapi.com/v1/oauth/token";
 }

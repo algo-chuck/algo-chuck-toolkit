@@ -40,8 +40,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         println!("  ✅ schwab::oauth - Authentication (feature enabled)");
         // Note: Individual modules will have actual functionality once implemented
-        let oauth_result = schwab::oauth::add(5, 7);
-        println!("     Example: oauth::add(5, 7) = {}", oauth_result);
+        // let oauth_result = schwab::oauth::add(5, 7);
+        // println!("     Example: oauth::add(5, 7) = {}", oauth_result);
     }
     #[cfg(not(feature = "oauth"))]
     {
