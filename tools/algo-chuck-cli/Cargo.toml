@@ -8,6 +8,7 @@ description = "Command-line interface for the Schwab API toolkit"
 
 [dependencies]
 schwab-api-core = { path = "../../crates/schwab-api-core" }
+schwab-api-marketdata = { path = "../../crates/schwab-api-marketdata" }
 schwab-api-trader = { path = "../../crates/schwab-api-trader" }
 schwab-api-types = { path = "../../crates/schwab-api-types" }
 anyhow = { workspace = true }

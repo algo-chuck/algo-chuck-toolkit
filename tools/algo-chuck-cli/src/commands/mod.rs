@@ -3,6 +3,7 @@ mod ca;
 mod config;
 mod login;
 mod orders;
+mod quotes;
 mod refresh;
 mod status;
 mod transactions;
@@ -19,6 +20,7 @@ pub use orders::{
     handle_orders_command, handle_place_order_command, handle_preview_order_command,
     handle_replace_order_command,
 };
+pub use quotes::{handle_quote_command, handle_quotes_command};
 pub use refresh::handle_refresh_command;
 pub use status::handle_status_command;
 pub use transactions::{handle_transaction_command, handle_transactions_command};

@@ -3,6 +3,7 @@ mod auth;
 mod ca;
 mod config;
 mod orders;
+mod quotes;
 mod transactions;
 mod user;
 
@@ -22,10 +23,14 @@ pub fn build_cli() -> Command {
     }
 
     // Add config command
-    app = app.subcommand(config::config_command());
+    for cmd in config::config_commands() {
+        app = app.subcommand(cmd);
+    }
 
     // Add CA command
-    app = app.subcommand(ca::ca_command());
+    for cmd in ca::ca_commands() {
+        app = app.subcommand(cmd);
+    }
 
     // Add account commands
     for cmd in accounts::account_commands() {
@@ -44,6 +49,11 @@ pub fn build_cli() -> Command {
 
     // Add user commands
     for cmd in user::user_commands() {
+        app = app.subcommand(cmd);
+    }
+
+    // Add quote commands
+    for cmd in quotes::quote_commands() {
         app = app.subcommand(cmd);
     }
 
