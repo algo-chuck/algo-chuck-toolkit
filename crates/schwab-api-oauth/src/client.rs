@@ -23,37 +23,14 @@ pub struct TokenResponse {
 #[derive(Debug, Clone)]
 pub struct OAuthClient {
     config: OAuthConfig,
-    client_id: String,
-    client_secret: String,
     http_client: Client,
 }
 
 impl OAuthClient {
-    /// Create a new OAuth client with the specified redirect URI.
-    /// Uses default Schwab API endpoints.
-    pub fn new(
-        client_id: impl Into<String>,
-        client_secret: impl Into<String>,
-        redirect_uri: impl Into<String>,
-    ) -> Self {
-        Self {
-            config: OAuthConfig::new(redirect_uri),
-            client_id: client_id.into(),
-            client_secret: client_secret.into(),
-            http_client: Client::new(),
-        }
-    }
-
-    /// Create a new OAuth client with custom configuration
-    pub fn with_config(
-        config: OAuthConfig,
-        client_id: impl Into<String>,
-        client_secret: impl Into<String>,
-    ) -> Self {
+    /// Create a new OAuth client with the given configuration
+    pub fn new(config: OAuthConfig) -> Self {
         Self {
             config,
-            client_id: client_id.into(),
-            client_secret: client_secret.into(),
             http_client: Client::new(),
         }
     }
@@ -69,7 +46,7 @@ impl OAuthClient {
 
         let params = vec![
             ("response_type", "code"),
-            ("client_id", &self.client_id),
+            ("client_id", &self.config.client_id),
             ("redirect_uri", &self.config.redirect_uri),
             ("scope", "readonly"),
             ("state", state),
@@ -85,7 +62,7 @@ impl OAuthClient {
     /// Exchange authorization code for access and refresh tokens
     pub async fn exchange_code_for_token(&self, code: &str) -> Result<TokenResponse> {
         // Create Basic Auth header
-        let auth_string = format!("{}:{}", self.client_id, self.client_secret);
+        let auth_string = format!("{}:{}", self.config.client_id, self.config.client_secret);
         let auth_header = format!("Basic {}", STANDARD.encode(auth_string.as_bytes()));
 
         let mut form = HashMap::new();
@@ -125,7 +102,7 @@ impl OAuthClient {
     /// Refresh an access token using a refresh token
     pub async fn refresh_access_token(&self, refresh_token: &str) -> Result<TokenResponse> {
         // Create Basic Auth header
-        let auth_string = format!("{}:{}", self.client_id, self.client_secret);
+        let auth_string = format!("{}:{}", self.config.client_id, self.config.client_secret);
         let auth_header = format!("Basic {}", STANDARD.encode(auth_string.as_bytes()));
 
         let mut form = HashMap::new();
@@ -168,6 +145,6 @@ impl OAuthClient {
 
     /// Get the client ID
     pub fn client_id(&self) -> &str {
-        &self.client_id
+        &self.config.client_id
     }
 }
