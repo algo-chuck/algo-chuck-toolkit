@@ -1,3 +1,7 @@
+use url::Url;
+
+use crate::error::Result;
+
 /// OAuth configuration and constants for Schwab API
 #[derive(Debug, Clone)]
 pub struct OAuthConfig {
@@ -49,5 +53,29 @@ impl OAuthConfig {
             client_id: client_id.into(),
             client_secret: client_secret.into(),
         }
+    }
+
+    /// Build the OAuth2 authorization URL with the given state parameter
+    pub fn build_auth_url(&self, state: &str) -> Result<String> {
+        let mut auth_url = Url::parse(&self.auth_url)?;
+
+        let params = vec![
+            ("response_type", "code"),
+            ("client_id", &self.client_id),
+            ("redirect_uri", &self.redirect_uri),
+            ("scope", "readonly"),
+            ("state", state),
+        ];
+
+        for (key, value) in params {
+            auth_url.query_pairs_mut().append_pair(key, value);
+        }
+
+        Ok(auth_url.to_string())
+    }
+
+    /// Generate a random state parameter for OAuth2 PKCE
+    pub fn generate_state() -> String {
+        uuid::Uuid::new_v4().to_string()
     }
 }

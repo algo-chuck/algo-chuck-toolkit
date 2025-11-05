@@ -5,15 +5,14 @@ use crate::config::SchwabConfig;
 
 /// Generate a random state parameter for OAuth2 PKCE
 pub fn generate_state() -> String {
-    OAuthClient::generate_state()
+    OAuthConfig::generate_state()
 }
 
 /// Build the Schwab OAuth2 authorization URL
 pub fn build_schwab_auth_url(client_id: &str, state: &str) -> Result<String> {
     let config = OAuthConfig::new(client_id, "", SchwabConfig::CALLBACK_URL);
-    let client = OAuthClient::new(config);
 
-    client
+    config
         .build_auth_url(state)
         .context("Failed to build authorization URL")
 }
@@ -33,7 +32,7 @@ pub async fn exchange_code_for_token(config: &SchwabConfig, code: &str) -> Resul
         .ok_or_else(|| anyhow::anyhow!("Client secret not configured"))?;
 
     let oauth_config = OAuthConfig::new(client_id, client_secret, SchwabConfig::CALLBACK_URL);
-    let oauth_client = OAuthClient::new(oauth_config);
+    let oauth_client = OAuthClient::new_async(oauth_config);
 
     oauth_client
         .exchange_code_for_token(code)
@@ -59,7 +58,7 @@ pub async fn refresh_access_token(
         .ok_or_else(|| anyhow::anyhow!("Client secret not configured"))?;
 
     let oauth_config = OAuthConfig::new(client_id, client_secret, SchwabConfig::CALLBACK_URL);
-    let oauth_client = OAuthClient::new(oauth_config);
+    let oauth_client = OAuthClient::new_async(oauth_config);
 
     oauth_client
         .refresh_access_token(refresh_token)

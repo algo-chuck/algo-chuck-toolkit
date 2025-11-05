@@ -1,9 +1,7 @@
 use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD;
-use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use url::Url;
 
 use crate::config::OAuthConfig;
 use crate::error::{OAuthError, Result};
@@ -21,42 +19,40 @@ pub struct TokenResponse {
 
 /// OAuth client for Schwab API authentication
 #[derive(Debug, Clone)]
-pub struct OAuthClient {
+pub struct OAuthClient<C> {
     config: OAuthConfig,
-    http_client: Client,
+    http_client: C,
 }
 
-impl OAuthClient {
-    /// Create a new OAuth client with the given configuration
-    pub fn new(config: OAuthConfig) -> Self {
+impl<C> OAuthClient<C> {
+    /// Create a new OAuth client with the given configuration and HTTP client
+    pub fn new(config: OAuthConfig, http_client: C) -> Self {
         Self {
             config,
-            http_client: Client::new(),
+            http_client,
         }
     }
 
-    /// Generate a random state parameter for OAuth2 PKCE
-    pub fn generate_state() -> String {
-        uuid::Uuid::new_v4().to_string()
-    }
-
-    /// Build the Schwab OAuth2 authorization URL
+    /// Build the OAuth2 authorization URL
     pub fn build_auth_url(&self, state: &str) -> Result<String> {
-        let mut auth_url = Url::parse(&self.config.auth_url)?;
+        self.config.build_auth_url(state)
+    }
 
-        let params = vec![
-            ("response_type", "code"),
-            ("client_id", &self.config.client_id),
-            ("redirect_uri", &self.config.redirect_uri),
-            ("scope", "readonly"),
-            ("state", state),
-        ];
+    /// Get the redirect URI configured for this client
+    pub fn redirect_uri(&self) -> &str {
+        &self.config.redirect_uri
+    }
 
-        for (key, value) in params {
-            auth_url.query_pairs_mut().append_pair(key, value);
-        }
+    /// Get the client ID
+    pub fn client_id(&self) -> &str {
+        &self.config.client_id
+    }
+}
 
-        Ok(auth_url.to_string())
+impl OAuthClient<reqwest::Client> {
+    /// Create a new async OAuth client with default reqwest client
+    pub fn new_async(config: OAuthConfig) -> Self {
+        Self::new(config, reqwest::Client::new())
     }
 
     /// Exchange authorization code for access and refresh tokens
@@ -136,15 +132,5 @@ impl OAuthClient {
         })?;
 
         Ok(token_response)
-    }
-
-    /// Get the redirect URI configured for this client
-    pub fn redirect_uri(&self) -> &str {
-        &self.config.redirect_uri
-    }
-
-    /// Get the client ID
-    pub fn client_id(&self) -> &str {
-        &self.config.client_id
     }
 }
