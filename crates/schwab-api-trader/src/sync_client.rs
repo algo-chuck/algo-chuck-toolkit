@@ -1,8 +1,8 @@
-use schwab_api_core::{ApiClient, HttpError, RequestParams, SyncHttpClient};
+use schwab_api_core::{ApiClient, HttpError, SyncHttpClient};
 use schwab_api_types::trader::*;
 use std::ops::Deref;
 
-use crate::TraderConfig;
+use crate::{TraderConfig, TraderParams, TraderParamsImpl};
 
 /// Synchronous/blocking client for Schwab Trader API
 pub struct SyncTraderClient<C: SyncHttpClient> {
@@ -35,13 +35,7 @@ where
         &self,
         access_token: &str,
     ) -> Result<Vec<AccountNumberHash>, HttpError> {
-        let params = RequestParams {
-            access_token,
-            method: http::Method::GET,
-            path: "/accounts/accountNumbers".to_string(),
-            query: None,
-            body: None::<()>,
-        };
+        let params = TraderParamsImpl::get_account_numbers(access_token);
         self.client.fetch_sync(&params)
     }
 
@@ -51,14 +45,7 @@ where
         access_token: &str,
         fields: Option<&str>,
     ) -> Result<Vec<Account>, HttpError> {
-        let query_string = fields.map(|f| format!("fields={}", f));
-        let params = RequestParams {
-            access_token,
-            method: http::Method::GET,
-            path: "/accounts".to_string(),
-            query: query_string,
-            body: None::<()>,
-        };
+        let params = TraderParamsImpl::get_accounts(access_token, fields);
         self.client.fetch_sync(&params)
     }
 
@@ -69,15 +56,7 @@ where
         encrypted_id: &str,
         fields: Option<&str>,
     ) -> Result<Account, HttpError> {
-        let path = format!("/accounts/{}", encrypted_id);
-        let query_string = fields.map(|f| format!("fields={}", f));
-        let params = RequestParams {
-            access_token,
-            method: http::Method::GET,
-            path,
-            query: query_string,
-            body: None::<()>,
-        };
+        let params = TraderParamsImpl::get_account(access_token, encrypted_id, fields);
         self.client.fetch_sync(&params)
     }
 
@@ -91,26 +70,14 @@ where
         max_results: Option<i32>,
         status: Option<&str>,
     ) -> Result<Vec<Order>, HttpError> {
-        let path = format!("/accounts/{}/orders", encrypted_id);
-        let mut query_parts = vec![
-            format!("fromEnteredTime={}", from_entered_time),
-            format!("toEnteredTime={}", to_entered_time),
-        ];
-
-        if let Some(max) = max_results {
-            query_parts.push(format!("maxResults={}", max));
-        }
-        if let Some(status_value) = status {
-            query_parts.push(format!("status={}", status_value));
-        }
-
-        let params = RequestParams {
+        let params = TraderParamsImpl::get_orders_by_path_param(
             access_token,
-            method: http::Method::GET,
-            path,
-            query: Some(query_parts.join("&")),
-            body: None::<()>,
-        };
+            encrypted_id,
+            from_entered_time,
+            to_entered_time,
+            max_results,
+            status,
+        );
         self.client.fetch_sync(&params)
     }
 
@@ -123,25 +90,13 @@ where
         max_results: Option<i32>,
         status: Option<&str>,
     ) -> Result<Vec<Order>, HttpError> {
-        let mut query_parts = vec![
-            format!("fromEnteredTime={}", from_entered_time),
-            format!("toEnteredTime={}", to_entered_time),
-        ];
-
-        if let Some(max) = max_results {
-            query_parts.push(format!("maxResults={}", max));
-        }
-        if let Some(status_value) = status {
-            query_parts.push(format!("status={}", status_value));
-        }
-
-        let params = RequestParams {
+        let params = TraderParamsImpl::get_orders_by_query_param(
             access_token,
-            method: http::Method::GET,
-            path: "/orders".to_string(),
-            query: Some(query_parts.join("&")),
-            body: None::<()>,
-        };
+            from_entered_time,
+            to_entered_time,
+            max_results,
+            status,
+        );
         self.client.fetch_sync(&params)
     }
 
@@ -152,15 +107,7 @@ where
         encrypted_id: &str,
         order_id: i64,
     ) -> Result<Order, HttpError> {
-        let path = format!("/accounts/{}/orders/{}", encrypted_id, order_id);
-
-        let params = RequestParams {
-            access_token,
-            method: http::Method::GET,
-            path,
-            query: None,
-            body: None::<()>,
-        };
+        let params = TraderParamsImpl::get_order(access_token, encrypted_id, order_id);
         self.client.fetch_sync(&params)
     }
 
@@ -171,15 +118,7 @@ where
         encrypted_id: &str,
         order: &OrderRequest,
     ) -> Result<(), HttpError> {
-        let path = format!("/accounts/{}/orders", encrypted_id);
-
-        let params = RequestParams {
-            access_token,
-            method: http::Method::POST,
-            path,
-            query: None,
-            body: Some(order),
-        };
+        let params = TraderParamsImpl::place_order(access_token, encrypted_id, order);
         self.client.execute_sync(&params)
     }
 
@@ -191,15 +130,7 @@ where
         order_id: i64,
         order: &OrderRequest,
     ) -> Result<(), HttpError> {
-        let path = format!("/accounts/{}/orders/{}", encrypted_id, order_id);
-
-        let params = RequestParams {
-            access_token,
-            method: http::Method::PUT,
-            path,
-            query: None,
-            body: Some(order),
-        };
+        let params = TraderParamsImpl::replace_order(access_token, encrypted_id, order_id, order);
         self.client.execute_sync(&params)
     }
 
@@ -210,15 +141,7 @@ where
         encrypted_id: &str,
         order_id: i64,
     ) -> Result<(), HttpError> {
-        let path = format!("/accounts/{}/orders/{}", encrypted_id, order_id);
-
-        let params = RequestParams {
-            access_token,
-            method: http::Method::DELETE,
-            path,
-            query: None,
-            body: None::<()>,
-        };
+        let params = TraderParamsImpl::cancel_order(access_token, encrypted_id, order_id);
         self.client.execute_sync(&params)
     }
 
@@ -229,15 +152,7 @@ where
         encrypted_id: &str,
         order: &OrderRequest,
     ) -> Result<PreviewOrder, HttpError> {
-        let path = format!("/accounts/{}/previewOrder", encrypted_id);
-
-        let params = RequestParams {
-            access_token,
-            method: http::Method::POST,
-            path,
-            query: None,
-            body: Some(order),
-        };
+        let params = TraderParamsImpl::preview_order(access_token, encrypted_id, order);
         self.client.fetch_sync(&params)
     }
 
@@ -251,25 +166,14 @@ where
         types: &str,
         symbol: Option<&str>,
     ) -> Result<Vec<Transaction>, HttpError> {
-        let path = format!("/accounts/{}/transactions", encrypted_id);
-
-        let mut query_parts = vec![
-            format!("startDate={}", start_date),
-            format!("endDate={}", end_date),
-            format!("types={}", types),
-        ];
-
-        if let Some(sym) = symbol {
-            query_parts.push(format!("symbol={}", sym));
-        }
-
-        let params = RequestParams {
+        let params = TraderParamsImpl::get_transactions_by_path_param(
             access_token,
-            method: http::Method::GET,
-            path,
-            query: Some(query_parts.join("&")),
-            body: None::<()>,
-        };
+            encrypted_id,
+            start_date,
+            end_date,
+            types,
+            symbol,
+        );
         self.client.fetch_sync(&params)
     }
 
@@ -280,27 +184,14 @@ where
         encrypted_id: &str,
         transaction_id: i64,
     ) -> Result<Vec<Transaction>, HttpError> {
-        let path = format!("/accounts/{}/transactions/{}", encrypted_id, transaction_id);
-
-        let params = RequestParams {
-            access_token,
-            method: http::Method::GET,
-            path,
-            query: None,
-            body: None::<()>,
-        };
+        let params =
+            TraderParamsImpl::get_transactions_by_id(access_token, encrypted_id, transaction_id);
         self.client.fetch_sync(&params)
     }
 
     /// Fetch user preferences for the logged-in user.
     pub fn get_user_preference(&self, access_token: &str) -> Result<UserPreference, HttpError> {
-        let params = RequestParams {
-            access_token,
-            method: http::Method::GET,
-            path: "/userPreference".to_string(),
-            query: None,
-            body: None::<()>,
-        };
+        let params = TraderParamsImpl::get_user_preference(access_token);
         self.client.fetch_sync(&params)
     }
 }
