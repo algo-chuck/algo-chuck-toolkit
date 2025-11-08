@@ -8,30 +8,30 @@
 //! Note: This example demonstrates the API structure but won't run without valid credentials.
 
 // Example 1: Using reqwest (async) with different ownership patterns
+#[allow(dead_code)]
 async fn example_reqwest_async() {
-    use schwab_api_trader::AsyncTraderClient;
+    use schwab_api_trader::TraderClient;
     use std::sync::Arc;
-
-    let access_token = "your_access_token".to_string();
 
     // Option A: Owned client (takes ownership)
     let client = reqwest::Client::new();
-    let trader = AsyncTraderClient::new(client);
+    let _trader = TraderClient::new(client);
 
     // Option B: Borrowed client (useful in server contexts)
     let client = reqwest::Client::new();
-    let trader = AsyncTraderClient::new(&client);
+    let _trader = TraderClient::new(&client);
     // client can still be used elsewhere
 
     // Option C: Arc-wrapped client (explicit shared ownership)
     let client = Arc::new(reqwest::Client::new());
-    let trader = AsyncTraderClient::new(Arc::clone(&client));
+    let _trader = TraderClient::new(Arc::clone(&client));
     // client can be cloned and shared across threads
 }
 
 // Example 2: Server-style usage with shared async client
+#[allow(dead_code)]
 async fn server_example() {
-    use schwab_api_trader::AsyncTraderClient;
+    use schwab_api_trader::TraderClient;
     use std::sync::Arc;
 
     // Create a shared client that will be used across many requests
@@ -39,42 +39,35 @@ async fn server_example() {
 
     // Each request handler can clone the Arc and create its own trader client
     let client_clone = Arc::clone(&shared_client);
-    let trader = AsyncTraderClient::new(client_clone);
+    let _trader = TraderClient::new(client_clone);
 
     // The Arc allows efficient sharing without copying the underlying client
 }
 
 // Example 3: Custom HTTP client implementation
-// You can implement AsyncHttpClient or SyncHttpClient for your own types
+// You can implement AsyncHttpClient for your own types
+//
+// This example shows the concept - in a real implementation you would:
+// 1. Add `async-trait` to your dependencies
+// 2. Use #[async_trait] macro on the impl block
+// 3. Implement the execute method with your custom logic
+#[allow(dead_code)]
 mod custom {
-    use async_trait::async_trait;
-    use http::{Request, Response};
-    use schwab_api_core::{AsyncHttpClient, HttpError};
+    // Example structure only - see schwab-api-core/src/reqwest_client.rs for real implementation
 
-    // Example: Custom client wrapper with logging
-    pub struct LoggingClient {
-        inner: reqwest::Client,
-    }
-
-    impl LoggingClient {
-        pub fn new() -> Self {
-            Self {
-                inner: reqwest::Client::new(),
-            }
-        }
-    }
-
-    #[async_trait]
-    impl AsyncHttpClient for LoggingClient {
-        type Error = HttpError;
-
-        async fn execute(&self, request: Request<String>) -> Result<Response<String>, Self::Error> {
-            println!("Executing request to: {:?}", request.uri());
-
-            // Delegate to the underlying reqwest client's implementation
-            self.inner.execute(request).await
-        }
-    }
+    // pub struct LoggingClient {
+    //     inner: reqwest::Client,
+    // }
+    //
+    // #[async_trait::async_trait]
+    // impl AsyncHttpClient for LoggingClient {
+    //     type Error = HttpError;
+    //
+    //     async fn execute(&self, request: Request<String>) -> Result<Response<String>, Self::Error> {
+    //         println!("Executing request to: {:?}", request.uri());
+    //         self.inner.execute(request).await
+    //     }
+    // }
 }
 
 fn main() {

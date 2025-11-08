@@ -96,6 +96,8 @@ full = ["oauth", "marketdata", "trader"]
 # Use the facade crate for examples
 schwab-api = { path = "crates/schwab-api" }
 tokio = { workspace = true, features = ["full"] }
+reqwest = { workspace = true }
+http = { workspace = true }
 
 # Individual crates for direct usage examples
 schwab-api-core = { path = "crates/schwab-api-core" }
