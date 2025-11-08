@@ -278,6 +278,79 @@ impl<C, Cfg: ApiConfig> ApiClient<C, Cfg> {
     }
 }
 
+// Helper function to execute HTTP requests with reqwest::Client
+// Shared by all AsyncClient implementations for reqwest
+async fn execute_with_reqwest(
+    client: &reqwest::Client,
+    request: Request<String>,
+) -> Result<Response<String>, HttpError> {
+    // --- 1. Safely convert http::Request fields to reqwest::Request parts ---
+
+    // Deconstruct Request (assuming it's http::Request<String> or similar)
+    let (parts, body_ref) = request.into_parts();
+
+    // Safely convert Method and URI
+    let req_method = parts
+        .method
+        .as_str()
+        .parse()
+        .map_err(|e: http::method::InvalidMethod| {
+            HttpError::RequestFailed(format!("Invalid HTTP method: {}", e))
+        })?;
+
+    let url = parts.uri.to_string();
+
+    // Start building the reqwest request
+    let mut rb = client.request(req_method, url);
+
+    // Add headers from http::HeaderMap
+    rb = rb.headers(parts.headers);
+
+    // Add body: Convert String body (body_ref) into reqwest's body type (Bytes or String)
+    if !body_ref.is_empty() {
+        rb = rb.body(body_ref);
+    }
+
+    // --- 2. Send request and handle network errors ---
+
+    let resp = rb
+        .send()
+        .await
+        .map_err(|e| HttpError::NetworkError(e.to_string()))?;
+
+    let status = resp.status();
+    let headers = resp.headers().clone();
+
+    // --- 3. Extract body text and handle API errors ---
+
+    let body_text = resp
+        .text()
+        .await
+        .map_err(|e| HttpError::NetworkError(format!("Failed to read response body: {}", e)))?;
+
+    // Handle API failure using the extracted helper function
+    if !status.is_success() {
+        let parsed = reqwest::Client::parse_api_error(status, &body_text);
+        return Err(HttpError::Api(parsed));
+    }
+
+    // --- 4. Build and return the high-level Response ---
+
+    let mut builder = http::Response::builder().status(status);
+
+    // Get headers from the reqwest response and copy/convert them
+    for (name, value) in headers.iter() {
+        builder = builder.header(name, value);
+    }
+
+    // Build the final Response<String>
+    let response = builder
+        .body(body_text)
+        .map_err(|e| HttpError::RequestFailed(format!("Failed to build final Response: {}", e)))?;
+
+    Ok(response)
+}
+
 // Provide an implementation of AsyncClient for reqwest::Client so the HTTP
 // adapter can be used directly with the higher-level clients.
 #[async_trait]
@@ -285,80 +358,28 @@ impl AsyncClient for reqwest::Client {
     type Error = HttpError;
 
     async fn execute(&self, request: Request<String>) -> Result<Response<String>, Self::Error> {
-        // --- 1. Safely convert http::Request fields to reqwest::Request parts ---
+        execute_with_reqwest(self, request).await
+    }
+}
 
-        // Deconstruct Request (assuming it's http::Request<String> or similar)
-        let (parts, body_ref) = request.into_parts(); // Assuming Request has into_parts()
+// Provide an implementation of AsyncClient for borrowed reqwest::Client
+// This allows servers to share a single client instance across requests
+#[async_trait]
+impl AsyncClient for &reqwest::Client {
+    type Error = HttpError;
 
-        // Safely convert Method and URI
-        let req_method =
-            parts
-                .method
-                .as_str()
-                .parse()
-                .map_err(|e: http::method::InvalidMethod| {
-                    HttpError::RequestFailed(format!("Invalid HTTP method: {}", e))
-                })?;
+    async fn execute(&self, request: Request<String>) -> Result<Response<String>, Self::Error> {
+        execute_with_reqwest(self, request).await
+    }
+}
 
-        let url = parts.uri.to_string();
+// Provide an implementation of AsyncClient for Arc-wrapped reqwest::Client
+// This allows for explicit shared ownership in multi-threaded scenarios
+#[async_trait]
+impl AsyncClient for std::sync::Arc<reqwest::Client> {
+    type Error = HttpError;
 
-        // Start building the reqwest request
-        let mut rb = self.request(req_method, url);
-
-        // Add headers from http::HeaderMap
-        // reqwest::RequestBuilder::headers() takes HeaderMap, allowing zero-copy or efficient copy.
-        // If your request.headers() returns &HeaderMap, use clone() if ownership is required later.
-        // Assuming parts.headers is HeaderMap:
-        rb = rb.headers(parts.headers);
-
-        // Add body: Convert String body (body_ref) into reqwest's body type (Bytes or String)
-        if !body_ref.is_empty() {
-            // Using into_inner() to take ownership of the inner String is best for performance,
-            // avoiding an unnecessary clone() if the inner type is String.
-            rb = rb.body(body_ref);
-        }
-
-        // --- 2. Send request and handle network errors ---
-
-        let resp = rb
-            .send()
-            .await
-            .map_err(|e| HttpError::NetworkError(e.to_string()))?; // Use reqwest::Error::to_string()
-
-        let status = resp.status();
-        let headers = resp.headers().clone();
-
-        // --- 3. Extract body text and handle API errors ---
-
-        // We read the body into a String regardless of success/failure,
-        // as we need the body text for error parsing or successful response.
-        let body_text = resp
-            .text()
-            .await
-            .map_err(|e| HttpError::NetworkError(format!("Failed to read response body: {}", e)))?;
-
-        // Handle API failure using the extracted helper function
-        if !status.is_success() {
-            let parsed = Self::parse_api_error(status, &body_text);
-            return Err(HttpError::Api(parsed));
-        }
-
-        // --- 4. Build and return the high-level Response ---
-
-        // Reuse parts.headers as reqwest::Response::headers() is less robust than the builder pattern.
-        let mut builder = http::Response::builder().status(status);
-
-        // Get headers from the reqwest response and copy/convert them
-        for (name, value) in headers.iter() {
-            // reqwest::header::HeaderName and http::header::HeaderName are the same type.
-            builder = builder.header(name, value);
-        }
-
-        // Build the final Response<String>
-        let response = builder.body(body_text).map_err(|e| {
-            HttpError::RequestFailed(format!("Failed to build final Response: {}", e))
-        })?;
-
-        Ok(response)
+    async fn execute(&self, request: Request<String>) -> Result<Response<String>, Self::Error> {
+        execute_with_reqwest(self.as_ref(), request).await
     }
 }
