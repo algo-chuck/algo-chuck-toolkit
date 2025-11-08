@@ -10,28 +10,28 @@
 // Example 1: Using reqwest (async) with different ownership patterns
 #[allow(dead_code)]
 async fn example_reqwest_async() {
-    use schwab_api_trader::TraderClient;
+    use schwab_api_trader::AsyncTraderClient;
     use std::sync::Arc;
 
     // Option A: Owned client (takes ownership)
     let client = reqwest::Client::new();
-    let _trader = TraderClient::new(client);
+    let _trader = AsyncTraderClient::new(client);
 
     // Option B: Borrowed client (useful in server contexts)
     let client = reqwest::Client::new();
-    let _trader = TraderClient::new(&client);
+    let _trader = AsyncTraderClient::new(&client);
     // client can still be used elsewhere
 
     // Option C: Arc-wrapped client (explicit shared ownership)
     let client = Arc::new(reqwest::Client::new());
-    let _trader = TraderClient::new(Arc::clone(&client));
+    let _trader = AsyncTraderClient::new(Arc::clone(&client));
     // client can be cloned and shared across threads
 }
 
 // Example 2: Server-style usage with shared async client
 #[allow(dead_code)]
 async fn server_example() {
-    use schwab_api_trader::TraderClient;
+    use schwab_api_trader::AsyncTraderClient;
     use std::sync::Arc;
 
     // Create a shared client that will be used across many requests
@@ -39,7 +39,7 @@ async fn server_example() {
 
     // Each request handler can clone the Arc and create its own trader client
     let client_clone = Arc::clone(&shared_client);
-    let _trader = TraderClient::new(client_clone);
+    let _trader = AsyncTraderClient::new(client_clone);
 
     // The Arc allows efficient sharing without copying the underlying client
 }
