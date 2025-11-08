@@ -1,113 +1,15 @@
 use http::Method;
 
 use schwab_api_core::RequestParams;
-use schwab_api_types::OrderRequest;
+use schwab_api_types::{OrderRequest, PreviewOrder};
 
-/// Trait providing parameter builders for all Schwab Trader API endpoints.
+/// Parameter builders for all Schwab Trader API endpoints.
 /// Function names match OpenAPI operationIds (converted to snake_case).
-pub trait TraderParams {
-    // Accounts
+pub struct TraderParams;
 
+impl TraderParams {
     /// Build params for getAccountNumbers operation
-    fn get_account_numbers<'a>(access_token: &'a str) -> RequestParams<'a>;
-
-    /// Build params for getAccounts operation
-    fn get_accounts<'a>(access_token: &'a str, fields: Option<&str>) -> RequestParams<'a>;
-
-    /// Build params for getAccount operation
-    fn get_account<'a>(
-        access_token: &'a str,
-        account_number: &str,
-        fields: Option<&str>,
-    ) -> RequestParams<'a>;
-
-    // Orders
-
-    /// Build params for getOrdersByPathParam operation
-    fn get_orders_by_path_param<'a>(
-        access_token: &'a str,
-        account_number: &str,
-        from_entered_time: &str,
-        to_entered_time: &str,
-        max_results: Option<i32>,
-        status: Option<&str>,
-    ) -> RequestParams<'a>;
-
-    /// Build params for getOrder operation
-    fn get_order<'a>(
-        access_token: &'a str,
-        account_number: &str,
-        order_id: i64,
-    ) -> RequestParams<'a>;
-
-    /// Build params for placeOrder operation
-    fn place_order<'a>(
-        access_token: &'a str,
-        account_number: &str,
-        order: &'a OrderRequest,
-    ) -> RequestParams<'a, &'a OrderRequest>;
-
-    /// Build params for cancelOrder operation
-    fn cancel_order<'a>(
-        access_token: &'a str,
-        account_number: &str,
-        order_id: i64,
-    ) -> RequestParams<'a>;
-
-    /// Build params for replaceOrder operation
-    fn replace_order<'a>(
-        access_token: &'a str,
-        account_number: &str,
-        order_id: i64,
-        order: &'a OrderRequest,
-    ) -> RequestParams<'a, &'a OrderRequest>;
-
-    /// Build params for getOrdersByQueryParam operation
-    fn get_orders_by_query_param<'a>(
-        access_token: &'a str,
-        from_entered_time: &str,
-        to_entered_time: &str,
-        max_results: Option<i32>,
-        status: Option<&str>,
-    ) -> RequestParams<'a>;
-
-    /// Build params for previewOrder operation
-    fn preview_order<'a>(
-        access_token: &'a str,
-        account_number: &str,
-        order: &'a OrderRequest,
-    ) -> RequestParams<'a, &'a OrderRequest>;
-
-    // Transactions
-
-    /// Build params for getTransactionsByPathParam operation
-    fn get_transactions_by_path_param<'a>(
-        access_token: &'a str,
-        account_number: &str,
-        start_date: &str,
-        end_date: &str,
-        types: &str,
-        symbol: Option<&str>,
-    ) -> RequestParams<'a>;
-
-    /// Build params for getTransactionsById operation
-    fn get_transactions_by_id<'a>(
-        access_token: &'a str,
-        account_number: &str,
-        transaction_id: i64,
-    ) -> RequestParams<'a>;
-
-    // User Preference
-
-    /// Build params for getUserPreference operation
-    fn get_user_preference<'a>(access_token: &'a str) -> RequestParams<'a>;
-}
-
-/// Concrete implementation of TraderParams
-pub struct TraderParamsImpl;
-
-impl TraderParams for TraderParamsImpl {
-    fn get_account_numbers<'a>(access_token: &'a str) -> RequestParams<'a> {
+    pub fn get_account_numbers<'a>(access_token: &'a str) -> RequestParams<'a> {
         RequestParams {
             access_token,
             body: None,
@@ -117,7 +19,8 @@ impl TraderParams for TraderParamsImpl {
         }
     }
 
-    fn get_accounts<'a>(access_token: &'a str, fields: Option<&str>) -> RequestParams<'a> {
+    /// Build params for getAccounts operation
+    pub fn get_accounts<'a>(access_token: &'a str, fields: Option<&str>) -> RequestParams<'a> {
         RequestParams {
             access_token,
             body: None,
@@ -127,7 +30,8 @@ impl TraderParams for TraderParamsImpl {
         }
     }
 
-    fn get_account<'a>(
+    /// Build params for getAccount operation
+    pub fn get_account<'a>(
         access_token: &'a str,
         account_number: &str,
         fields: Option<&str>,
@@ -141,7 +45,8 @@ impl TraderParams for TraderParamsImpl {
         }
     }
 
-    fn get_orders_by_path_param<'a>(
+    /// Build params for getOrdersByPathParam operation
+    pub fn get_orders_by_path_param<'a>(
         access_token: &'a str,
         account_number: &str,
         from_entered_time: &str,
@@ -168,7 +73,8 @@ impl TraderParams for TraderParamsImpl {
         }
     }
 
-    fn get_order<'a>(
+    /// Build params for getOrder operation
+    pub fn get_order<'a>(
         access_token: &'a str,
         account_number: &str,
         order_id: i64,
@@ -182,7 +88,8 @@ impl TraderParams for TraderParamsImpl {
         }
     }
 
-    fn place_order<'a>(
+    /// Build params for placeOrder operation
+    pub fn place_order<'a>(
         access_token: &'a str,
         account_number: &str,
         order: &'a OrderRequest,
@@ -196,7 +103,8 @@ impl TraderParams for TraderParamsImpl {
         }
     }
 
-    fn cancel_order<'a>(
+    /// Build params for cancelOrder operation
+    pub fn cancel_order<'a>(
         access_token: &'a str,
         account_number: &str,
         order_id: i64,
@@ -210,7 +118,8 @@ impl TraderParams for TraderParamsImpl {
         }
     }
 
-    fn replace_order<'a>(
+    /// Build params for replaceOrder operation
+    pub fn replace_order<'a>(
         access_token: &'a str,
         account_number: &str,
         order_id: i64,
@@ -225,7 +134,8 @@ impl TraderParams for TraderParamsImpl {
         }
     }
 
-    fn get_orders_by_query_param<'a>(
+    /// Build params for getOrdersByQueryParam operation
+    pub fn get_orders_by_query_param<'a>(
         access_token: &'a str,
         from_entered_time: &str,
         to_entered_time: &str,
@@ -251,11 +161,12 @@ impl TraderParams for TraderParamsImpl {
         }
     }
 
-    fn preview_order<'a>(
+    /// Build params for previewOrder operation
+    pub fn preview_order<'a>(
         access_token: &'a str,
         account_number: &str,
-        order: &'a OrderRequest,
-    ) -> RequestParams<'a, &'a OrderRequest> {
+        order: &'a PreviewOrder,
+    ) -> RequestParams<'a, &'a PreviewOrder> {
         RequestParams {
             access_token,
             body: Some(order),
@@ -265,7 +176,8 @@ impl TraderParams for TraderParamsImpl {
         }
     }
 
-    fn get_transactions_by_path_param<'a>(
+    /// Build params for getTransactionsByPathParam operation
+    pub fn get_transactions_by_path_param<'a>(
         access_token: &'a str,
         account_number: &str,
         start_date: &str,
@@ -290,7 +202,8 @@ impl TraderParams for TraderParamsImpl {
         }
     }
 
-    fn get_transactions_by_id<'a>(
+    /// Build params for getTransactionsById operation
+    pub fn get_transactions_by_id<'a>(
         access_token: &'a str,
         account_number: &str,
         transaction_id: i64,
@@ -304,7 +217,8 @@ impl TraderParams for TraderParamsImpl {
         }
     }
 
-    fn get_user_preference<'a>(access_token: &'a str) -> RequestParams<'a> {
+    /// Build params for getUserPreference operation
+    pub fn get_user_preference<'a>(access_token: &'a str) -> RequestParams<'a> {
         RequestParams {
             access_token,
             body: None,

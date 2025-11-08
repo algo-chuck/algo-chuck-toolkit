@@ -51,5 +51,5 @@ impl ApiConfig for TraderConfig {
 pub use async_client::AsyncTraderClient;
 pub use sync_client::SyncTraderClient;
 
-/// Re-export TraderParams trait and implementation for advanced users
-pub use params::{TraderParams, TraderParamsImpl};
+/// Re-export TraderParams for advanced users who want direct parameter access
+pub use params::TraderParams;
