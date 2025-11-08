@@ -4,8 +4,29 @@ use clap::ArgMatches;
 use crate::config::{ConfigManager, TokenManager};
 use schwab_api_trader::TraderClient;
 
-/// Handle the account numbers command for data retrieval
-pub async fn handle_account_numbers_command(_matches: &ArgMatches) -> Result<()> {
+/// Handle the account numbers command for data retrieval (synchronous)
+pub fn handle_account_numbers_command_sync(_matches: &ArgMatches) -> Result<()> {
+    println!("🚀 Fetching Account Numbers");
+
+    // Load configuration and TokenManager
+    let config_manager = ConfigManager::new()?;
+    let token_manager = TokenManager::new(&config_manager)?;
+
+    // Get access token from TokenManager
+    let access_token = token_manager
+        .get_access_token()?
+        .ok_or_else(|| anyhow::anyhow!("No access token found. Please run 'chuck login' first."))?;
+
+    let client = TraderClient::new(ureq::Agent::new());
+    let data = client.get_account_numbers_sync(&access_token)?;
+    println!("{:#?}", data);
+
+    Ok(())
+}
+
+// Async version kept for reference if needed
+#[allow(dead_code)]
+async fn handle_account_numbers_command_async(_matches: &ArgMatches) -> Result<()> {
     println!("🚀 Fetching Account Numbers");
     // Implement the logic to fetch account numbers here
 

@@ -50,5 +50,6 @@
 mod asynchronous;
 mod client;
 mod params;
+mod synchronous;
 
 pub use client::TraderClient;

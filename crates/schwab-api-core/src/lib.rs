@@ -160,6 +160,12 @@ impl<C: AsyncHttpClient> HttpClient<C> {
     }
 }
 
+impl<C: SyncHttpClient> HttpClient<C> {
+    pub fn execute_sync(&self, request: Request<String>) -> Result<Response<String>, C::Error> {
+        self.client.execute(request)
+    }
+}
+
 impl<C, Cfg> ApiClient<C, Cfg>
 where
     C: AsyncHttpClient,
@@ -198,6 +204,41 @@ where
             .execute(request)
             .await
             .map_err(HttpError::from)?;
+
+        Ok(())
+    }
+}
+
+impl<C, Cfg> ApiClient<C, Cfg>
+where
+    C: SyncHttpClient,
+    Cfg: ApiConfig,
+    HttpError: From<C::Error>,
+{
+    /// Helper method to fetch and deserialize a response (synchronous)
+    pub fn fetch_sync<'a, R, B>(&self, params: &'a RequestParams<'a, B>) -> Result<R, HttpError>
+    where
+        R: DeserializeOwned,
+        B: Serialize,
+    {
+        let request = self.build_request(params)?;
+
+        // Execute the request synchronously
+        let response = self.client.execute_sync(request).map_err(HttpError::from)?;
+
+        // Use the single helper method to handle deserialization, logging, and error conversion.
+        let typed = self.parse_ok_response(&response)?;
+        Ok(typed)
+    }
+
+    /// Helper method to execute a request without parsing a response body (synchronous)
+    pub fn execute_sync<'a, B>(&self, params: &'a RequestParams<'a, B>) -> Result<(), HttpError>
+    where
+        B: Serialize,
+    {
+        let request = self.build_request(params)?;
+
+        self.client.execute_sync(request).map_err(HttpError::from)?;
 
         Ok(())
     }

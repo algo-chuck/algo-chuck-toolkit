@@ -9,7 +9,7 @@ mod server;
 
 use anyhow::Result;
 use commands::{
-    handle_account_command, handle_account_numbers_command, handle_account_order_command,
+    handle_account_command, handle_account_numbers_command_sync, handle_account_order_command,
     handle_account_orders_command, handle_accounts_command, handle_ca_command,
     handle_cancel_order_command, handle_chain_command, handle_config_command,
     handle_expiration_chain_command, handle_instrument_command, handle_instruments_command,
@@ -21,39 +21,75 @@ use commands::{
     handle_user_preference_command,
 };
 
-#[tokio::main]
-async fn main() -> Result<()> {
+fn main() -> Result<()> {
     let matches = cli::build_cli().get_matches();
 
     match matches.subcommand() {
-        Some(("login", m)) => handle_login_command(m).await,
-        Some(("refresh", m)) => handle_refresh_command(m).await,
-        Some(("status", m)) => handle_status_command(m).await,
-        Some(("config", m)) => handle_config_command(m).await,
-        Some(("ca", m)) => handle_ca_command(m).await,
-        Some(("account-numbers", m)) => handle_account_numbers_command(m).await,
-        Some(("accounts", m)) => handle_accounts_command(m).await,
-        Some(("account", m)) => handle_account_command(m).await,
-        Some(("account-orders", m)) => handle_account_orders_command(m).await,
-        Some(("account-order", m)) => handle_account_order_command(m).await,
-        Some(("orders", m)) => handle_orders_command(m).await,
-        Some(("place-order", m)) => handle_place_order_command(m).await,
-        Some(("cancel-order", m)) => handle_cancel_order_command(m).await,
-        Some(("replace-order", m)) => handle_replace_order_command(m).await,
-        Some(("preview-order", m)) => handle_preview_order_command(m).await,
-        Some(("transactions", m)) => handle_transactions_command(m).await,
-        Some(("transaction", m)) => handle_transaction_command(m).await,
-        Some(("user-preference", m)) => handle_user_preference_command(m).await,
-        Some(("quotes", m)) => handle_quotes_command(m).await,
-        Some(("quote", m)) => handle_quote_command(m).await,
-        Some(("chain", m)) => handle_chain_command(m).await,
-        Some(("expiration-chain", m)) => handle_expiration_chain_command(m).await,
-        Some(("price-history", m)) => handle_price_history_command(m).await,
-        Some(("movers", m)) => handle_movers_command(m).await,
-        Some(("market-hours", m)) => handle_market_hours_command(m).await,
-        Some(("market-hour", m)) => handle_market_hour_command(m).await,
-        Some(("instruments", m)) => handle_instruments_command(m).await,
-        Some(("instrument", m)) => handle_instrument_command(m).await,
+        // Commands that need async runtime (OAuth + server)
+        Some(("login", m)) => tokio::runtime::Runtime::new()?.block_on(handle_login_command(m)),
+        Some(("refresh", m)) => tokio::runtime::Runtime::new()?.block_on(handle_refresh_command(m)),
+
+        // Synchronous commands - no runtime overhead!
+        Some(("account-numbers", m)) => handle_account_numbers_command_sync(m),
+
+        // Rest of the commands still async for now (will convert later)
+        Some(("status", m)) => tokio::runtime::Runtime::new()?.block_on(handle_status_command(m)),
+        Some(("config", m)) => tokio::runtime::Runtime::new()?.block_on(handle_config_command(m)),
+        Some(("ca", m)) => tokio::runtime::Runtime::new()?.block_on(handle_ca_command(m)),
+        Some(("accounts", m)) => {
+            tokio::runtime::Runtime::new()?.block_on(handle_accounts_command(m))
+        }
+        Some(("account", m)) => tokio::runtime::Runtime::new()?.block_on(handle_account_command(m)),
+        Some(("account-orders", m)) => {
+            tokio::runtime::Runtime::new()?.block_on(handle_account_orders_command(m))
+        }
+        Some(("account-order", m)) => {
+            tokio::runtime::Runtime::new()?.block_on(handle_account_order_command(m))
+        }
+        Some(("orders", m)) => tokio::runtime::Runtime::new()?.block_on(handle_orders_command(m)),
+        Some(("place-order", m)) => {
+            tokio::runtime::Runtime::new()?.block_on(handle_place_order_command(m))
+        }
+        Some(("cancel-order", m)) => {
+            tokio::runtime::Runtime::new()?.block_on(handle_cancel_order_command(m))
+        }
+        Some(("replace-order", m)) => {
+            tokio::runtime::Runtime::new()?.block_on(handle_replace_order_command(m))
+        }
+        Some(("preview-order", m)) => {
+            tokio::runtime::Runtime::new()?.block_on(handle_preview_order_command(m))
+        }
+        Some(("transactions", m)) => {
+            tokio::runtime::Runtime::new()?.block_on(handle_transactions_command(m))
+        }
+        Some(("transaction", m)) => {
+            tokio::runtime::Runtime::new()?.block_on(handle_transaction_command(m))
+        }
+        Some(("user-preference", m)) => {
+            tokio::runtime::Runtime::new()?.block_on(handle_user_preference_command(m))
+        }
+        Some(("quotes", m)) => tokio::runtime::Runtime::new()?.block_on(handle_quotes_command(m)),
+        Some(("quote", m)) => tokio::runtime::Runtime::new()?.block_on(handle_quote_command(m)),
+        Some(("chain", m)) => tokio::runtime::Runtime::new()?.block_on(handle_chain_command(m)),
+        Some(("expiration-chain", m)) => {
+            tokio::runtime::Runtime::new()?.block_on(handle_expiration_chain_command(m))
+        }
+        Some(("price-history", m)) => {
+            tokio::runtime::Runtime::new()?.block_on(handle_price_history_command(m))
+        }
+        Some(("movers", m)) => tokio::runtime::Runtime::new()?.block_on(handle_movers_command(m)),
+        Some(("market-hours", m)) => {
+            tokio::runtime::Runtime::new()?.block_on(handle_market_hours_command(m))
+        }
+        Some(("market-hour", m)) => {
+            tokio::runtime::Runtime::new()?.block_on(handle_market_hour_command(m))
+        }
+        Some(("instruments", m)) => {
+            tokio::runtime::Runtime::new()?.block_on(handle_instruments_command(m))
+        }
+        Some(("instrument", m)) => {
+            tokio::runtime::Runtime::new()?.block_on(handle_instrument_command(m))
+        }
         _ => unreachable!("Subcommand is required"),
     }
 }

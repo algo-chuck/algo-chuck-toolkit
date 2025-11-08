@@ -7,7 +7,7 @@ license.workspace = true
 description = "Command-line interface for the Schwab API toolkit"
 
 [dependencies]
-schwab-api-core = { path = "../../crates/schwab-api-core" }
+schwab-api-core = { path = "../../crates/schwab-api-core", features = ["reqwest-client", "ureq-client"] }
 schwab-api-marketdata = { path = "../../crates/schwab-api-marketdata" }
 schwab-api-oauth = { path = "../../crates/schwab-api-oauth" }
 schwab-api-trader = { path = "../../crates/schwab-api-trader" }
@@ -21,6 +21,7 @@ config = "0.15"
 dirs = "6.0"
 rcgen = "0.14"
 reqwest = { workspace = true }
+ureq = { workspace = true }
 rustls = { version = "0.23", features = ["ring"] }
 rustls-pemfile = "2.0"
 serde = { workspace = true, features = ["derive"] }

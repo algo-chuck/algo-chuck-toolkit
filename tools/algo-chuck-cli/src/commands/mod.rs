@@ -16,7 +16,7 @@ mod transactions;
 mod user_preference;
 
 pub use accounts::{
-    handle_account_command, handle_account_numbers_command, handle_accounts_command,
+    handle_account_command, handle_account_numbers_command_sync, handle_accounts_command,
 };
 pub use ca::handle_ca_command;
 pub use chain::handle_chain_command;
