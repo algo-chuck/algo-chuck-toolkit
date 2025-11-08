@@ -2,14 +2,13 @@ use http::Method;
 
 use schwab_api_core::RequestParams;
 
-pub trait MarketdataParams {
-    // Quotes
+/// Parameter builders for all Schwab Market Data API endpoints.
+/// Function names match OpenAPI operationIds (converted to snake_case).
+pub struct MarketdataParams;
 
-    /// Get quotes for multiple symbols
-    /// - symbols: Comma-separated list of symbols (e.g., "AAPL,MSFT,TSLA")
-    /// - fields: Optional subset of data (e.g., "quote,reference")
-    /// - indicative: Include indicative quotes for ETFs
-    fn get_quotes_params<'a>(
+impl MarketdataParams {
+    /// Build params for getQuotes operation - Get quotes for multiple symbols
+    pub fn get_quotes<'a>(
         access_token: &'a str,
         symbols: &str,
         fields: Option<&str>,
@@ -29,17 +28,15 @@ pub trait MarketdataParams {
 
         RequestParams {
             access_token,
-            body: None,
-            path: "/quotes".to_string(),
             method: Method::GET,
+            path: "/quotes".to_string(),
             query: Some(query),
+            body: None,
         }
     }
 
-    /// Get quote for a single symbol
-    /// - symbol: Single symbol (e.g., "AAPL")
-    /// - fields: Optional subset of data (e.g., "quote,reference")
-    fn get_quote_params<'a>(
+    /// Build params for getQuote operation - Get quote for a single symbol
+    pub fn get_quote<'a>(
         access_token: &'a str,
         symbol: &str,
         fields: Option<&str>,
@@ -49,33 +46,16 @@ pub trait MarketdataParams {
 
         RequestParams {
             access_token,
-            body: None,
-            path,
             method: Method::GET,
+            path,
             query,
+            body: None,
         }
     }
 
-    // Option Chains
-
-    /// Get option chain for an optionable symbol
-    /// - symbol: Symbol (e.g., "AAPL")
-    /// - contract_type: Type of contracts (CALL, PUT, ALL)
-    /// - strike_count: Number of strikes above/below ATM
-    /// - include_underlying_quote: Include underlying quote
-    /// - strategy: Option chain strategy (SINGLE, ANALYTICAL, COVERED, etc.)
-    /// - interval: Strike interval for spread strategies
-    /// - strike: Strike price
-    /// - range: Range (ITM/NTM/OTM)
-    /// - from_date: From date (yyyy-MM-dd)
-    /// - to_date: To date (yyyy-MM-dd)
-    /// - volatility: Volatility for ANALYTICAL strategy
-    /// - underlying_price: Underlying price for ANALYTICAL strategy
-    /// - interest_rate: Interest rate for ANALYTICAL strategy
-    /// - days_to_expiration: Days to expiration for ANALYTICAL strategy
-    /// - exp_month: Expiration month
-    /// - option_type: Option type
-    fn get_chain_params<'a>(
+    /// Build params for getChain operation - Get option chain for an optionable symbol
+    #[allow(clippy::too_many_arguments)]
+    pub fn get_chain<'a>(
         access_token: &'a str,
         symbol: &str,
         contract_type: Option<&str>,
@@ -146,42 +126,29 @@ pub trait MarketdataParams {
 
         RequestParams {
             access_token,
-            body: None,
-            path: "/chains".to_string(),
             method: Method::GET,
+            path: "/chains".to_string(),
             query: Some(query),
+            body: None,
         }
     }
 
-    // Options Expiration Chain
-
-    /// Get option expiration chain for an optionable symbol
-    /// - symbol: Symbol (e.g., "AAPL")
-    fn get_expiration_chain_params<'a>(access_token: &'a str, symbol: &str) -> RequestParams<'a> {
+    /// Build params for getExpirationChain operation - Get option expiration chain
+    pub fn get_expiration_chain<'a>(access_token: &'a str, symbol: &str) -> RequestParams<'a> {
         let query = format!("symbol={symbol}");
 
         RequestParams {
             access_token,
-            body: None,
-            path: "/expirationchain".to_string(),
             method: Method::GET,
+            path: "/expirationchain".to_string(),
             query: Some(query),
+            body: None,
         }
     }
 
-    // Price History
-
-    /// Get price history for a symbol
-    /// - symbol: Symbol (e.g., "AAPL")
-    /// - period_type: Period type (day, month, year, ytd)
-    /// - period: Number of periods
-    /// - frequency_type: Frequency type (minute, daily, weekly, monthly)
-    /// - frequency: Frequency (1, 5, 10, 15, 30 for minute; 1 for others)
-    /// - start_date: Start date in milliseconds since epoch
-    /// - end_date: End date in milliseconds since epoch
-    /// - need_extended_hours_data: Include extended hours data
-    /// - need_previous_close: Include previous close
-    fn get_price_history_params<'a>(
+    /// Build params for getPriceHistory operation - Get price history for a symbol
+    #[allow(clippy::too_many_arguments)]
+    pub fn get_price_history<'a>(
         access_token: &'a str,
         symbol: &str,
         period_type: Option<&str>,
@@ -213,39 +180,33 @@ pub trait MarketdataParams {
         if let Some(ed) = end_date {
             query_parts.push(format!("endDate={ed}"));
         }
-        if let Some(ehd) = need_extended_hours_data {
-            query_parts.push(format!("needExtendedHoursData={ehd}"));
+        if let Some(nehd) = need_extended_hours_data {
+            query_parts.push(format!("needExtendedHoursData={nehd}"));
         }
-        if let Some(pc) = need_previous_close {
-            query_parts.push(format!("needPreviousClose={pc}"));
+        if let Some(npc) = need_previous_close {
+            query_parts.push(format!("needPreviousClose={npc}"));
         }
 
         let query = query_parts.join("&");
 
         RequestParams {
             access_token,
-            body: None,
-            path: "/pricehistory".to_string(),
             method: Method::GET,
+            path: "/pricehistory".to_string(),
             query: Some(query),
+            body: None,
         }
     }
 
-    // Movers
-
-    /// Get movers for a specific index
-    /// - symbol: Index symbol ($DJI, $COMPX, $SPX, NYSE, NASDAQ, OTCBB, INDEX_ALL, EQUITY_ALL, OPTION_ALL, OPTION_PUT, OPTION_CALL)
-    /// - sort: Sort by attribute (VOLUME, TRADES, PERCENT_CHANGE_UP, PERCENT_CHANGE_DOWN)
-    /// - frequency: Frequency (0, 1, 5, 10, 30, 60)
-    fn get_movers_params<'a>(
+    /// Build params for getMovers operation - Get movers for a specific index
+    pub fn get_movers<'a>(
         access_token: &'a str,
         symbol: &str,
         sort: Option<&str>,
         frequency: Option<i32>,
     ) -> RequestParams<'a> {
-        let path = format!("/movers/{symbol}");
+        let mut query_parts = vec![];
 
-        let mut query_parts = Vec::new();
         if let Some(s) = sort {
             query_parts.push(format!("sort={s}"));
         }
@@ -261,19 +222,15 @@ pub trait MarketdataParams {
 
         RequestParams {
             access_token,
-            body: None,
-            path,
             method: Method::GET,
+            path: format!("/movers/{symbol}"),
             query,
+            body: None,
         }
     }
 
-    // Market Hours
-
-    /// Get market hours for multiple markets
-    /// - markets: Comma-separated list of markets (equity, option, bond, future, forex)
-    /// - date: Date in YYYY-MM-DD format
-    fn get_market_hours_params<'a>(
+    /// Build params for getMarketHours operation - Get market hours for multiple markets
+    pub fn get_market_hours<'a>(
         access_token: &'a str,
         markets: &str,
         date: Option<&str>,
@@ -288,40 +245,32 @@ pub trait MarketdataParams {
 
         RequestParams {
             access_token,
-            body: None,
-            path: "/markets".to_string(),
             method: Method::GET,
+            path: "/markets".to_string(),
             query: Some(query),
+            body: None,
         }
     }
 
-    /// Get market hours for a single market
-    /// - market: Market (equity, option, bond, future, forex)
-    /// - date: Date in YYYY-MM-DD format
-    fn get_market_hour_params<'a>(
+    /// Build params for getMarketHour operation - Get market hours for a single market
+    pub fn get_market_hour<'a>(
         access_token: &'a str,
         market: &str,
         date: Option<&str>,
     ) -> RequestParams<'a> {
-        let path = format!("/markets/{market}");
-
         let query = date.map(|d| format!("date={d}"));
 
         RequestParams {
             access_token,
-            body: None,
-            path,
             method: Method::GET,
+            path: format!("/markets/{market}"),
             query,
+            body: None,
         }
     }
 
-    // Instruments
-
-    /// Get instruments by symbol and projection
-    /// - symbol: Symbol to search for
-    /// - projection: Search type (symbol-search, symbol-regex, desc-search, desc-regex, search, fundamental)
-    fn get_instruments_params<'a>(
+    /// Build params for getInstruments operation - Get instruments by symbol and projection
+    pub fn get_instruments<'a>(
         access_token: &'a str,
         symbol: &str,
         projection: &str,
@@ -330,24 +279,21 @@ pub trait MarketdataParams {
 
         RequestParams {
             access_token,
-            body: None,
-            path: "/instruments".to_string(),
             method: Method::GET,
+            path: "/instruments".to_string(),
             query: Some(query),
+            body: None,
         }
     }
 
-    /// Get instrument by CUSIP
-    /// - cusip: CUSIP identifier
-    fn get_instrument_by_cusip_params<'a>(access_token: &'a str, cusip: &str) -> RequestParams<'a> {
-        let path = format!("/instruments/{cusip}");
-
+    /// Build params for getInstrumentsByCusip operation - Get instrument by CUSIP
+    pub fn get_instruments_by_cusip<'a>(access_token: &'a str, cusip: &str) -> RequestParams<'a> {
         RequestParams {
             access_token,
-            body: None,
-            path,
             method: Method::GET,
+            path: format!("/instruments/{cusip}"),
             query: None,
+            body: None,
         }
     }
 }

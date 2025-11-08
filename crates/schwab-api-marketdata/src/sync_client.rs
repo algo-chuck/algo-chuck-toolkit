@@ -1,45 +1,61 @@
-use schwab_api_core::{AsyncHttpClient, HttpError};
+use schwab_api_core::{ApiClient, HttpError, SyncHttpClient};
 use schwab_api_types::{
     CandleList, ExpirationChain, GetMovers200Response, Hours, InstrumentResponse, OptionChain,
     QuoteResponseObject,
 };
 use std::collections::HashMap;
+use std::ops::Deref;
 
-use crate::client::MarketdataClient;
-use crate::params::MarketdataParams;
+use crate::{MarketdataConfig, MarketdataParams};
 
-impl<C> MarketdataClient<C>
+/// Sync client for Schwab Market Data API
+pub struct SyncMarketdataClient<C: SyncHttpClient> {
+    client: ApiClient<C, MarketdataConfig>,
+}
+
+impl<C: SyncHttpClient> SyncMarketdataClient<C> {
+    pub fn new(client: C) -> Self {
+        Self {
+            client: ApiClient::new(client),
+        }
+    }
+}
+
+impl<C: SyncHttpClient> Deref for SyncMarketdataClient<C> {
+    type Target = ApiClient<C, MarketdataConfig>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.client
+    }
+}
+
+impl<C> SyncMarketdataClient<C>
 where
-    C: AsyncHttpClient,
+    C: SyncHttpClient,
     HttpError: From<C::Error>,
 {
-    // Quotes
-
     /// Get quotes for multiple symbols
-    pub async fn get_quotes(
+    pub fn get_quotes(
         &self,
         access_token: &str,
         symbols: &str,
         fields: Option<&str>,
         indicative: Option<bool>,
     ) -> Result<HashMap<String, QuoteResponseObject>, HttpError> {
-        let params =
-            MarketdataClient::<C>::get_quotes_params(access_token, symbols, fields, indicative);
-        self.fetch(&params).await
+        let params = MarketdataParams::get_quotes(access_token, symbols, fields, indicative);
+        self.client.fetch_sync(&params)
     }
 
     /// Get quote for a single symbol
-    pub async fn get_quote(
+    pub fn get_quote(
         &self,
         access_token: &str,
         symbol: &str,
         fields: Option<&str>,
     ) -> Result<HashMap<String, QuoteResponseObject>, HttpError> {
-        let params = MarketdataClient::<C>::get_quote_params(access_token, symbol, fields);
-        self.fetch(&params).await
+        let params = MarketdataParams::get_quote(access_token, symbol, fields);
+        self.client.fetch_sync(&params)
     }
-
-    // Option Chains
 
     /// Get option chain for an optionable symbol
     ///
@@ -64,7 +80,7 @@ where
     /// **Workaround**: Access the raw JSON from the error/warning output, or update the
     /// schwab-api-types crate with the corrected structure.
     #[allow(clippy::too_many_arguments)]
-    pub async fn get_chain(
+    pub fn get_chain(
         &self,
         access_token: &str,
         symbol: &str,
@@ -84,7 +100,7 @@ where
         exp_month: Option<&str>,
         option_type: Option<&str>,
     ) -> Result<OptionChain, HttpError> {
-        let params = MarketdataClient::<C>::get_chain_params(
+        let params = MarketdataParams::get_chain(
             access_token,
             symbol,
             contract_type,
@@ -103,26 +119,22 @@ where
             exp_month,
             option_type,
         );
-        self.fetch(&params).await
+        self.client.fetch_sync(&params)
     }
 
-    // Options Expiration Chain
-
     /// Get option expiration chain for an optionable symbol
-    pub async fn get_expiration_chain(
+    pub fn get_expiration_chain(
         &self,
         access_token: &str,
         symbol: &str,
     ) -> Result<ExpirationChain, HttpError> {
-        let params = MarketdataClient::<C>::get_expiration_chain_params(access_token, symbol);
-        self.fetch(&params).await
+        let params = MarketdataParams::get_expiration_chain(access_token, symbol);
+        self.client.fetch_sync(&params)
     }
-
-    // Price History
 
     /// Get price history for a symbol
     #[allow(clippy::too_many_arguments)]
-    pub async fn get_price_history(
+    pub fn get_price_history(
         &self,
         access_token: &str,
         symbol: &str,
@@ -135,7 +147,7 @@ where
         need_extended_hours_data: Option<bool>,
         need_previous_close: Option<bool>,
     ) -> Result<CandleList, HttpError> {
-        let params = MarketdataClient::<C>::get_price_history_params(
+        let params = MarketdataParams::get_price_history(
             access_token,
             symbol,
             period_type,
@@ -147,69 +159,61 @@ where
             need_extended_hours_data,
             need_previous_close,
         );
-        self.fetch(&params).await
+        self.client.fetch_sync(&params)
     }
 
-    // Movers
-
     /// Get movers for a specific index
-    pub async fn get_movers(
+    pub fn get_movers(
         &self,
         access_token: &str,
         symbol: &str,
         sort: Option<&str>,
         frequency: Option<i32>,
     ) -> Result<GetMovers200Response, HttpError> {
-        let params =
-            MarketdataClient::<C>::get_movers_params(access_token, symbol, sort, frequency);
-        self.fetch(&params).await
+        let params = MarketdataParams::get_movers(access_token, symbol, sort, frequency);
+        self.client.fetch_sync(&params)
     }
 
-    // Market Hours
-
     /// Get market hours for multiple markets
-    pub async fn get_market_hours(
+    pub fn get_market_hours(
         &self,
         access_token: &str,
         markets: &str,
         date: Option<&str>,
     ) -> Result<HashMap<String, HashMap<String, Hours>>, HttpError> {
-        let params = MarketdataClient::<C>::get_market_hours_params(access_token, markets, date);
-        self.fetch(&params).await
+        let params = MarketdataParams::get_market_hours(access_token, markets, date);
+        self.client.fetch_sync(&params)
     }
 
     /// Get market hours for a single market
-    pub async fn get_market_hour(
+    pub fn get_market_hour(
         &self,
         access_token: &str,
         market: &str,
         date: Option<&str>,
     ) -> Result<HashMap<String, HashMap<String, Hours>>, HttpError> {
-        let params = MarketdataClient::<C>::get_market_hour_params(access_token, market, date);
-        self.fetch(&params).await
+        let params = MarketdataParams::get_market_hour(access_token, market, date);
+        self.client.fetch_sync(&params)
     }
 
-    // Instruments
-
     /// Get instruments by symbol and projection
-    pub async fn get_instruments(
+    pub fn get_instruments(
         &self,
         access_token: &str,
         symbol: &str,
         projection: &str,
     ) -> Result<HashMap<String, Vec<InstrumentResponse>>, HttpError> {
-        let params =
-            MarketdataClient::<C>::get_instruments_params(access_token, symbol, projection);
-        self.fetch(&params).await
+        let params = MarketdataParams::get_instruments(access_token, symbol, projection);
+        self.client.fetch_sync(&params)
     }
 
     /// Get instrument by CUSIP
-    pub async fn get_instrument_by_cusip(
+    pub fn get_instruments_by_cusip(
         &self,
         access_token: &str,
         cusip: &str,
     ) -> Result<HashMap<String, Vec<InstrumentResponse>>, HttpError> {
-        let params = MarketdataClient::<C>::get_instrument_by_cusip_params(access_token, cusip);
-        self.fetch(&params).await
+        let params = MarketdataParams::get_instruments_by_cusip(access_token, cusip);
+        self.client.fetch_sync(&params)
     }
 }
