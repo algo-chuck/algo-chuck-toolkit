@@ -155,10 +155,7 @@ pub fn parse_api_error(status: http::StatusCode, body_text: &str) -> SchwabError
 }
 
 impl<C: AsyncHttpClient> HttpClient<C> {
-    pub async fn execute_async(
-        &self,
-        request: Request<String>,
-    ) -> Result<Response<String>, C::Error> {
+    pub async fn execute(&self, request: Request<String>) -> Result<Response<String>, C::Error> {
         self.client.execute(request).await
     }
 }
@@ -186,7 +183,7 @@ where
         // Success path continues immediately.
         let response = self
             .client
-            .execute_async(request)
+            .execute(request)
             .await
             // Use HttpError::from to explicitly tell the compiler the target type.
             .map_err(HttpError::from)?;
@@ -204,7 +201,7 @@ where
         let request = self.build_request(params)?;
 
         self.client
-            .execute_async(request)
+            .execute(request)
             .await
             .map_err(HttpError::from)?;
 
