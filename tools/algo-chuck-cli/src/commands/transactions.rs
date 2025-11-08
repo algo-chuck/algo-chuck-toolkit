@@ -39,7 +39,7 @@ pub async fn handle_transactions_command(matches: &ArgMatches) -> Result<()> {
 
     let client = AsyncTraderClient::new(reqwest::Client::new());
     let data = client
-        .get_transactions(
+        .get_transactions_by_path_param(
             &access_token,
             account_number,
             start_date,
@@ -77,7 +77,7 @@ pub async fn handle_transaction_command(matches: &ArgMatches) -> Result<()> {
 
     let client = AsyncTraderClient::new(reqwest::Client::new());
     let data = client
-        .get_transaction(&access_token, account_number, *transaction_id)
+        .get_transactions_by_id(&access_token, account_number, *transaction_id)
         .await?;
     println!("{:#?}", data);
 

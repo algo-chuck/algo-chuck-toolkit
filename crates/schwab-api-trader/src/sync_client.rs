@@ -38,7 +38,7 @@ where
         let params = RequestParams {
             access_token,
             method: http::Method::GET,
-            path: "/accountNumbers".to_string(),
+            path: "/accounts/accountNumbers".to_string(),
             query: None,
             body: None::<()>,
         };
@@ -82,7 +82,7 @@ where
     }
 
     /// Fetch all orders for a specific account.
-    pub fn get_orders_by_account(
+    pub fn get_orders_by_path_param(
         &self,
         access_token: &str,
         encrypted_id: &str,
@@ -115,7 +115,7 @@ where
     }
 
     /// Fetch orders across all accounts.
-    pub fn get_orders_by_path(
+    pub fn get_orders_by_query_param(
         &self,
         access_token: &str,
         from_entered_time: &str,
@@ -242,7 +242,7 @@ where
     }
 
     /// Fetch transactions for a specific account.
-    pub fn get_transactions(
+    pub fn get_transactions_by_path_param(
         &self,
         access_token: &str,
         encrypted_id: &str,
@@ -274,12 +274,12 @@ where
     }
 
     /// Fetch a specific transaction by its `transaction_id`.
-    pub fn get_transaction(
+    pub fn get_transactions_by_id(
         &self,
         access_token: &str,
         encrypted_id: &str,
         transaction_id: i64,
-    ) -> Result<Transaction, HttpError> {
+    ) -> Result<Vec<Transaction>, HttpError> {
         let path = format!("/accounts/{}/transactions/{}", encrypted_id, transaction_id);
 
         let params = RequestParams {
