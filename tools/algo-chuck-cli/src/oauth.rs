@@ -31,8 +31,9 @@ pub async fn exchange_code_for_token(config: &SchwabConfig, code: &str) -> Resul
         .as_ref()
         .ok_or_else(|| anyhow::anyhow!("Client secret not configured"))?;
 
+    let http_client = reqwest::Client::new();
     let oauth_config = OAuthConfig::new(client_id, client_secret, SchwabConfig::CALLBACK_URL);
-    let oauth_client = OAuthClient::new_async(oauth_config);
+    let oauth_client = OAuthClient::new(http_client, oauth_config);
 
     oauth_client
         .exchange_code_for_token(code)
@@ -57,8 +58,9 @@ pub async fn refresh_access_token(
         .as_ref()
         .ok_or_else(|| anyhow::anyhow!("Client secret not configured"))?;
 
+    let http_client = reqwest::Client::new();
     let oauth_config = OAuthConfig::new(client_id, client_secret, SchwabConfig::CALLBACK_URL);
-    let oauth_client = OAuthClient::new_async(oauth_config);
+    let oauth_client = OAuthClient::new(http_client, oauth_config);
 
     oauth_client
         .refresh_access_token(refresh_token)

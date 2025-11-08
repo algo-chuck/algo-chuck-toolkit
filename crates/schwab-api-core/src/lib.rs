@@ -88,6 +88,11 @@ impl<C> HttpClient<C> {
     pub fn new(client: C) -> Self {
         Self { client }
     }
+
+    /// Get a reference to the inner client
+    pub fn inner(&self) -> &C {
+        &self.client
+    }
 }
 
 #[async_trait]
