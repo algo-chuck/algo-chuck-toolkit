@@ -21,4 +21,4 @@ http = { workspace = true, features = ["std"] }
 
 # Optional HTTP client implementations
 reqwest = { workspace = true, optional = true }
-ureq = { version = "2.10", optional = true }
+ureq = { workspace = true, optional = true }

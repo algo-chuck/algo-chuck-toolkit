@@ -32,11 +32,15 @@ rust_decimal = { version = "1.35", default-features = false }
 serde = { version = "1.0", default-features = false }
 serde_json = { version = "1.0", default-features = false }
 
-# Async runtime and HTTP client
+# HTTP clients
+## Async
 async-trait = { version = "0.1", default-features = false }
 http = { version = "1.0", default-features = false }
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
 tokio = { version = "1.0", default-features = false }
+
+## Sync
+ureq = { version = "2.10", default-features = false, features = ["tls"] }
 
 # UUID and URL handling
 uuid = { version = "1.0", default-features = false }
