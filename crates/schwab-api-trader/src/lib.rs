@@ -47,9 +47,21 @@
 //! }
 //! ```
 
-mod asynchronous;
-mod client;
-mod params;
-mod synchronous;
+mod async_client;
+mod sync_client;
 
-pub use client::TraderClient;
+// Re-export TraderConfig from client module (needed by the wrapper types)
+pub use schwab_api_core::ApiConfig;
+
+/// Configuration for Schwab Trader API
+pub struct TraderConfig;
+
+impl ApiConfig for TraderConfig {
+    fn base_url() -> &'static str {
+        "https://api.schwabapi.com/trader/v1"
+    }
+}
+
+// Re-export the new separate client types
+pub use async_client::AsyncTraderClient;
+pub use sync_client::SyncTraderClient;

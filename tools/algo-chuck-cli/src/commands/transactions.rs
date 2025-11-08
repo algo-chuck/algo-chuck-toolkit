@@ -2,7 +2,7 @@ use anyhow::Result;
 use clap::ArgMatches;
 
 use crate::config::{ConfigManager, TokenManager};
-use schwab_api_trader::TraderClient;
+use schwab_api_trader::AsyncTraderClient;
 
 /// Handle the transactions command for data retrieval
 pub async fn handle_transactions_command(matches: &ArgMatches) -> Result<()> {
@@ -37,9 +37,9 @@ pub async fn handle_transactions_command(matches: &ArgMatches) -> Result<()> {
     // Get optional symbol parameter
     let symbol = matches.get_one::<String>("symbol").map(|s| s.as_str());
 
-    let client = TraderClient::new(reqwest::Client::new());
+    let client = AsyncTraderClient::new(reqwest::Client::new());
     let data = client
-        .get_transactions_by_path_param(
+        .get_transactions(
             &access_token,
             account_number,
             start_date,
@@ -75,9 +75,9 @@ pub async fn handle_transaction_command(matches: &ArgMatches) -> Result<()> {
         .get_one::<i64>("transaction-id")
         .ok_or_else(|| anyhow::anyhow!("Transaction ID is required"))?;
 
-    let client = TraderClient::new(reqwest::Client::new());
+    let client = AsyncTraderClient::new(reqwest::Client::new());
     let data = client
-        .get_transactions_by_id(&access_token, account_number, *transaction_id)
+        .get_transaction(&access_token, account_number, *transaction_id)
         .await?;
     println!("{:#?}", data);
 

@@ -4,7 +4,7 @@ use serde::de::DeserializeOwned;
 use std::io::Read;
 
 use crate::config::{ConfigManager, TokenManager};
-use schwab_api_trader::TraderClient;
+use schwab_api_trader::AsyncTraderClient;
 
 /// Handle the account orders command for data retrieval
 pub async fn handle_account_orders_command(matches: &ArgMatches) -> Result<()> {
@@ -33,12 +33,12 @@ pub async fn handle_account_orders_command(matches: &ArgMatches) -> Result<()> {
         .ok_or_else(|| anyhow::anyhow!("To entered time is required"))?;
 
     // Get optional parameters
-    let max_results = matches.get_one::<i64>("max-results").copied();
+    let max_results = matches.get_one::<i64>("max-results").map(|x| *x as i32);
     let status = matches.get_one::<String>("status").map(|s| s.as_str());
 
-    let client = TraderClient::new(reqwest::Client::new());
+    let client = AsyncTraderClient::new(reqwest::Client::new());
     let data = client
-        .get_orders_by_path(
+        .get_orders_by_account(
             &access_token,
             account_number,
             from_entered_time,
@@ -74,7 +74,7 @@ pub async fn handle_account_order_command(matches: &ArgMatches) -> Result<()> {
         .get_one::<i64>("order-id")
         .ok_or_else(|| anyhow::anyhow!("Order ID is required"))?;
 
-    let client = TraderClient::new(reqwest::Client::new());
+    let client = AsyncTraderClient::new(reqwest::Client::new());
     let data = client
         .get_order(&access_token, account_number, *order_id)
         .await?;
@@ -106,12 +106,12 @@ pub async fn handle_orders_command(matches: &ArgMatches) -> Result<()> {
         .ok_or_else(|| anyhow::anyhow!("To entered time is required"))?;
 
     // Get optional parameters
-    let max_results = matches.get_one::<i64>("max-results").copied();
+    let max_results = matches.get_one::<i64>("max-results").map(|x| *x as i32);
     let status = matches.get_one::<String>("status").map(|s| s.as_str());
 
-    let client = TraderClient::new(reqwest::Client::new());
+    let client = AsyncTraderClient::new(reqwest::Client::new());
     let data = client
-        .get_orders_by_query(
+        .get_orders_by_path(
             &access_token,
             from_entered_time,
             to_entered_time,
@@ -145,7 +145,7 @@ pub async fn handle_place_order_command(matches: &ArgMatches) -> Result<()> {
     // Read order JSON from file or stdin
     let order_json = read_json(matches)?;
 
-    let client = TraderClient::new(reqwest::Client::new());
+    let client = AsyncTraderClient::new(reqwest::Client::new());
     client
         .place_order(&access_token, account_number, &order_json)
         .await?;
@@ -177,7 +177,7 @@ pub async fn handle_cancel_order_command(matches: &ArgMatches) -> Result<()> {
         .get_one::<i64>("order-id")
         .ok_or_else(|| anyhow::anyhow!("Order ID is required"))?;
 
-    let client = TraderClient::new(reqwest::Client::new());
+    let client = AsyncTraderClient::new(reqwest::Client::new());
     client
         .cancel_order(&access_token, account_number, *order_id)
         .await?;
@@ -212,7 +212,7 @@ pub async fn handle_replace_order_command(matches: &ArgMatches) -> Result<()> {
     // Read order JSON from file or stdin
     let order_json = read_json(matches)?;
 
-    let client = TraderClient::new(reqwest::Client::new());
+    let client = AsyncTraderClient::new(reqwest::Client::new());
     client
         .replace_order(&access_token, account_number, *order_id, &order_json)
         .await?;
@@ -243,7 +243,7 @@ pub async fn handle_preview_order_command(matches: &ArgMatches) -> Result<()> {
     // Read preview JSON from file or stdin
     let preview_json = read_json(matches)?;
 
-    let client = TraderClient::new(reqwest::Client::new());
+    let client = AsyncTraderClient::new(reqwest::Client::new());
     let preview = client
         .preview_order(&access_token, account_number, &preview_json)
         .await?;

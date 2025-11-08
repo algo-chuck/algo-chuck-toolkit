@@ -13,36 +13,36 @@ where
 {
     // Accounts
 
-    pub fn get_account_numbers_sync(
+    pub fn get_account_numbers(
         &self,
         access_token: &str,
     ) -> Result<Vec<AccountNumberHash>, HttpError> {
         let params = TraderClient::<C>::get_account_numbers_params(access_token);
-        self.fetch_sync(&params)
+        self.fetch(&params)
     }
 
-    pub fn get_accounts_sync(
+    pub fn get_accounts(
         &self,
         access_token: &str,
         fields: Option<&str>,
     ) -> Result<Vec<Account>, HttpError> {
         let params = TraderClient::<C>::get_accounts_params(access_token, fields);
-        self.fetch_sync(&params)
+        self.fetch(&params)
     }
 
-    pub fn get_account_sync(
+    pub fn get_account(
         &self,
         access_token: &str,
         account_number: &str,
         fields: Option<&str>,
     ) -> Result<Account, HttpError> {
         let params = TraderClient::<C>::get_account_params(access_token, account_number, fields);
-        self.fetch_sync(&params)
+        self.fetch(&params)
     }
 
     // Orders
 
-    pub fn get_orders_by_path_sync(
+    pub fn get_orders_by_path(
         &self,
         access_token: &str,
         account_number: &str,
@@ -59,20 +59,20 @@ where
             max_results,
             status,
         );
-        self.fetch_sync(&params)
+        self.fetch(&params)
     }
 
-    pub fn get_order_sync(
+    pub fn get_order(
         &self,
         access_token: &str,
         account_number: &str,
         order_id: i64,
     ) -> Result<Order, HttpError> {
         let params = TraderClient::<C>::get_order_params(access_token, account_number, order_id);
-        self.fetch_sync(&params)
+        self.fetch(&params)
     }
 
-    pub fn get_orders_by_query_sync(
+    pub fn get_orders_by_query(
         &self,
         access_token: &str,
         from_entered_time: &str,
@@ -87,30 +87,30 @@ where
             max_results,
             status,
         );
-        self.fetch_sync(&params)
+        self.fetch(&params)
     }
 
-    pub fn place_order_sync(
+    pub fn place_order(
         &self,
         access_token: &str,
         account_number: &str,
         order: &OrderRequest,
     ) -> Result<(), HttpError> {
         let params = TraderClient::<C>::place_order_params(access_token, account_number, order);
-        self.execute_sync(&params)
+        self.execute(&params)
     }
 
-    pub fn cancel_order_sync(
+    pub fn cancel_order(
         &self,
         access_token: &str,
         account_number: &str,
         order_id: i64,
     ) -> Result<(), HttpError> {
         let params = TraderClient::<C>::cancel_order_params(access_token, account_number, order_id);
-        self.execute_sync(&params)
+        self.execute(&params)
     }
 
-    pub fn replace_order_sync(
+    pub fn replace_order(
         &self,
         access_token: &str,
         account_number: &str,
@@ -119,22 +119,22 @@ where
     ) -> Result<(), HttpError> {
         let params =
             TraderClient::<C>::replace_order_params(access_token, account_number, order_id, order);
-        self.execute_sync(&params)
+        self.execute(&params)
     }
 
-    pub fn preview_order_sync(
+    pub fn preview_order(
         &self,
         access_token: &str,
         account_number: &str,
         preview: &PreviewOrder,
     ) -> Result<PreviewOrder, HttpError> {
         let params = TraderClient::<C>::preview_order_params(access_token, account_number, preview);
-        self.fetch_sync(&params)
+        self.fetch(&params)
     }
 
     // Transactions
 
-    pub fn get_transactions_by_path_param_sync(
+    pub fn get_transactions_by_path_param(
         &self,
         access_token: &str,
         account_number: &str,
@@ -151,10 +151,10 @@ where
             types,
             symbol,
         );
-        self.fetch_sync(&params)
+        self.fetch(&params)
     }
 
-    pub fn get_transactions_by_id_sync(
+    pub fn get_transactions_by_id(
         &self,
         access_token: &str,
         account_number: &str,
@@ -165,16 +165,13 @@ where
             account_number,
             transaction_id,
         );
-        self.fetch_sync(&params)
+        self.fetch(&params)
     }
 
     // User Preferences
 
-    pub fn get_user_preference_sync(
-        &self,
-        access_token: &str,
-    ) -> Result<UserPreference, HttpError> {
+    pub fn get_user_preference(&self, access_token: &str) -> Result<UserPreference, HttpError> {
         let params = TraderClient::<C>::get_user_preference_params(access_token);
-        self.fetch_sync(&params)
+        self.fetch(&params)
     }
 }

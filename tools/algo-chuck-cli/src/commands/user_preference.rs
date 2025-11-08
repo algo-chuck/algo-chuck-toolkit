@@ -2,7 +2,7 @@ use anyhow::Result;
 use clap::ArgMatches;
 
 use crate::config::{ConfigManager, TokenManager};
-use schwab_api_trader::TraderClient;
+use schwab_api_trader::AsyncTraderClient;
 
 /// Handle the user preference command for data retrieval
 pub async fn handle_user_preference_command(_matches: &ArgMatches) -> Result<()> {
@@ -18,7 +18,7 @@ pub async fn handle_user_preference_command(_matches: &ArgMatches) -> Result<()>
         .get_access_token()?
         .ok_or_else(|| anyhow::anyhow!("No access token found. Please run 'chuck login' first."))?;
 
-    let client = TraderClient::new(reqwest::Client::new());
+    let client = AsyncTraderClient::new(reqwest::Client::new());
     let data = client.get_user_preference(&access_token).await?;
     println!("{:#?}", data);
 
