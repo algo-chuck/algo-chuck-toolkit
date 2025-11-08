@@ -1,4 +1,4 @@
-use schwab_api_core::{AsyncClient, HttpError};
+use schwab_api_core::{AsyncHttpClient, HttpError};
 use schwab_api_types::{
     CandleList, ExpirationChain, GetMovers200Response, Hours, InstrumentResponse, OptionChain,
     QuoteResponseObject,
@@ -10,7 +10,7 @@ use crate::params::MarketdataParams;
 
 impl<C> MarketdataClient<C>
 where
-    C: AsyncClient,
+    C: AsyncHttpClient,
     HttpError: From<C::Error>,
 {
     // Quotes

@@ -1,4 +1,4 @@
-use schwab_api_core::{AsyncClient, HttpError};
+use schwab_api_core::{AsyncHttpClient, HttpError};
 use schwab_api_types::{
     Account, AccountNumberHash, Order, OrderRequest, PreviewOrder, Transaction, UserPreference,
 };
@@ -8,7 +8,7 @@ use crate::params::TraderParams;
 
 impl<C> TraderClient<C>
 where
-    C: AsyncClient,
+    C: AsyncHttpClient,
     HttpError: From<C::Error>,
 {
     // Accounts

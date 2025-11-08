@@ -7,6 +7,13 @@ use thiserror::Error;
 use schwab_api_types::ServiceError;
 use schwab_api_types::marketdata::ErrorResponse;
 
+// Feature-gated HTTP client implementations
+#[cfg(feature = "reqwest-client")]
+mod reqwest_client;
+
+#[cfg(feature = "ureq-client")]
+mod ureq_client;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum SchwabSuccess<J> {
@@ -95,51 +102,59 @@ impl<C> HttpClient<C> {
     }
 }
 
+/// Trait for async HTTP clients
 #[async_trait]
-pub trait AsyncClient: Send + Sync {
+pub trait AsyncHttpClient: Send + Sync {
     type Error: std::error::Error + Send + Sync + 'static;
 
     async fn execute(&self, request: Request<String>) -> Result<Response<String>, Self::Error>;
+}
 
-    // Associated function for common error parsing with a default implementation
-    fn parse_api_error(status: http::StatusCode, body_text: &str) -> SchwabError {
-        let status_code = status.as_u16();
+/// Trait for sync/blocking HTTP clients
+pub trait SyncHttpClient: Send + Sync {
+    type Error: std::error::Error + Send + Sync + 'static;
 
-        // Attempt 1: Try to parse the body as the Marketdata API structured ErrorResponse.
-        if let Ok(me) = serde_json::from_str::<ErrorResponse>(&body_text) {
-            return SchwabError::Marketdata {
+    fn execute(&self, request: Request<String>) -> Result<Response<String>, Self::Error>;
+}
+
+// Helper function for parsing Schwab API errors from response body
+pub fn parse_api_error(status: http::StatusCode, body_text: &str) -> SchwabError {
+    let status_code = status.as_u16();
+
+    // Attempt 1: Try to parse the body as the Marketdata API structured ErrorResponse.
+    if let Ok(me) = serde_json::from_str::<ErrorResponse>(&body_text) {
+        return SchwabError::Marketdata {
+            status: status_code,
+            detail: me,
+        };
+    }
+
+    // Attempt 2: Try to parse the body as the Trader API structured ServiceError.
+    match serde_json::from_str::<ServiceError>(&body_text) {
+        Ok(se) => {
+            // If parsing is successful, wrap the error and the status code
+            SchwabError::Trader {
                 status: status_code,
-                detail: me,
-            };
-        }
-
-        // Attempt 2: Try to parse the body as the Trader API structured ServiceError.
-        match serde_json::from_str::<ServiceError>(&body_text) {
-            Ok(se) => {
-                // If parsing is successful, wrap the error and the status code
-                SchwabError::Trader {
-                    status: status_code,
-                    detail: se,
-                }
+                detail: se,
             }
-            // Attempt 3: If structured parsing fails, assume it's an unknown/unstructured error.
-            Err(_) => {
-                // Try to parse it as generic JSON value for better debugging output.
-                match serde_json::from_str::<serde_json::Value>(&body_text) {
-                    Ok(v) => SchwabError::UnknownValue(v),
+        }
+        // Attempt 3: If structured parsing fails, assume it's an unknown/unstructured error.
+        Err(_) => {
+            // Try to parse it as generic JSON value for better debugging output.
+            match serde_json::from_str::<serde_json::Value>(&body_text) {
+                Ok(v) => SchwabError::UnknownValue(v),
 
-                    // Fallback: If it's not even valid JSON, just store the raw text.
-                    Err(_) => SchwabError::UnknownValue(serde_json::Value::String(format!(
-                        "Raw text (status {status_code}): {}",
-                        body_text
-                    ))),
-                }
+                // Fallback: If it's not even valid JSON, just store the raw text.
+                Err(_) => SchwabError::UnknownValue(serde_json::Value::String(format!(
+                    "Raw text (status {status_code}): {}",
+                    body_text
+                ))),
             }
         }
     }
 }
 
-impl<C: AsyncClient> HttpClient<C> {
+impl<C: AsyncHttpClient> HttpClient<C> {
     pub async fn execute(&self, request: Request<String>) -> Result<Response<String>, C::Error> {
         self.client.execute(request).await
     }
@@ -147,7 +162,7 @@ impl<C: AsyncClient> HttpClient<C> {
 
 impl<C, Cfg> ApiClient<C, Cfg>
 where
-    C: AsyncClient,
+    C: AsyncHttpClient,
     Cfg: ApiConfig,
     HttpError: From<C::Error>,
 {
@@ -275,111 +290,5 @@ impl<C, Cfg: ApiConfig> ApiClient<C, Cfg> {
                 ))
             }
         }
-    }
-}
-
-// Helper function to execute HTTP requests with reqwest::Client
-// Shared by all AsyncClient implementations for reqwest
-async fn execute_with_reqwest(
-    client: &reqwest::Client,
-    request: Request<String>,
-) -> Result<Response<String>, HttpError> {
-    // --- 1. Safely convert http::Request fields to reqwest::Request parts ---
-
-    // Deconstruct Request (assuming it's http::Request<String> or similar)
-    let (parts, body_ref) = request.into_parts();
-
-    // Safely convert Method and URI
-    let req_method = parts
-        .method
-        .as_str()
-        .parse()
-        .map_err(|e: http::method::InvalidMethod| {
-            HttpError::RequestFailed(format!("Invalid HTTP method: {}", e))
-        })?;
-
-    let url = parts.uri.to_string();
-
-    // Start building the reqwest request
-    let mut rb = client.request(req_method, url);
-
-    // Add headers from http::HeaderMap
-    rb = rb.headers(parts.headers);
-
-    // Add body: Convert String body (body_ref) into reqwest's body type (Bytes or String)
-    if !body_ref.is_empty() {
-        rb = rb.body(body_ref);
-    }
-
-    // --- 2. Send request and handle network errors ---
-
-    let resp = rb
-        .send()
-        .await
-        .map_err(|e| HttpError::NetworkError(e.to_string()))?;
-
-    let status = resp.status();
-    let headers = resp.headers().clone();
-
-    // --- 3. Extract body text and handle API errors ---
-
-    let body_text = resp
-        .text()
-        .await
-        .map_err(|e| HttpError::NetworkError(format!("Failed to read response body: {}", e)))?;
-
-    // Handle API failure using the extracted helper function
-    if !status.is_success() {
-        let parsed = reqwest::Client::parse_api_error(status, &body_text);
-        return Err(HttpError::Api(parsed));
-    }
-
-    // --- 4. Build and return the high-level Response ---
-
-    let mut builder = http::Response::builder().status(status);
-
-    // Get headers from the reqwest response and copy/convert them
-    for (name, value) in headers.iter() {
-        builder = builder.header(name, value);
-    }
-
-    // Build the final Response<String>
-    let response = builder
-        .body(body_text)
-        .map_err(|e| HttpError::RequestFailed(format!("Failed to build final Response: {}", e)))?;
-
-    Ok(response)
-}
-
-// Provide an implementation of AsyncClient for reqwest::Client so the HTTP
-// adapter can be used directly with the higher-level clients.
-#[async_trait]
-impl AsyncClient for reqwest::Client {
-    type Error = HttpError;
-
-    async fn execute(&self, request: Request<String>) -> Result<Response<String>, Self::Error> {
-        execute_with_reqwest(self, request).await
-    }
-}
-
-// Provide an implementation of AsyncClient for borrowed reqwest::Client
-// This allows servers to share a single client instance across requests
-#[async_trait]
-impl AsyncClient for &reqwest::Client {
-    type Error = HttpError;
-
-    async fn execute(&self, request: Request<String>) -> Result<Response<String>, Self::Error> {
-        execute_with_reqwest(self, request).await
-    }
-}
-
-// Provide an implementation of AsyncClient for Arc-wrapped reqwest::Client
-// This allows for explicit shared ownership in multi-threaded scenarios
-#[async_trait]
-impl AsyncClient for std::sync::Arc<reqwest::Client> {
-    type Error = HttpError;
-
-    async fn execute(&self, request: Request<String>) -> Result<Response<String>, Self::Error> {
-        execute_with_reqwest(self.as_ref(), request).await
     }
 }
