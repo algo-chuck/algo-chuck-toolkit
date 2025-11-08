@@ -2,7 +2,7 @@ use anyhow::Result;
 use clap::ArgMatches;
 
 use crate::config::{ConfigManager, TokenManager};
-use schwab_api_marketdata::MarketdataClient;
+use schwab_api_marketdata::AsyncMarketdataClient;
 
 /// Handle the price-history command
 pub async fn handle_price_history_command(matches: &ArgMatches) -> Result<()> {
@@ -37,7 +37,7 @@ pub async fn handle_price_history_command(matches: &ArgMatches) -> Result<()> {
     let need_extended_hours = matches.get_flag("extended-hours").then_some(true);
     let need_previous_close = matches.get_flag("previous-close").then_some(true);
 
-    let client = MarketdataClient::new(reqwest::Client::new());
+    let client = AsyncMarketdataClient::new(reqwest::Client::new());
     let data = client
         .get_price_history(
             &access_token,

@@ -5,7 +5,7 @@ use crate::config::{ConfigManager, TokenManager};
 use schwab_api_trader::{AsyncTraderClient, SyncTraderClient};
 
 /// Handle the account numbers command for data retrieval (synchronous)
-pub fn handle_account_numbers_command_sync(_matches: &ArgMatches) -> Result<()> {
+pub fn handle_account_numbers_command(_matches: &ArgMatches) -> Result<()> {
     println!("🚀 Fetching Account Numbers");
 
     // Load configuration and TokenManager

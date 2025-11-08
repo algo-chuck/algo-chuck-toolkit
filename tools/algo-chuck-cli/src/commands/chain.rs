@@ -2,7 +2,7 @@ use anyhow::Result;
 use clap::ArgMatches;
 
 use crate::config::{ConfigManager, TokenManager};
-use schwab_api_marketdata::MarketdataClient;
+use schwab_api_marketdata::AsyncMarketdataClient;
 
 /// Handle the option-chain command
 pub async fn handle_chain_command(matches: &ArgMatches) -> Result<()> {
@@ -50,7 +50,7 @@ pub async fn handle_chain_command(matches: &ArgMatches) -> Result<()> {
     let exp_month = matches.get_one::<String>("exp-month").map(|s| s.as_str());
     let option_type = matches.get_one::<String>("option-type").map(|s| s.as_str());
 
-    let client = MarketdataClient::new(reqwest::Client::new());
+    let client = AsyncMarketdataClient::new(reqwest::Client::new());
     let data = client
         .get_chain(
             &access_token,

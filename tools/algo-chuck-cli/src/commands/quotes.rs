@@ -2,7 +2,7 @@ use anyhow::Result;
 use clap::ArgMatches;
 
 use crate::config::{ConfigManager, TokenManager};
-use schwab_api_marketdata::MarketdataClient;
+use schwab_api_marketdata::AsyncMarketdataClient;
 
 /// Handle the quotes command for multiple symbols
 pub async fn handle_quotes_command(matches: &ArgMatches) -> Result<()> {
@@ -26,7 +26,7 @@ pub async fn handle_quotes_command(matches: &ArgMatches) -> Result<()> {
     let fields = matches.get_one::<String>("fields").map(|s| s.as_str());
     let indicative = matches.get_flag("indicative").then_some(true);
 
-    let client = MarketdataClient::new(reqwest::Client::new());
+    let client = AsyncMarketdataClient::new(reqwest::Client::new());
     let data = client
         .get_quotes(&access_token, symbols, fields, indicative)
         .await?;
@@ -57,7 +57,7 @@ pub async fn handle_quote_command(matches: &ArgMatches) -> Result<()> {
     // Get optional parameters
     let fields = matches.get_one::<String>("fields").map(|s| s.as_str());
 
-    let client = MarketdataClient::new(reqwest::Client::new());
+    let client = AsyncMarketdataClient::new(reqwest::Client::new());
     let data = client.get_quote(&access_token, symbol, fields).await?;
 
     println!("{:#?}", data);

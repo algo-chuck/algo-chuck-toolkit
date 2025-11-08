@@ -8,18 +8,7 @@ mod oauth;
 mod server;
 
 use anyhow::Result;
-use commands::{
-    handle_account_command, handle_account_numbers_command_sync, handle_account_order_command,
-    handle_account_orders_command, handle_accounts_command, handle_ca_command,
-    handle_cancel_order_command, handle_chain_command, handle_config_command,
-    handle_expiration_chain_command, handle_instrument_command, handle_instruments_command,
-    handle_login_command, handle_market_hour_command, handle_market_hours_command,
-    handle_movers_command, handle_orders_command, handle_place_order_command,
-    handle_preview_order_command, handle_price_history_command, handle_quote_command,
-    handle_quotes_command, handle_refresh_command, handle_replace_order_command,
-    handle_status_command, handle_transaction_command, handle_transactions_command,
-    handle_user_preference_command,
-};
+use commands::*;
 
 fn main() -> Result<()> {
     let matches = cli::build_cli().get_matches();
@@ -30,7 +19,7 @@ fn main() -> Result<()> {
         Some(("refresh", m)) => tokio::runtime::Runtime::new()?.block_on(handle_refresh_command(m)),
 
         // Synchronous commands - no runtime overhead!
-        Some(("account-numbers", m)) => handle_account_numbers_command_sync(m),
+        Some(("account-numbers", m)) => handle_account_numbers_command(m),
 
         // Rest of the commands still async for now (will convert later)
         Some(("status", m)) => tokio::runtime::Runtime::new()?.block_on(handle_status_command(m)),
