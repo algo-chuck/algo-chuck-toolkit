@@ -49,14 +49,14 @@ where
         self.client.fetch(&params).await
     }
 
-    /// Fetch a specific account by `encrypted_id` (Schwab's encrypted account ID).
+    /// Fetch a specific account by `account_hash` (Schwab's encrypted account ID).
     pub async fn get_account(
         &self,
         access_token: &str,
-        encrypted_id: &str,
+        account_hash: &str,
         fields: Option<&str>,
     ) -> Result<Account, HttpError> {
-        let params = TraderParams::get_account(access_token, encrypted_id, fields);
+        let params = TraderParams::get_account(access_token, account_hash, fields);
         self.client.fetch(&params).await
     }
 
@@ -64,7 +64,7 @@ where
     pub async fn get_orders_by_path_param(
         &self,
         access_token: &str,
-        encrypted_id: &str,
+        account_hash: &str,
         from_entered_time: &str,
         to_entered_time: &str,
         max_results: Option<i32>,
@@ -72,7 +72,7 @@ where
     ) -> Result<Vec<Order>, HttpError> {
         let params = TraderParams::get_orders_by_path_param(
             access_token,
-            encrypted_id,
+            account_hash,
             from_entered_time,
             to_entered_time,
             max_results,
@@ -104,10 +104,10 @@ where
     pub async fn get_order(
         &self,
         access_token: &str,
-        encrypted_id: &str,
+        account_hash: &str,
         order_id: i64,
     ) -> Result<Order, HttpError> {
-        let params = TraderParams::get_order(access_token, encrypted_id, order_id);
+        let params = TraderParams::get_order(access_token, account_hash, order_id);
         self.client.fetch(&params).await
     }
 
@@ -115,10 +115,10 @@ where
     pub async fn place_order(
         &self,
         access_token: &str,
-        encrypted_id: &str,
+        account_hash: &str,
         order: &OrderRequest,
     ) -> Result<(), HttpError> {
-        let params = TraderParams::place_order(access_token, encrypted_id, order);
+        let params = TraderParams::place_order(access_token, account_hash, order);
         self.client.execute(&params).await
     }
 
@@ -126,11 +126,11 @@ where
     pub async fn replace_order(
         &self,
         access_token: &str,
-        encrypted_id: &str,
+        account_hash: &str,
         order_id: i64,
         order: &OrderRequest,
     ) -> Result<(), HttpError> {
-        let params = TraderParams::replace_order(access_token, encrypted_id, order_id, order);
+        let params = TraderParams::replace_order(access_token, account_hash, order_id, order);
         self.client.execute(&params).await
     }
 
@@ -138,10 +138,10 @@ where
     pub async fn cancel_order(
         &self,
         access_token: &str,
-        encrypted_id: &str,
+        account_hash: &str,
         order_id: i64,
     ) -> Result<(), HttpError> {
-        let params = TraderParams::cancel_order(access_token, encrypted_id, order_id);
+        let params = TraderParams::cancel_order(access_token, account_hash, order_id);
         self.client.execute(&params).await
     }
 
@@ -149,10 +149,10 @@ where
     pub async fn preview_order(
         &self,
         access_token: &str,
-        encrypted_id: &str,
+        account_hash: &str,
         order: &PreviewOrder,
     ) -> Result<PreviewOrder, HttpError> {
-        let params = TraderParams::preview_order(access_token, encrypted_id, order);
+        let params = TraderParams::preview_order(access_token, account_hash, order);
         self.client.fetch(&params).await
     }
 
@@ -160,7 +160,7 @@ where
     pub async fn get_transactions_by_path_param(
         &self,
         access_token: &str,
-        encrypted_id: &str,
+        account_hash: &str,
         start_date: &str,
         end_date: &str,
         types: &str,
@@ -168,7 +168,7 @@ where
     ) -> Result<Vec<Transaction>, HttpError> {
         let params = TraderParams::get_transactions_by_path_param(
             access_token,
-            encrypted_id,
+            account_hash,
             start_date,
             end_date,
             types,
@@ -181,11 +181,11 @@ where
     pub async fn get_transactions_by_id(
         &self,
         access_token: &str,
-        encrypted_id: &str,
+        account_hash: &str,
         transaction_id: i64,
     ) -> Result<Vec<Transaction>, HttpError> {
         let params =
-            TraderParams::get_transactions_by_id(access_token, encrypted_id, transaction_id);
+            TraderParams::get_transactions_by_id(access_token, account_hash, transaction_id);
         self.client.fetch(&params).await
     }
 

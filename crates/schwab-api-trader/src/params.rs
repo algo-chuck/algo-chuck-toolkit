@@ -33,13 +33,13 @@ impl TraderParams {
     /// Build params for getAccount operation
     pub fn get_account<'a>(
         access_token: &'a str,
-        account_number: &str,
+        account_hash: &str,
         fields: Option<&str>,
     ) -> RequestParams<'a> {
         RequestParams {
             access_token,
             body: None,
-            path: format!("/accounts/{account_number}"),
+            path: format!("/accounts/{account_hash}"),
             method: Method::GET,
             query: fields.map(|f| format!("fields={f}")),
         }
@@ -48,7 +48,7 @@ impl TraderParams {
     /// Build params for getOrdersByPathParam operation
     pub fn get_orders_by_path_param<'a>(
         access_token: &'a str,
-        account_number: &str,
+        account_hash: &str,
         from_entered_time: &str,
         to_entered_time: &str,
         max_results: Option<i32>,
@@ -67,7 +67,7 @@ impl TraderParams {
         RequestParams {
             access_token,
             body: None,
-            path: format!("/accounts/{account_number}/orders"),
+            path: format!("/accounts/{account_hash}/orders"),
             method: Method::GET,
             query: Some(query_parts.join("&")),
         }
@@ -76,13 +76,13 @@ impl TraderParams {
     /// Build params for getOrder operation
     pub fn get_order<'a>(
         access_token: &'a str,
-        account_number: &str,
+        account_hash: &str,
         order_id: i64,
     ) -> RequestParams<'a> {
         RequestParams {
             access_token,
             body: None,
-            path: format!("/accounts/{account_number}/orders/{order_id}"),
+            path: format!("/accounts/{account_hash}/orders/{order_id}"),
             method: Method::GET,
             query: None,
         }
@@ -91,13 +91,13 @@ impl TraderParams {
     /// Build params for placeOrder operation
     pub fn place_order<'a>(
         access_token: &'a str,
-        account_number: &str,
+        account_hash: &str,
         order: &'a OrderRequest,
     ) -> RequestParams<'a, &'a OrderRequest> {
         RequestParams {
             access_token,
             body: Some(order),
-            path: format!("/accounts/{account_number}/orders"),
+            path: format!("/accounts/{account_hash}/orders"),
             method: Method::POST,
             query: None,
         }
@@ -106,13 +106,13 @@ impl TraderParams {
     /// Build params for cancelOrder operation
     pub fn cancel_order<'a>(
         access_token: &'a str,
-        account_number: &str,
+        account_hash: &str,
         order_id: i64,
     ) -> RequestParams<'a> {
         RequestParams {
             access_token,
             body: None,
-            path: format!("/accounts/{account_number}/orders/{order_id}"),
+            path: format!("/accounts/{account_hash}/orders/{order_id}"),
             method: Method::DELETE,
             query: None,
         }
@@ -121,14 +121,14 @@ impl TraderParams {
     /// Build params for replaceOrder operation
     pub fn replace_order<'a>(
         access_token: &'a str,
-        account_number: &str,
+        account_hash: &str,
         order_id: i64,
         order: &'a OrderRequest,
     ) -> RequestParams<'a, &'a OrderRequest> {
         RequestParams {
             access_token,
             body: Some(order),
-            path: format!("/accounts/{account_number}/orders/{order_id}"),
+            path: format!("/accounts/{account_hash}/orders/{order_id}"),
             method: Method::PUT,
             query: None,
         }
@@ -164,13 +164,13 @@ impl TraderParams {
     /// Build params for previewOrder operation
     pub fn preview_order<'a>(
         access_token: &'a str,
-        account_number: &str,
+        account_hash: &str,
         order: &'a PreviewOrder,
     ) -> RequestParams<'a, &'a PreviewOrder> {
         RequestParams {
             access_token,
             body: Some(order),
-            path: format!("/accounts/{account_number}/previewOrder"),
+            path: format!("/accounts/{account_hash}/previewOrder"),
             method: Method::POST,
             query: None,
         }
@@ -179,7 +179,7 @@ impl TraderParams {
     /// Build params for getTransactionsByPathParam operation
     pub fn get_transactions_by_path_param<'a>(
         access_token: &'a str,
-        account_number: &str,
+        account_hash: &str,
         start_date: &str,
         end_date: &str,
         types: &str,
@@ -196,7 +196,7 @@ impl TraderParams {
         RequestParams {
             access_token,
             body: None,
-            path: format!("/accounts/{account_number}/transactions"),
+            path: format!("/accounts/{account_hash}/transactions"),
             method: Method::GET,
             query: Some(query_parts.join("&")),
         }
@@ -205,13 +205,13 @@ impl TraderParams {
     /// Build params for getTransactionsById operation
     pub fn get_transactions_by_id<'a>(
         access_token: &'a str,
-        account_number: &str,
+        account_hash: &str,
         transaction_id: i64,
     ) -> RequestParams<'a> {
         RequestParams {
             access_token,
             body: None,
-            path: format!("/accounts/{account_number}/transactions/{transaction_id}"),
+            path: format!("/accounts/{account_hash}/transactions/{transaction_id}"),
             method: Method::GET,
             query: None,
         }
