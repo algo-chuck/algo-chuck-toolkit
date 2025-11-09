@@ -1,48 +1,21 @@
 use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD;
-use schwab_api_core::{ApiClient, ApiConfig};
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+use crate::TokenResponse;
 use crate::config::OAuthConfig;
 use crate::error::{OAuthError, Result};
 
-/// Response structure from Schwab OAuth2 token endpoint
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TokenResponse {
-    pub access_token: String,
-    pub token_type: String,
-    pub expires_in: u64,
-    pub refresh_token: String,
-    pub scope: String,
-    pub id_token: String,
-}
-
-// OAuthConfig already exists, but we need it to implement ApiConfig
-// We'll use a marker type for the ApiConfig implementation
-pub struct OAuthApiConfig;
-
-impl ApiConfig for OAuthApiConfig {
-    fn base_url() -> &'static str {
-        // OAuth doesn't use a base URL in the same way, but we need to satisfy the trait
-        // We'll override the URL construction in OAuthClient methods
-        ""
-    }
-}
-
-/// OAuth client for Schwab API authentication
-pub struct OAuthClient<C> {
-    inner: ApiClient<C, OAuthApiConfig>,
+/// Async OAuth client for Schwab API authentication
+pub struct AsyncOAuthClient {
+    client: reqwest::Client,
     config: OAuthConfig,
 }
 
-impl<C> OAuthClient<C> {
-    /// Create a new OAuth client with the given HTTP client and configuration
-    pub fn new(client: C, config: OAuthConfig) -> Self {
-        Self {
-            inner: ApiClient::new(client),
-            config,
-        }
+impl AsyncOAuthClient {
+    /// Create a new async OAuth client
+    pub fn new(client: reqwest::Client, config: OAuthConfig) -> Self {
+        Self { client, config }
     }
 
     /// Build the OAuth2 authorization URL
@@ -60,35 +33,6 @@ impl<C> OAuthClient<C> {
         &self.config.client_id
     }
 
-    /// Access the inner ApiClient for direct operations
-    pub fn inner(&self) -> &ApiClient<C, OAuthApiConfig> {
-        &self.inner
-    }
-
-    /// Access the inner ApiClient mutably
-    pub fn inner_mut(&mut self) -> &mut ApiClient<C, OAuthApiConfig> {
-        &mut self.inner
-    }
-}
-
-// Implement Deref to allow calling ApiClient methods directly
-impl<C> std::ops::Deref for OAuthClient<C> {
-    type Target = ApiClient<C, OAuthApiConfig>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.inner
-    }
-}
-
-// Implement DerefMut to allow mutable access to ApiClient methods
-impl<C> std::ops::DerefMut for OAuthClient<C> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.inner
-    }
-}
-
-// OAuth-specific methods that require reqwest::Client
-impl OAuthClient<reqwest::Client> {
     /// Exchange authorization code for access and refresh tokens
     pub async fn exchange_code_for_token(&self, code: &str) -> Result<TokenResponse> {
         // Create Basic Auth header
@@ -101,9 +45,7 @@ impl OAuthClient<reqwest::Client> {
         form.insert("redirect_uri", &self.config.redirect_uri);
 
         let response = self
-            .inner
             .client
-            .inner()
             .post(&self.config.token_url)
             .header("Authorization", auth_header)
             .header("Content-Type", "application/x-www-form-urlencoded")
@@ -142,9 +84,7 @@ impl OAuthClient<reqwest::Client> {
         form.insert("refresh_token", refresh_token);
 
         let response = self
-            .inner
             .client
-            .inner()
             .post(&self.config.token_url)
             .header("Authorization", auth_header)
             .header("Content-Type", "application/x-www-form-urlencoded")
