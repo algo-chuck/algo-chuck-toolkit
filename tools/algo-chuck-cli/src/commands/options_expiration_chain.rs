@@ -2,10 +2,10 @@ use anyhow::Result;
 use clap::ArgMatches;
 
 use crate::config::{ConfigManager, TokenManager};
-use schwab_api_marketdata::AsyncMarketdataClient;
+use schwab_api_marketdata::SyncMarketdataClient;
 
 /// Handle the expiration-chain command
-pub async fn handle_expiration_chain_command(matches: &ArgMatches) -> Result<()> {
+pub fn handle_expiration_chain_command(matches: &ArgMatches) -> Result<()> {
     println!("🚀 Fetching Expiration Chain");
 
     let config_manager = ConfigManager::new()?;
@@ -18,8 +18,8 @@ pub async fn handle_expiration_chain_command(matches: &ArgMatches) -> Result<()>
         .get_one::<String>("symbol")
         .ok_or_else(|| anyhow::anyhow!("Symbol is required"))?;
 
-    let client = AsyncMarketdataClient::new(reqwest::Client::new());
-    let data = client.get_expiration_chain(&access_token, symbol).await?;
+    let client = SyncMarketdataClient::new(ureq::Agent::new());
+    let data = client.get_expiration_chain(&access_token, symbol)?;
 
     println!("{:#?}", data);
     Ok(())

@@ -2,10 +2,10 @@ use anyhow::Result;
 use clap::ArgMatches;
 
 use crate::config::{ConfigManager, TokenManager};
-use schwab_api_marketdata::AsyncMarketdataClient;
+use schwab_api_marketdata::SyncMarketdataClient;
 
 /// Handle the instruments command
-pub async fn handle_instruments_command(matches: &ArgMatches) -> Result<()> {
+pub fn handle_instruments_command(matches: &ArgMatches) -> Result<()> {
     println!("🚀 Fetching Instruments");
 
     let config_manager = ConfigManager::new()?;
@@ -22,17 +22,17 @@ pub async fn handle_instruments_command(matches: &ArgMatches) -> Result<()> {
         .get_one::<String>("projection")
         .ok_or_else(|| anyhow::anyhow!("Projection is required"))?;
 
-    let client = AsyncMarketdataClient::new(reqwest::Client::new());
+    let client = SyncMarketdataClient::new(ureq::Agent::new());
     let data = client
         .get_instruments(&access_token, symbol, projection)
-        .await?;
+        ?;
 
     println!("{:#?}", data);
     Ok(())
 }
 
 /// Handle the instrument command (by CUSIP)
-pub async fn handle_instrument_command(matches: &ArgMatches) -> Result<()> {
+pub fn handle_instrument_command(matches: &ArgMatches) -> Result<()> {
     println!("🚀 Fetching Instrument");
 
     let config_manager = ConfigManager::new()?;
@@ -45,10 +45,10 @@ pub async fn handle_instrument_command(matches: &ArgMatches) -> Result<()> {
         .get_one::<String>("cusip")
         .ok_or_else(|| anyhow::anyhow!("CUSIP is required"))?;
 
-    let client = AsyncMarketdataClient::new(reqwest::Client::new());
+    let client = SyncMarketdataClient::new(ureq::Agent::new());
     let data = client
         .get_instruments_by_cusip(&access_token, cusip)
-        .await?;
+        ?;
 
     println!("{:#?}", data);
     Ok(())

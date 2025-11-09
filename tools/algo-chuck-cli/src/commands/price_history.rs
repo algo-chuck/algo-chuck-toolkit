@@ -2,10 +2,10 @@ use anyhow::Result;
 use clap::ArgMatches;
 
 use crate::config::{ConfigManager, TokenManager};
-use schwab_api_marketdata::AsyncMarketdataClient;
+use schwab_api_marketdata::SyncMarketdataClient;
 
 /// Handle the price-history command
-pub async fn handle_price_history_command(matches: &ArgMatches) -> Result<()> {
+pub fn handle_price_history_command(matches: &ArgMatches) -> Result<()> {
     println!("🚀 Fetching Price History");
 
     let config_manager = ConfigManager::new()?;
@@ -37,7 +37,7 @@ pub async fn handle_price_history_command(matches: &ArgMatches) -> Result<()> {
     let need_extended_hours = matches.get_flag("extended-hours").then_some(true);
     let need_previous_close = matches.get_flag("previous-close").then_some(true);
 
-    let client = AsyncMarketdataClient::new(reqwest::Client::new());
+    let client = SyncMarketdataClient::new(ureq::Agent::new());
     let data = client
         .get_price_history(
             &access_token,
@@ -51,7 +51,7 @@ pub async fn handle_price_history_command(matches: &ArgMatches) -> Result<()> {
             need_extended_hours,
             need_previous_close,
         )
-        .await?;
+        ?;
 
     println!("{:#?}", data);
     Ok(())

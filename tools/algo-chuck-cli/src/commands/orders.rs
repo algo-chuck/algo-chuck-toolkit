@@ -4,10 +4,10 @@ use serde::de::DeserializeOwned;
 use std::io::Read;
 
 use crate::config::{ConfigManager, TokenManager};
-use schwab_api_trader::AsyncTraderClient;
+use schwab_api_trader::SyncTraderClient;
 
 /// Handle the account orders command for data retrieval
-pub async fn handle_account_orders_command(matches: &ArgMatches) -> Result<()> {
+pub fn handle_account_orders_command(matches: &ArgMatches) -> Result<()> {
     println!("🚀 Fetching Account Orders");
 
     // Load configuration and TokenManager
@@ -36,7 +36,7 @@ pub async fn handle_account_orders_command(matches: &ArgMatches) -> Result<()> {
     let max_results = matches.get_one::<i64>("max-results").map(|x| *x as i32);
     let status = matches.get_one::<String>("status").map(|s| s.as_str());
 
-    let client = AsyncTraderClient::new(reqwest::Client::new());
+    let client = SyncTraderClient::new(ureq::Agent::new());
     let data = client
         .get_orders_by_path_param(
             &access_token,
@@ -46,14 +46,14 @@ pub async fn handle_account_orders_command(matches: &ArgMatches) -> Result<()> {
             max_results,
             status,
         )
-        .await?;
+        ?;
     println!("{:#?}", data);
 
     Ok(())
 }
 
 /// Handle the account order command for data retrieval
-pub async fn handle_account_order_command(matches: &ArgMatches) -> Result<()> {
+pub fn handle_account_order_command(matches: &ArgMatches) -> Result<()> {
     println!("🚀 Fetching Account Order");
 
     // Load configuration and TokenManager
@@ -74,17 +74,17 @@ pub async fn handle_account_order_command(matches: &ArgMatches) -> Result<()> {
         .get_one::<i64>("order-id")
         .ok_or_else(|| anyhow::anyhow!("Order ID is required"))?;
 
-    let client = AsyncTraderClient::new(reqwest::Client::new());
+    let client = SyncTraderClient::new(ureq::Agent::new());
     let data = client
         .get_order(&access_token, account_number, *order_id)
-        .await?;
+        ?;
     println!("{:#?}", data);
 
     Ok(())
 }
 
 /// Handle the orders command for data retrieval
-pub async fn handle_orders_command(matches: &ArgMatches) -> Result<()> {
+pub fn handle_orders_command(matches: &ArgMatches) -> Result<()> {
     println!("🚀 Fetching Orders");
 
     // Load configuration and TokenManager
@@ -109,7 +109,7 @@ pub async fn handle_orders_command(matches: &ArgMatches) -> Result<()> {
     let max_results = matches.get_one::<i64>("max-results").map(|x| *x as i32);
     let status = matches.get_one::<String>("status").map(|s| s.as_str());
 
-    let client = AsyncTraderClient::new(reqwest::Client::new());
+    let client = SyncTraderClient::new(ureq::Agent::new());
     let data = client
         .get_orders_by_query_param(
             &access_token,
@@ -118,14 +118,14 @@ pub async fn handle_orders_command(matches: &ArgMatches) -> Result<()> {
             max_results,
             status,
         )
-        .await?;
+        ?;
     println!("{:#?}", data);
 
     Ok(())
 }
 
 /// Handle the place order command
-pub async fn handle_place_order_command(matches: &ArgMatches) -> Result<()> {
+pub fn handle_place_order_command(matches: &ArgMatches) -> Result<()> {
     println!("🚀 Placing Order");
 
     // Load configuration and TokenManager
@@ -145,10 +145,10 @@ pub async fn handle_place_order_command(matches: &ArgMatches) -> Result<()> {
     // Read order JSON from file or stdin
     let order_json = read_json(matches)?;
 
-    let client = AsyncTraderClient::new(reqwest::Client::new());
+    let client = SyncTraderClient::new(ureq::Agent::new());
     client
         .place_order(&access_token, account_number, &order_json)
-        .await?;
+        ?;
 
     println!("✅ Order placed successfully");
 
@@ -156,7 +156,7 @@ pub async fn handle_place_order_command(matches: &ArgMatches) -> Result<()> {
 }
 
 /// Handle the cancel order command
-pub async fn handle_cancel_order_command(matches: &ArgMatches) -> Result<()> {
+pub fn handle_cancel_order_command(matches: &ArgMatches) -> Result<()> {
     println!("🚀 Canceling Order");
 
     // Load configuration and TokenManager
@@ -177,10 +177,10 @@ pub async fn handle_cancel_order_command(matches: &ArgMatches) -> Result<()> {
         .get_one::<i64>("order-id")
         .ok_or_else(|| anyhow::anyhow!("Order ID is required"))?;
 
-    let client = AsyncTraderClient::new(reqwest::Client::new());
+    let client = SyncTraderClient::new(ureq::Agent::new());
     client
         .cancel_order(&access_token, account_number, *order_id)
-        .await?;
+        ?;
 
     println!("✅ Order canceled successfully");
 
@@ -188,7 +188,7 @@ pub async fn handle_cancel_order_command(matches: &ArgMatches) -> Result<()> {
 }
 
 /// Handle the replace order command
-pub async fn handle_replace_order_command(matches: &ArgMatches) -> Result<()> {
+pub fn handle_replace_order_command(matches: &ArgMatches) -> Result<()> {
     println!("🚀 Replacing Order");
 
     // Load configuration and TokenManager
@@ -212,10 +212,10 @@ pub async fn handle_replace_order_command(matches: &ArgMatches) -> Result<()> {
     // Read order JSON from file or stdin
     let order_json = read_json(matches)?;
 
-    let client = AsyncTraderClient::new(reqwest::Client::new());
+    let client = SyncTraderClient::new(ureq::Agent::new());
     client
         .replace_order(&access_token, account_number, *order_id, &order_json)
-        .await?;
+        ?;
 
     println!("✅ Order replaced successfully");
 
@@ -223,7 +223,7 @@ pub async fn handle_replace_order_command(matches: &ArgMatches) -> Result<()> {
 }
 
 /// Handle the preview order command
-pub async fn handle_preview_order_command(matches: &ArgMatches) -> Result<()> {
+pub fn handle_preview_order_command(matches: &ArgMatches) -> Result<()> {
     println!("🚀 Previewing Order");
 
     // Load configuration and TokenManager
@@ -243,10 +243,10 @@ pub async fn handle_preview_order_command(matches: &ArgMatches) -> Result<()> {
     // Read preview JSON from file or stdin
     let preview_json = read_json(matches)?;
 
-    let client = AsyncTraderClient::new(reqwest::Client::new());
+    let client = SyncTraderClient::new(ureq::Agent::new());
     let preview = client
         .preview_order(&access_token, account_number, &preview_json)
-        .await?;
+        ?;
 
     println!("{:#?}", preview);
 

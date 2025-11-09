@@ -2,7 +2,7 @@ use anyhow::Result;
 use clap::ArgMatches;
 
 use crate::config::{ConfigManager, TokenManager};
-use schwab_api_trader::{AsyncTraderClient, SyncTraderClient};
+use schwab_api_trader::SyncTraderClient;
 
 /// Handle the account numbers command for data retrieval (synchronous)
 pub fn handle_account_numbers_command(_matches: &ArgMatches) -> Result<()> {
@@ -25,7 +25,7 @@ pub fn handle_account_numbers_command(_matches: &ArgMatches) -> Result<()> {
 }
 
 /// Handle the accounts command for data retrieval
-pub async fn handle_accounts_command(matches: &ArgMatches) -> Result<()> {
+pub fn handle_accounts_command(matches: &ArgMatches) -> Result<()> {
     println!("🚀 Fetching Accounts");
 
     // Load configuration and TokenManager
@@ -40,15 +40,15 @@ pub async fn handle_accounts_command(matches: &ArgMatches) -> Result<()> {
     // Get optional fields parameter
     let fields = matches.get_one::<String>("fields").map(|s| s.as_str());
 
-    let client = AsyncTraderClient::new(reqwest::Client::new());
-    let data = client.get_accounts(&access_token, fields).await?;
+    let client = SyncTraderClient::new(ureq::Agent::new());
+    let data = client.get_accounts(&access_token, fields)?;
     println!("{:#?}", data);
 
     Ok(())
 }
 
 /// Handle the account command for data retrieval
-pub async fn handle_account_command(matches: &ArgMatches) -> Result<()> {
+pub fn handle_account_command(matches: &ArgMatches) -> Result<()> {
     println!("🚀 Fetching Account");
 
     // Load configuration and TokenManager
@@ -68,10 +68,8 @@ pub async fn handle_account_command(matches: &ArgMatches) -> Result<()> {
     // Get optional fields parameter
     let fields = matches.get_one::<String>("fields").map(|s| s.as_str());
 
-    let client = AsyncTraderClient::new(reqwest::Client::new());
-    let data = client
-        .get_account(&access_token, account_number, fields)
-        .await?;
+    let client = SyncTraderClient::new(ureq::Agent::new());
+    let data = client.get_account(&access_token, account_number, fields)?;
     println!("{:#?}", data);
 
     Ok(())

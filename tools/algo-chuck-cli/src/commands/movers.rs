@@ -2,10 +2,10 @@ use anyhow::Result;
 use clap::ArgMatches;
 
 use crate::config::{ConfigManager, TokenManager};
-use schwab_api_marketdata::AsyncMarketdataClient;
+use schwab_api_marketdata::SyncMarketdataClient;
 
 /// Handle the movers command
-pub async fn handle_movers_command(matches: &ArgMatches) -> Result<()> {
+pub fn handle_movers_command(matches: &ArgMatches) -> Result<()> {
     println!("🚀 Fetching Movers");
 
     let config_manager = ConfigManager::new()?;
@@ -23,10 +23,10 @@ pub async fn handle_movers_command(matches: &ArgMatches) -> Result<()> {
         .get_one::<String>("frequency")
         .and_then(|s| s.parse().ok());
 
-    let client = AsyncMarketdataClient::new(reqwest::Client::new());
+    let client = SyncMarketdataClient::new(ureq::Agent::new());
     let data = client
         .get_movers(&access_token, symbol, sort, frequency)
-        .await?;
+        ?;
 
     println!("{:#?}", data);
     Ok(())
