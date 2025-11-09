@@ -5,7 +5,7 @@ use crate::config::{ConfigManager, TokenManager};
 use crate::oauth::refresh_access_token;
 
 /// Handle the refresh command for token renewal
-pub async fn handle_refresh_command(_matches: &ArgMatches) -> Result<()> {
+pub fn handle_refresh_command(_matches: &ArgMatches) -> Result<()> {
     println!("🔄 Schwab OAuth2 Token Refresh");
 
     // Load configuration and TokenManager
@@ -22,7 +22,7 @@ pub async fn handle_refresh_command(_matches: &ArgMatches) -> Result<()> {
     println!("🔄 Requesting new access token from Schwab...");
 
     // Use the refresh token to get a new access token
-    let token_response = refresh_access_token(&config, &refresh_token).await?;
+    let token_response = refresh_access_token(&config, &refresh_token)?;
 
     println!("✅ New access token received successfully!");
 

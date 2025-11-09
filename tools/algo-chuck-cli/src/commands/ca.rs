@@ -335,7 +335,7 @@ async fn handle_ca_test_server(port: u16) -> Result<()> {
 
 /// Start a simple test server on the specified port
 async fn start_test_server(port: u16) -> Result<()> {
-    let tls_config = create_tls_config().await?;
+    let tls_config = create_tls_config()?;
     let acceptor = TlsAcceptor::from(Arc::new(tls_config));
     let address = format!("127.0.0.1:{}", port);
     let listener = TcpListener::bind(&address).await?;

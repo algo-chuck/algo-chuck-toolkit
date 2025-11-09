@@ -2,14 +2,13 @@ use anyhow::{Context, Result};
 use chrono::Utc;
 use rcgen::generate_simple_self_signed;
 use rustls::ServerConfig;
+use rustls::ServerConnection;
 use rustls::pki_types::{CertificateDer, PrivateKeyDer};
 use std::collections::HashMap;
+use std::io::{BufRead, BufReader, Write};
+use std::net::{TcpListener, TcpStream};
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-use tokio::net::{TcpListener as TokioTcpListener, TcpStream as TokioTcpStream};
-use tokio::time::timeout;
-use tokio_rustls::{TlsAcceptor, server::TlsStream};
 use url::Url;
 
 use crate::ca::CaManager;
@@ -19,7 +18,7 @@ const SUCCESS_HTML_TEMPLATE: &str = include_str!("../templates/oauth_success.htm
 const NOT_FOUND_HTML_TEMPLATE: &str = include_str!("../templates/oauth_404.html");
 
 /// Create TLS configuration with CA-generated certificate
-pub async fn create_tls_config() -> Result<ServerConfig> {
+pub fn create_tls_config() -> Result<ServerConfig> {
     // Install the default crypto provider (ring) for rustls
     let _ = rustls::crypto::ring::default_provider().install_default();
 
@@ -28,7 +27,7 @@ pub async fn create_tls_config() -> Result<ServerConfig> {
 
     if ca_manager.ca_exists() {
         // Use CA-generated server certificate
-        match ca_manager.get_or_create_server_cert().await {
+        match ca_manager.get_or_create_server_cert_sync() {
             Ok(server_cert) => {
                 return create_tls_config_from_pem(&server_cert.full_chain, &server_cert.key_pem);
             }
@@ -127,16 +126,17 @@ fn create_not_found_response(requested_path: &str) -> String {
 }
 
 /// Start HTTPS callback server and wait for OAuth2 callback
-pub async fn start_callback_server(config: &SchwabConfig) -> Result<(String, String)> {
-    let tls_config = create_tls_config().await?;
-    let acceptor = TlsAcceptor::from(Arc::new(tls_config));
+pub fn start_callback_server(config: &SchwabConfig) -> Result<(String, String)> {
+    let tls_config = create_tls_config()?;
+    let tls_config = Arc::new(tls_config);
 
-    let listener = TokioTcpListener::bind(SchwabConfig::CALLBACK_ADDRESS)
-        .await
-        .context(format!(
-            "Failed to bind to {}",
-            SchwabConfig::CALLBACK_ADDRESS
-        ))?;
+    let listener = TcpListener::bind(SchwabConfig::CALLBACK_ADDRESS).context(format!(
+        "Failed to bind to {}",
+        SchwabConfig::CALLBACK_ADDRESS
+    ))?;
+
+    // Set socket to blocking mode (default)
+    listener.set_nonblocking(false)?;
 
     println!(
         "🌐 HTTPS callback server listening on: {}",
@@ -146,47 +146,64 @@ pub async fn start_callback_server(config: &SchwabConfig) -> Result<(String, Str
     println!("⏰ Timeout: {} seconds", config.preferences.browser_timeout);
 
     let timeout_duration = Duration::from_secs(config.preferences.browser_timeout as u64);
+    let start_time = std::time::Instant::now();
 
-    let server_future = async {
-        loop {
-            let (stream, _addr) = listener
-                .accept()
-                .await
-                .context("Failed to accept connection")?;
-            let acceptor = acceptor.clone();
-            let config = config.clone();
+    // Loop to accept connections with timeout
+    loop {
+        // Check if we've exceeded the timeout
+        if start_time.elapsed() > timeout_duration {
+            return Err(anyhow::anyhow!(
+                "OAuth2 callback timeout after {} seconds. Please try again or check your browser.",
+                config.preferences.browser_timeout
+            ));
+        }
 
-            match acceptor.accept(stream).await {
-                Ok(tls_stream) => {
-                    if let Ok((code, state)) = handle_callback(tls_stream, &config).await {
-                        return Ok((code, state));
-                    }
-                }
+        // Accept connections with a timeout by using SO_RCVTIMEO
+        match listener.accept() {
+            Ok((stream, _addr)) => match handle_callback(stream, &tls_config, config) {
+                Ok((code, state)) => return Ok((code, state)),
                 Err(e) => {
-                    eprintln!("TLS handshake failed: {}", e);
+                    eprintln!("Connection handling failed: {}", e);
                     continue;
                 }
+            },
+            Err(e) => {
+                // On timeout or would block, check if overall timeout exceeded
+                if e.kind() == std::io::ErrorKind::WouldBlock
+                    || e.kind() == std::io::ErrorKind::TimedOut
+                {
+                    continue;
+                }
+                return Err(anyhow::anyhow!("Failed to accept connection: {}", e));
             }
         }
-    };
-
-    match timeout(timeout_duration, server_future).await {
-        Ok(result) => result,
-        Err(_) => Err(anyhow::anyhow!(
-            "OAuth2 callback timeout after {} seconds. Please try again or check your browser.",
-            config.preferences.browser_timeout
-        )),
     }
 }
 
 /// Handle individual HTTPS callback request
-async fn handle_callback(
-    mut stream: TlsStream<TokioTcpStream>,
+fn handle_callback(
+    stream: TcpStream,
+    tls_config: &Arc<ServerConfig>,
     _config: &SchwabConfig,
 ) -> Result<(String, String)> {
-    let mut reader = BufReader::new(&mut stream);
+    // Perform TLS handshake
+    let conn =
+        ServerConnection::new(tls_config.clone()).context("Failed to create TLS connection")?;
+
+    // Set socket timeout
+    stream.set_read_timeout(Some(Duration::from_secs(10)))?;
+    stream.set_write_timeout(Some(Duration::from_secs(10)))?;
+
+    // Create rustls stream (note: this is a bit tricky with blocking I/O)
+    // We need to handle the TLS handshake and data transfer manually
+    let mut tls_stream = rustls::StreamOwned::new(conn, stream);
+
+    // Read the HTTP request line
+    let mut reader = BufReader::new(&mut tls_stream);
     let mut request_line = String::new();
-    reader.read_line(&mut request_line).await?;
+    reader
+        .read_line(&mut request_line)
+        .context("Failed to read request line")?;
 
     println!("📨 Received callback: {}", request_line.trim());
 
@@ -210,8 +227,10 @@ async fn handle_callback(
         // Send 404 response for wrong paths
         let not_found_response = create_not_found_response(path);
 
-        stream.write_all(not_found_response.as_bytes()).await?;
-        stream.flush().await?;
+        // Write through the reader's inner stream
+        let tls_stream = reader.into_inner();
+        let _ = tls_stream.write_all(not_found_response.as_bytes());
+        let _ = tls_stream.flush();
 
         return Err(anyhow::anyhow!("Invalid callback path: {}", path));
     }
@@ -239,8 +258,12 @@ async fn handle_callback(
     // Send success response
     let response = create_success_response(&session_id);
 
-    stream.write_all(response.as_bytes()).await?;
-    stream.flush().await?;
+    // Write through the reader's inner stream
+    let tls_stream = reader.into_inner();
+    tls_stream
+        .write_all(response.as_bytes())
+        .context("Failed to write response")?;
+    tls_stream.flush().context("Failed to flush response")?;
 
     println!("✅ Authorization code received successfully!");
 

@@ -19,7 +19,7 @@ impl AutoRefresher {
     }
 
     /// Ensure we have a valid access token, refreshing if necessary
-    pub async fn ensure_valid_token(&self) -> Result<()> {
+    pub fn ensure_valid_token(&self) -> Result<()> {
         // Only proceed if auto_refresh is enabled
         if !self.config.preferences.auto_refresh {
             // If auto-refresh disabled, just check and warn if expired
@@ -42,7 +42,7 @@ impl AutoRefresher {
             } else {
                 println!("🔄 Access token expires soon, auto-refreshing...");
             }
-            self.refresh_token().await?;
+            self.refresh_token()?;
             println!("✅ Token refreshed successfully");
         }
 
@@ -50,14 +50,14 @@ impl AutoRefresher {
     }
 
     /// Internal method to refresh the token
-    async fn refresh_token(&self) -> Result<()> {
+    fn refresh_token(&self) -> Result<()> {
         // Get refresh token
         let refresh_token = self.token_manager.get_refresh_token()?.ok_or_else(|| {
             anyhow::anyhow!("No refresh token available. Please run 'chuck login' again.")
         })?;
 
         // Make refresh request to Schwab API
-        let token_response = refresh_access_token(&self.config, &refresh_token).await
+        let token_response = refresh_access_token(&self.config, &refresh_token)
             .map_err(|e| {
                 anyhow::anyhow!("Auto-refresh failed: {}. Try running 'chuck refresh' manually or 'chuck login' if refresh token expired.", e)
             })?;

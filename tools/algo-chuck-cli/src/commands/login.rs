@@ -7,7 +7,7 @@ use crate::oauth::{build_schwab_auth_url, exchange_code_for_token, generate_stat
 use crate::server::start_callback_server;
 
 /// Handle the login command for OAuth2 authentication
-pub async fn handle_login_command(_matches: &ArgMatches) -> Result<()> {
+pub fn handle_login_command(_matches: &ArgMatches) -> Result<()> {
     println!("🔐 Algo Chuck CLI - Login");
 
     // Setup Certificate Authority for seamless HTTPS
@@ -15,12 +15,13 @@ pub async fn handle_login_command(_matches: &ArgMatches) -> Result<()> {
     if !ca_manager.ca_exists() {
         println!("\n🔐 Setting up Certificate Authority for seamless HTTPS...");
 
-        // Generate CA certificate
-        ca_manager.generate_ca().await?;
+        // Generate CA certificate (needs to stay async for now, or we need a sync version)
+        // For now, let's use the sync version we'll create
+        ca_manager.generate_ca_sync()?;
 
-        // Prompt user to install CA in system trust store
+        // Prompt user to install CA in system trust store (needs sync version)
         if installer::prompt_ca_installation()? {
-            ca_manager.install_system_ca().await?;
+            ca_manager.install_system_ca_sync()?;
             println!("✅ Certificate Authority installed successfully!");
             println!("   Future OAuth logins will not show certificate warnings.");
         } else {
@@ -66,7 +67,7 @@ pub async fn handle_login_command(_matches: &ArgMatches) -> Result<()> {
     }
 
     // Start callback server and wait for authorization
-    let (code, returned_state) = start_callback_server(&config).await?;
+    let (code, returned_state) = start_callback_server(&config)?;
 
     // Verify state parameter
     if returned_state != state {
@@ -78,7 +79,7 @@ pub async fn handle_login_command(_matches: &ArgMatches) -> Result<()> {
     println!("🔄 Exchanging authorization code for tokens...");
 
     // Exchange code for tokens
-    let token_response = exchange_code_for_token(&config, &code).await?;
+    let token_response = exchange_code_for_token(&config, &code)?;
 
     println!("✅ Tokens received successfully!");
 

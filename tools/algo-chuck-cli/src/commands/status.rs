@@ -6,7 +6,7 @@ use crate::config::{ConfigManager, TokenManager};
 use crate::display::display_encrypted_token_info;
 
 /// Handle the status command to display token status
-pub async fn handle_status_command(matches: &ArgMatches) -> Result<()> {
+pub fn handle_status_command(matches: &ArgMatches) -> Result<()> {
     println!("🔍 Schwab OAuth2 Token Information\n");
 
     // Load configuration to create TokenManager
@@ -28,7 +28,7 @@ pub async fn handle_status_command(matches: &ArgMatches) -> Result<()> {
         );
 
         if auto_refresher.is_enabled() {
-            if let Err(e) = auto_refresher.ensure_valid_token().await {
+            if let Err(e) = auto_refresher.ensure_valid_token() {
                 eprintln!("⚠️  Auto-refresh failed: {}", e);
             }
         } else {
