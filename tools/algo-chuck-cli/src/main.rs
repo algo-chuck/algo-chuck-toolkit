@@ -10,6 +10,11 @@ mod server;
 use anyhow::Result;
 use commands::*;
 
+/// Helper to run async commands with a tokio runtime
+fn run_async<F: std::future::Future<Output = Result<()>>>(f: F) -> Result<()> {
+    tokio::runtime::Runtime::new()?.block_on(f)
+}
+
 fn main() -> Result<()> {
     let matches = cli::build_cli().get_matches();
 
@@ -18,12 +23,12 @@ fn main() -> Result<()> {
         Some(("config", m)) => handle_config_command(m),
 
         // ==================== Certificate Authority ====================
-        Some(("ca", m)) => tokio::runtime::Runtime::new()?.block_on(handle_ca_command(m)),
+        Some(("ca", m)) => run_async(handle_ca_command(m)),
 
         // ==================== Authentication & OAuth ====================
-        Some(("login", m)) => tokio::runtime::Runtime::new()?.block_on(handle_login_command(m)),
-        Some(("refresh", m)) => tokio::runtime::Runtime::new()?.block_on(handle_refresh_command(m)),
-        Some(("status", m)) => tokio::runtime::Runtime::new()?.block_on(handle_status_command(m)),
+        Some(("login", m)) => run_async(handle_login_command(m)),
+        Some(("refresh", m)) => run_async(handle_refresh_command(m)),
+        Some(("status", m)) => run_async(handle_status_command(m)),
 
         // ==================== Trader API - Accounts ====================
         Some(("account-numbers", m)) => handle_account_numbers_command(m),
