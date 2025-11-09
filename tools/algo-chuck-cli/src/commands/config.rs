@@ -4,18 +4,18 @@ use clap::ArgMatches;
 use crate::config::{ConfigManager, CredentialsManager, SchwabConfig, TokenManager};
 
 /// Handle the config command and its subcommands
-pub async fn handle_config_command(matches: &ArgMatches) -> Result<()> {
+pub fn handle_config_command(matches: &ArgMatches) -> Result<()> {
     match matches.subcommand() {
-        Some(("show", _)) => handle_config_show().await,
-        Some(("set", sub_matches)) => handle_config_set(sub_matches).await,
-        Some(("reset", _)) => handle_config_reset().await,
-        Some(("clean", _)) => handle_config_clean().await,
+        Some(("show", _)) => handle_config_show(),
+        Some(("set", sub_matches)) => handle_config_set(sub_matches),
+        Some(("reset", _)) => handle_config_reset(),
+        Some(("clean", _)) => handle_config_clean(),
         _ => unreachable!("Config subcommand is required"),
     }
 }
 
 /// Display current configuration
-async fn handle_config_show() -> Result<()> {
+fn handle_config_show() -> Result<()> {
     println!("🔧 Current Configuration\n");
 
     let config_manager = ConfigManager::new()?;
@@ -95,7 +95,7 @@ async fn handle_config_show() -> Result<()> {
 }
 
 /// Set configuration values
-async fn handle_config_set(matches: &ArgMatches) -> Result<()> {
+fn handle_config_set(matches: &ArgMatches) -> Result<()> {
     println!("🔧 Setting Configuration\n");
 
     let config_manager = ConfigManager::new()?;
@@ -175,7 +175,7 @@ async fn handle_config_set(matches: &ArgMatches) -> Result<()> {
 }
 
 /// Reset configuration to defaults and clear tokens
-async fn handle_config_reset() -> Result<()> {
+fn handle_config_reset() -> Result<()> {
     println!("🔧 Resetting Configuration\n");
 
     let config_manager = ConfigManager::new()?;
@@ -205,7 +205,7 @@ async fn handle_config_reset() -> Result<()> {
 }
 
 /// Completely clean all data and directories
-async fn handle_config_clean() -> Result<()> {
+fn handle_config_clean() -> Result<()> {
     println!("🧹 Cleaning All Data\n");
     println!(
         "⚠️  This will completely remove all configuration, credentials, tokens, and directories."
