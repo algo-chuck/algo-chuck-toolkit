@@ -20,6 +20,8 @@ fn main() -> Result<()> {
 
         // Synchronous commands - no runtime overhead!
         Some(("account-numbers", m)) => handle_account_numbers_command(m),
+        Some(("market-hours", m)) => handle_market_hours_command(m),
+        Some(("market-hour", m)) => handle_market_hour_command(m),
 
         // Rest of the commands still async for now (will convert later)
         Some(("status", m)) => tokio::runtime::Runtime::new()?.block_on(handle_status_command(m)),
@@ -67,12 +69,6 @@ fn main() -> Result<()> {
             tokio::runtime::Runtime::new()?.block_on(handle_price_history_command(m))
         }
         Some(("movers", m)) => tokio::runtime::Runtime::new()?.block_on(handle_movers_command(m)),
-        Some(("market-hours", m)) => {
-            tokio::runtime::Runtime::new()?.block_on(handle_market_hours_command(m))
-        }
-        Some(("market-hour", m)) => {
-            tokio::runtime::Runtime::new()?.block_on(handle_market_hour_command(m))
-        }
         Some(("instruments", m)) => {
             tokio::runtime::Runtime::new()?.block_on(handle_instruments_command(m))
         }

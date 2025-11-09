@@ -2,10 +2,10 @@ use anyhow::Result;
 use clap::ArgMatches;
 
 use crate::config::{ConfigManager, TokenManager};
-use schwab_api_marketdata::AsyncMarketdataClient;
+use schwab_api_marketdata::SyncMarketdataClient;
 
 /// Handle the market hours command
-pub async fn handle_market_hours_command(matches: &ArgMatches) -> Result<()> {
+pub fn handle_market_hours_command(matches: &ArgMatches) -> Result<()> {
     println!("🚀 Fetching Market Hours");
 
     let config_manager = ConfigManager::new()?;
@@ -20,17 +20,15 @@ pub async fn handle_market_hours_command(matches: &ArgMatches) -> Result<()> {
 
     let date = matches.get_one::<String>("date").map(|s| s.as_str());
 
-    let client = AsyncMarketdataClient::new(reqwest::Client::new());
-    let data = client
-        .get_market_hours(&access_token, markets, date)
-        .await?;
+    let client = SyncMarketdataClient::new(ureq::Agent::new());
+    let data = client.get_market_hours(&access_token, markets, date)?;
 
     println!("{:#?}", data);
     Ok(())
 }
 
 /// Handle the market hours command
-pub async fn handle_market_hour_command(matches: &ArgMatches) -> Result<()> {
+pub fn handle_market_hour_command(matches: &ArgMatches) -> Result<()> {
     println!("🚀 Fetching Market Hour");
 
     let config_manager = ConfigManager::new()?;
@@ -45,8 +43,8 @@ pub async fn handle_market_hour_command(matches: &ArgMatches) -> Result<()> {
 
     let date = matches.get_one::<String>("date").map(|s| s.as_str());
 
-    let client = AsyncMarketdataClient::new(reqwest::Client::new());
-    let data = client.get_market_hour(&access_token, market, date).await?;
+    let client = SyncMarketdataClient::new(ureq::Agent::new());
+    let data = client.get_market_hour(&access_token, market, date)?;
 
     println!("{:#?}", data);
     Ok(())
