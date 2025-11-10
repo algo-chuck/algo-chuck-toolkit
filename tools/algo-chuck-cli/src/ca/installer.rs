@@ -66,6 +66,22 @@ pub async fn uninstall_ca_from_system(ca_manager: &CaManager) -> Result<()> {
     }
 }
 
+/// Remove CA certificate from system trust store (sync version)
+pub fn uninstall_ca_from_system_sync(ca_manager: &CaManager) -> Result<()> {
+    println!("🗑️  Removing CA certificate from system trust store...");
+
+    match std::env::consts::OS {
+        "macos" => uninstall_macos_ca_sync(ca_manager),
+        "windows" => uninstall_windows_ca_sync(ca_manager),
+        "linux" => uninstall_linux_ca_sync(ca_manager),
+        os => {
+            eprintln!("⚠️  Automatic removal not supported on {}", os);
+            print_manual_removal_instructions(ca_manager)?;
+            Ok(())
+        }
+    }
+}
+
 /// Install CA certificate on macOS
 async fn install_macos_ca(ca_manager: &CaManager) -> Result<()> {
     let ca_cert_path = ca_manager.ca_cert_path();
@@ -347,6 +363,87 @@ async fn uninstall_macos_ca(ca_manager: &CaManager) -> Result<()> {
     Ok(())
 }
 
+/// Remove CA certificate from macOS keychain (sync version)
+fn uninstall_macos_ca_sync(ca_manager: &CaManager) -> Result<()> {
+    println!("📋 Removing CA certificate from macOS keychain...");
+    println!("   This requires administrator privileges and will prompt for your password.");
+
+    // First, find all certificates with our common name and get their SHA-1 hashes
+    let find_output = Command::new("security")
+        .args([
+            "find-certificate",
+            "-a",
+            "-Z",
+            "-c",
+            "Algo Chuck Local CA",
+            "/Library/Keychains/System.keychain",
+        ])
+        .output()
+        .with_context(|| "Failed to find certificates")?;
+
+    if find_output.status.success() {
+        let output_str = String::from_utf8_lossy(&find_output.stdout);
+
+        // Extract SHA-1 hashes from the output
+        let mut hashes = Vec::new();
+        for line in output_str.lines() {
+            if line.starts_with("SHA-1 hash: ") {
+                if let Some(hash) = line.strip_prefix("SHA-1 hash: ") {
+                    hashes.push(hash.to_string());
+                }
+            }
+        }
+
+        if hashes.is_empty() {
+            println!("ℹ️  No certificates found to remove");
+            update_ca_installation_status_sync(ca_manager, false, "")?;
+            return Ok(());
+        }
+
+        println!("   Found {} certificate(s) to remove", hashes.len());
+
+        // Delete each certificate by its SHA-1 hash
+        let mut removed_count = 0;
+        for hash in &hashes {
+            let delete_output = Command::new("sudo")
+                .args([
+                    "security",
+                    "delete-certificate",
+                    "-Z",
+                    hash,
+                    "/Library/Keychains/System.keychain",
+                ])
+                .output()
+                .with_context(|| format!("Failed to delete certificate with hash {}", hash))?;
+
+            if delete_output.status.success() {
+                removed_count += 1;
+            } else {
+                let error = String::from_utf8_lossy(&delete_output.stderr);
+                eprintln!("⚠️  Warning removing certificate {}: {}", hash, error);
+            }
+        }
+
+        if removed_count > 0 {
+            println!(
+                "✅ CA certificate(s) removed successfully from macOS keychain ({} removed)",
+                removed_count
+            );
+        } else {
+            eprintln!("⚠️  No certificates were successfully removed");
+        }
+
+        update_ca_installation_status_sync(ca_manager, false, "")?;
+    } else {
+        let error = String::from_utf8_lossy(&find_output.stderr);
+        eprintln!("⚠️  Warning: Failed to find certificates: {}", error);
+        // Don't fail here, certificate might not have been installed
+        update_ca_installation_status_sync(ca_manager, false, "")?;
+    }
+
+    Ok(())
+}
+
 /// Remove CA certificate from Windows certificate store
 async fn uninstall_windows_ca(ca_manager: &CaManager) -> Result<()> {
     println!("📋 Removing CA certificate from Windows certificate store...");
@@ -368,6 +465,32 @@ async fn uninstall_windows_ca(ca_manager: &CaManager) -> Result<()> {
         eprintln!("⚠️  Warning: {}", error);
         // Don't fail here, certificate might not have been installed
         update_ca_installation_status(ca_manager, false, "").await?;
+    }
+
+    Ok(())
+}
+
+/// Remove CA certificate from Windows certificate store (sync version)
+fn uninstall_windows_ca_sync(ca_manager: &CaManager) -> Result<()> {
+    println!("📋 Removing CA certificate from Windows certificate store...");
+
+    // Use PowerShell to remove certificate
+    let output = Command::new("powershell")
+        .args([
+            "-Command",
+            "Get-ChildItem -Path Cert:\\LocalMachine\\Root | Where-Object {$_.Subject -like '*Algo Chuck Local CA*'} | Remove-Item",
+        ])
+        .output()
+        .with_context(|| "Failed to execute PowerShell command")?;
+
+    if output.status.success() {
+        println!("✅ CA certificate removed successfully from Windows certificate store");
+        update_ca_installation_status_sync(ca_manager, false, "")?;
+    } else {
+        let error = String::from_utf8_lossy(&output.stderr);
+        eprintln!("⚠️  Warning: {}", error);
+        // Don't fail here, certificate might not have been installed
+        update_ca_installation_status_sync(ca_manager, false, "")?;
     }
 
     Ok(())
@@ -406,6 +529,44 @@ async fn uninstall_linux_ca(ca_manager: &CaManager) -> Result<()> {
         eprintln!("⚠️  Warning: {}", error);
         // Don't fail here, update might have succeeded partially
         update_ca_installation_status(ca_manager, false, "").await?;
+    }
+
+    Ok(())
+}
+
+/// Remove CA certificate from Linux certificate store (sync version)
+fn uninstall_linux_ca_sync(ca_manager: &CaManager) -> Result<()> {
+    println!("📋 Removing CA certificate from Linux certificate store...");
+
+    // Remove certificate file
+    let remove_output = Command::new("sudo")
+        .args([
+            "rm",
+            "-f",
+            "/usr/local/share/ca-certificates/algo-chuck-ca.crt",
+        ])
+        .output()
+        .with_context(|| "Failed to remove CA certificate")?;
+
+    if !remove_output.status.success() {
+        let error = String::from_utf8_lossy(&remove_output.stderr);
+        eprintln!("⚠️  Warning: {}", error);
+    }
+
+    // Update CA certificates
+    let update_output = Command::new("sudo")
+        .args(["update-ca-certificates"])
+        .output()
+        .with_context(|| "Failed to update CA certificates")?;
+
+    if update_output.status.success() {
+        println!("✅ CA certificate removed successfully from Linux certificate store");
+        update_ca_installation_status_sync(ca_manager, false, "")?;
+    } else {
+        let error = String::from_utf8_lossy(&update_output.stderr);
+        eprintln!("⚠️  Warning: {}", error);
+        // Don't fail here, update might have succeeded partially
+        update_ca_installation_status_sync(ca_manager, false, "")?;
     }
 
     Ok(())

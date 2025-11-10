@@ -152,6 +152,11 @@ impl CaManager {
         installer::uninstall_ca_from_system(self).await
     }
 
+    /// Remove CA certificate from system trust store (sync version)
+    pub fn uninstall_system_ca_sync(&self) -> Result<()> {
+        installer::uninstall_ca_from_system_sync(self)
+    }
+
     /// Generate or retrieve existing server certificate (async version)
     pub async fn get_or_create_server_cert(&self) -> Result<ServerCertificate> {
         // Check if server cert exists and is valid
@@ -229,6 +234,42 @@ impl CaManager {
     pub async fn clean(&self, uninstall_from_system: bool) -> Result<()> {
         if uninstall_from_system && self.ca_installed_in_system()? {
             self.uninstall_system_ca().await?;
+        }
+
+        // Remove all CA files
+        let files_to_remove = [
+            self.ca_cert_path(),
+            self.ca_key_path(),
+            self.server_cert_path(),
+            self.server_key_path(),
+            self.ca_info_path(),
+        ];
+
+        for file_path in &files_to_remove {
+            if file_path.exists() {
+                std::fs::remove_file(file_path)
+                    .with_context(|| format!("Failed to remove: {}", file_path.display()))?;
+            }
+        }
+
+        // Remove backup directory if it exists
+        let backup_dir = self.ca_directory().join("backup");
+        if backup_dir.exists() {
+            std::fs::remove_dir_all(&backup_dir).with_context(|| {
+                format!(
+                    "Failed to remove backup directory: {}",
+                    backup_dir.display()
+                )
+            })?;
+        }
+
+        Ok(())
+    }
+
+    /// Remove all CA files and optionally uninstall from system (sync version)
+    pub fn clean_sync(&self, uninstall_from_system: bool) -> Result<()> {
+        if uninstall_from_system && self.ca_installed_in_system()? {
+            self.uninstall_system_ca_sync()?;
         }
 
         // Remove all CA files

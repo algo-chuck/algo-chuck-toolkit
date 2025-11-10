@@ -10,11 +10,6 @@ mod server;
 use anyhow::Result;
 use commands::*;
 
-/// Helper to run async commands with a tokio runtime (still needed for ca command)
-fn run_async<F: std::future::Future<Output = Result<()>>>(f: F) -> Result<()> {
-    tokio::runtime::Runtime::new()?.block_on(f)
-}
-
 fn main() -> Result<()> {
     let matches = cli::build_cli().get_matches();
 
@@ -23,7 +18,7 @@ fn main() -> Result<()> {
         Some(("config", m)) => handle_config_command(m),
 
         // ==================== Certificate Authority ====================
-        Some(("ca", m)) => run_async(handle_ca_command(m)),
+        Some(("ca", m)) => handle_ca_command(m),
 
         // ==================== Authentication & OAuth ====================
         Some(("login", m)) => handle_login_command(m),
