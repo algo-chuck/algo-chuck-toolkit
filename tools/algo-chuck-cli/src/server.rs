@@ -27,7 +27,7 @@ pub fn create_tls_config() -> Result<ServerConfig> {
 
     if ca_manager.ca_exists() {
         // Use CA-generated server certificate
-        match ca_manager.get_or_create_server_cert_sync() {
+        match ca_manager.get_or_create_server_cert() {
             Ok(server_cert) => {
                 return create_tls_config_from_pem(&server_cert.full_chain, &server_cert.key_pem);
             }

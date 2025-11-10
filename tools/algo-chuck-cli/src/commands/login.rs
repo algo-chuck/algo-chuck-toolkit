@@ -15,13 +15,12 @@ pub fn handle_login_command(_matches: &ArgMatches) -> Result<()> {
     if !ca_manager.ca_exists() {
         println!("\n🔐 Setting up Certificate Authority for seamless HTTPS...");
 
-        // Generate CA certificate (needs to stay async for now, or we need a sync version)
-        // For now, let's use the sync version we'll create
-        ca_manager.generate_ca_sync()?;
+        // Generate CA certificate
+        ca_manager.generate_ca()?;
 
         // Prompt user to install CA in system trust store (needs sync version)
         if installer::prompt_ca_installation()? {
-            ca_manager.install_system_ca_sync()?;
+            ca_manager.install_system_ca()?;
             println!("✅ Certificate Authority installed successfully!");
             println!("   Future OAuth logins will not show certificate warnings.");
         } else {

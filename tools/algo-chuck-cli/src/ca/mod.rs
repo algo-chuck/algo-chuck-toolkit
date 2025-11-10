@@ -128,37 +128,22 @@ impl CaManager {
     }
 
     /// Generate a new Certificate Authority
-    pub async fn generate_ca(&self) -> Result<CaInfo> {
-        generator::generate_ca(self).await
-    }
-
-    /// Generate a new Certificate Authority (sync version)
-    pub fn generate_ca_sync(&self) -> Result<CaInfo> {
-        generator::generate_ca_sync(self)
+    pub fn generate_ca(&self) -> Result<CaInfo> {
+        generator::generate_ca(self)
     }
 
     /// Install CA certificate in system trust store
-    pub async fn install_system_ca(&self) -> Result<()> {
-        installer::install_ca_in_system(self).await
-    }
-
-    /// Install CA certificate in system trust store (sync version)
-    pub fn install_system_ca_sync(&self) -> Result<()> {
-        installer::install_ca_in_system_sync(self)
+    pub fn install_system_ca(&self) -> Result<()> {
+        installer::install_ca_in_system(self)
     }
 
     /// Remove CA certificate from system trust store
-    pub async fn uninstall_system_ca(&self) -> Result<()> {
-        installer::uninstall_ca_from_system(self).await
+    pub fn uninstall_system_ca(&self) -> Result<()> {
+        installer::uninstall_ca_from_system(self)
     }
 
-    /// Remove CA certificate from system trust store (sync version)
-    pub fn uninstall_system_ca_sync(&self) -> Result<()> {
-        installer::uninstall_ca_from_system_sync(self)
-    }
-
-    /// Generate or retrieve existing server certificate (async version)
-    pub async fn get_or_create_server_cert(&self) -> Result<ServerCertificate> {
+    /// Generate or retrieve existing server certificate
+    pub fn get_or_create_server_cert(&self) -> Result<ServerCertificate> {
         // Check if server cert exists and is valid
         if self.server_cert_path().exists() && self.server_key_path().exists() {
             if let Ok(info) = self.load_ca_info() {
@@ -176,39 +161,12 @@ impl CaManager {
         }
 
         // Generate new server certificate
-        self.generate_server_certificate().await
+        self.generate_server_certificate()
     }
 
-    /// Generate or retrieve existing server certificate (sync version)
-    pub fn get_or_create_server_cert_sync(&self) -> Result<ServerCertificate> {
-        // Check if server cert exists and is valid
-        if self.server_cert_path().exists() && self.server_key_path().exists() {
-            if let Ok(info) = self.load_ca_info() {
-                if let Some(server_meta) = &info.server {
-                    // Check if certificate is still valid (not expired and not expiring soon)
-                    let now = Utc::now();
-                    let expires_soon = server_meta.expires_at - chrono::Duration::days(30);
-
-                    if now < expires_soon {
-                        // Certificate is still good, load it
-                        return self.load_server_certificate();
-                    }
-                }
-            }
-        }
-
-        // Generate new server certificate
-        self.generate_server_certificate_sync()
-    }
-
-    /// Generate a new server certificate signed by the CA (async version)
-    pub async fn generate_server_certificate(&self) -> Result<ServerCertificate> {
-        generator::generate_server_certificate(self).await
-    }
-
-    /// Generate a new server certificate signed by the CA (sync version)
-    pub fn generate_server_certificate_sync(&self) -> Result<ServerCertificate> {
-        generator::generate_server_certificate_sync(self)
+    /// Generate a new server certificate signed by the CA
+    pub fn generate_server_certificate(&self) -> Result<ServerCertificate> {
+        generator::generate_server_certificate(self)
     }
 
     /// Load existing server certificate from disk
@@ -231,45 +189,9 @@ impl CaManager {
     }
 
     /// Remove all CA files and optionally uninstall from system
-    pub async fn clean(&self, uninstall_from_system: bool) -> Result<()> {
+    pub fn clean(&self, uninstall_from_system: bool) -> Result<()> {
         if uninstall_from_system && self.ca_installed_in_system()? {
-            self.uninstall_system_ca().await?;
-        }
-
-        // Remove all CA files
-        let files_to_remove = [
-            self.ca_cert_path(),
-            self.ca_key_path(),
-            self.server_cert_path(),
-            self.server_key_path(),
-            self.ca_info_path(),
-        ];
-
-        for file_path in &files_to_remove {
-            if file_path.exists() {
-                std::fs::remove_file(file_path)
-                    .with_context(|| format!("Failed to remove: {}", file_path.display()))?;
-            }
-        }
-
-        // Remove backup directory if it exists
-        let backup_dir = self.ca_directory().join("backup");
-        if backup_dir.exists() {
-            std::fs::remove_dir_all(&backup_dir).with_context(|| {
-                format!(
-                    "Failed to remove backup directory: {}",
-                    backup_dir.display()
-                )
-            })?;
-        }
-
-        Ok(())
-    }
-
-    /// Remove all CA files and optionally uninstall from system (sync version)
-    pub fn clean_sync(&self, uninstall_from_system: bool) -> Result<()> {
-        if uninstall_from_system && self.ca_installed_in_system()? {
-            self.uninstall_system_ca_sync()?;
+            self.uninstall_system_ca()?;
         }
 
         // Remove all CA files

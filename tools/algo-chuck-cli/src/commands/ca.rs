@@ -43,7 +43,7 @@ fn handle_ca_install() -> Result<()> {
     // Check if CA exists
     if !ca_manager.ca_exists() {
         println!("🔐 No Certificate Authority found. Creating new CA...");
-        ca_manager.generate_ca_sync()?;
+        ca_manager.generate_ca()?;
     }
 
     // Check if already installed
@@ -54,7 +54,7 @@ fn handle_ca_install() -> Result<()> {
 
     // Prompt user for installation
     if installer::prompt_ca_installation()? {
-        ca_manager.install_system_ca_sync()?;
+        ca_manager.install_system_ca()?;
         println!("🎉 Certificate Authority installed successfully!");
         println!("   Future OAuth logins will not show certificate warnings.");
     } else {
@@ -84,7 +84,7 @@ fn handle_ca_uninstall() -> Result<()> {
 
     if cert_in_system {
         println!("🗑️  Removing Certificate Authority from system trust store...");
-        ca_manager.uninstall_system_ca_sync()?;
+        ca_manager.uninstall_system_ca()?;
         println!("✅ CA certificate removed successfully from system");
     } else {
         println!("ℹ️  No certificate found in system trust store");
@@ -115,17 +115,17 @@ fn handle_ca_regenerate() -> Result<()> {
         // Uninstall from system if installed
         if ca_manager.ca_installed_in_system()? {
             println!("🗑️  Removing old CA from system trust store...");
-            ca_manager.uninstall_system_ca_sync()?;
+            ca_manager.uninstall_system_ca()?;
         }
     }
 
     // Generate new CA
     println!("🔐 Generating new Certificate Authority...");
-    ca_manager.generate_ca_sync()?;
+    ca_manager.generate_ca()?;
 
     // Prompt for installation
     if installer::prompt_ca_installation()? {
-        ca_manager.install_system_ca_sync()?;
+        ca_manager.install_system_ca()?;
         println!("🎉 New Certificate Authority installed successfully!");
     }
 
@@ -186,7 +186,7 @@ fn handle_ca_clean(uninstall: bool) -> Result<()> {
     }
 
     // Clean CA files and optionally uninstall
-    ca_manager.clean_sync(uninstall)?;
+    ca_manager.clean(uninstall)?;
 
     if uninstall {
         println!("✅ CA certificate removed from system and all files deleted");
@@ -206,10 +206,10 @@ fn handle_ca_test_server(port: u16) -> Result<()> {
     // Generate CA if it doesn't exist
     if !ca_manager.ca_exists() {
         println!("🔐 No Certificate Authority found. Creating new CA...");
-        ca_manager.generate_ca_sync()?;
+        ca_manager.generate_ca()?;
 
         if installer::prompt_ca_installation()? {
-            ca_manager.install_system_ca_sync()?;
+            ca_manager.install_system_ca()?;
         }
     }
 
@@ -229,7 +229,7 @@ fn handle_ca_test_server(port: u16) -> Result<()> {
     println!();
 
     // Get or create server certificate
-    let _server_cert = ca_manager.get_or_create_server_cert_sync()?;
+    let _server_cert = ca_manager.get_or_create_server_cert()?;
 
     println!("🌐 Test Server Starting...");
     println!("   Server will run on: https://127.0.0.1:{}", port);

@@ -5,7 +5,7 @@ use anyhow::{Context, Result, anyhow};
 use std::process::Command;
 
 /// Install CA certificate in system trust store
-pub async fn install_ca_in_system(ca_manager: &CaManager) -> Result<()> {
+pub fn install_ca_in_system(ca_manager: &CaManager) -> Result<()> {
     println!("🔧 Installing CA certificate in system trust store...");
 
     let ca_cert_path = ca_manager.ca_cert_path();
@@ -16,32 +16,9 @@ pub async fn install_ca_in_system(ca_manager: &CaManager) -> Result<()> {
     }
 
     match std::env::consts::OS {
-        "macos" => install_macos_ca(ca_manager).await,
-        "windows" => install_windows_ca(ca_manager).await,
-        "linux" => install_linux_ca(ca_manager).await,
-        os => {
-            eprintln!("⚠️  Automatic installation not supported on {}", os);
-            print_manual_instructions(ca_manager)?;
-            Ok(())
-        }
-    }
-}
-
-/// Install CA certificate in system trust store (sync version)
-pub fn install_ca_in_system_sync(ca_manager: &CaManager) -> Result<()> {
-    println!("🔧 Installing CA certificate in system trust store...");
-
-    let ca_cert_path = ca_manager.ca_cert_path();
-    if !ca_cert_path.exists() {
-        return Err(anyhow!(
-            "CA certificate not found. Run 'chuck ca generate' first."
-        ));
-    }
-
-    match std::env::consts::OS {
-        "macos" => install_macos_ca_sync(ca_manager),
-        "windows" => install_windows_ca_sync(ca_manager),
-        "linux" => install_linux_ca_sync(ca_manager),
+        "macos" => install_macos_ca(ca_manager),
+        "windows" => install_windows_ca(ca_manager),
+        "linux" => install_linux_ca(ca_manager),
         os => {
             eprintln!("⚠️  Automatic installation not supported on {}", os);
             print_manual_instructions(ca_manager)?;
@@ -51,29 +28,13 @@ pub fn install_ca_in_system_sync(ca_manager: &CaManager) -> Result<()> {
 }
 
 /// Remove CA certificate from system trust store
-pub async fn uninstall_ca_from_system(ca_manager: &CaManager) -> Result<()> {
+pub fn uninstall_ca_from_system(ca_manager: &CaManager) -> Result<()> {
     println!("🗑️  Removing CA certificate from system trust store...");
 
     match std::env::consts::OS {
-        "macos" => uninstall_macos_ca(ca_manager).await,
-        "windows" => uninstall_windows_ca(ca_manager).await,
-        "linux" => uninstall_linux_ca(ca_manager).await,
-        os => {
-            eprintln!("⚠️  Automatic removal not supported on {}", os);
-            print_manual_removal_instructions(ca_manager)?;
-            Ok(())
-        }
-    }
-}
-
-/// Remove CA certificate from system trust store (sync version)
-pub fn uninstall_ca_from_system_sync(ca_manager: &CaManager) -> Result<()> {
-    println!("🗑️  Removing CA certificate from system trust store...");
-
-    match std::env::consts::OS {
-        "macos" => uninstall_macos_ca_sync(ca_manager),
-        "windows" => uninstall_windows_ca_sync(ca_manager),
-        "linux" => uninstall_linux_ca_sync(ca_manager),
+        "macos" => uninstall_macos_ca(ca_manager),
+        "windows" => uninstall_windows_ca(ca_manager),
+        "linux" => uninstall_linux_ca(ca_manager),
         os => {
             eprintln!("⚠️  Automatic removal not supported on {}", os);
             print_manual_removal_instructions(ca_manager)?;
@@ -83,7 +44,7 @@ pub fn uninstall_ca_from_system_sync(ca_manager: &CaManager) -> Result<()> {
 }
 
 /// Install CA certificate on macOS
-async fn install_macos_ca(ca_manager: &CaManager) -> Result<()> {
+fn install_macos_ca(ca_manager: &CaManager) -> Result<()> {
     let ca_cert_path = ca_manager.ca_cert_path();
 
     println!("📋 Installing CA certificate in macOS keychain...");
@@ -106,40 +67,7 @@ async fn install_macos_ca(ca_manager: &CaManager) -> Result<()> {
 
     if output.status.success() {
         println!("✅ CA certificate installed successfully in macOS keychain");
-        update_ca_installation_status(ca_manager, true, "macos-security").await?;
-    } else {
-        let error = String::from_utf8_lossy(&output.stderr);
-        return Err(anyhow!("Failed to install CA certificate: {}", error));
-    }
-
-    Ok(())
-}
-
-/// Install CA certificate on macOS (sync version)
-fn install_macos_ca_sync(ca_manager: &CaManager) -> Result<()> {
-    let ca_cert_path = ca_manager.ca_cert_path();
-
-    println!("📋 Installing CA certificate in macOS keychain...");
-    println!("   This requires administrator privileges and will prompt for your password.");
-
-    // Use sudo with security command to add certificate to system keychain with broader trust
-    let output = Command::new("sudo")
-        .args([
-            "security",
-            "add-trusted-cert",
-            "-d", // Add to admin trust settings
-            "-r",
-            "trustRoot", // Trust as root CA
-            "-k",
-            "/Library/Keychains/System.keychain",
-            ca_cert_path.to_str().unwrap(),
-        ])
-        .output()
-        .with_context(|| "Failed to execute sudo security command")?;
-
-    if output.status.success() {
-        println!("✅ CA certificate installed successfully in macOS keychain");
-        update_ca_installation_status_sync(ca_manager, true, "macos-security")?;
+        update_ca_installation_status(ca_manager, true, "macos-security")?;
     } else {
         let error = String::from_utf8_lossy(&output.stderr);
         return Err(anyhow!("Failed to install CA certificate: {}", error));
@@ -149,7 +77,7 @@ fn install_macos_ca_sync(ca_manager: &CaManager) -> Result<()> {
 }
 
 /// Install CA certificate on Windows
-async fn install_windows_ca(ca_manager: &CaManager) -> Result<()> {
+fn install_windows_ca(ca_manager: &CaManager) -> Result<()> {
     let ca_cert_path = ca_manager.ca_cert_path();
 
     println!("📋 Installing CA certificate in Windows certificate store...");
@@ -169,37 +97,7 @@ async fn install_windows_ca(ca_manager: &CaManager) -> Result<()> {
 
     if output.status.success() {
         println!("✅ CA certificate installed successfully in Windows certificate store");
-        update_ca_installation_status(ca_manager, true, "windows-powershell").await?;
-    } else {
-        let error = String::from_utf8_lossy(&output.stderr);
-        return Err(anyhow!("Failed to install CA certificate: {}", error));
-    }
-
-    Ok(())
-}
-
-/// Install CA certificate on Windows (sync version)
-fn install_windows_ca_sync(ca_manager: &CaManager) -> Result<()> {
-    let ca_cert_path = ca_manager.ca_cert_path();
-
-    println!("📋 Installing CA certificate in Windows certificate store...");
-    println!("   This requires administrator privileges.");
-
-    // Use certlm.exe or PowerShell to install certificate
-    let output = Command::new("powershell")
-        .args([
-            "-Command",
-            &format!(
-                "Import-Certificate -FilePath '{}' -CertStoreLocation Cert:\\LocalMachine\\Root",
-                ca_cert_path.display()
-            ),
-        ])
-        .output()
-        .with_context(|| "Failed to execute PowerShell command")?;
-
-    if output.status.success() {
-        println!("✅ CA certificate installed successfully in Windows certificate store");
-        update_ca_installation_status_sync(ca_manager, true, "windows-powershell")?;
+        update_ca_installation_status(ca_manager, true, "windows-powershell")?;
     } else {
         let error = String::from_utf8_lossy(&output.stderr);
         return Err(anyhow!("Failed to install CA certificate: {}", error));
@@ -209,7 +107,7 @@ fn install_windows_ca_sync(ca_manager: &CaManager) -> Result<()> {
 }
 
 /// Install CA certificate on Linux
-async fn install_linux_ca(ca_manager: &CaManager) -> Result<()> {
+fn install_linux_ca(ca_manager: &CaManager) -> Result<()> {
     let ca_cert_path = ca_manager.ca_cert_path();
 
     println!("📋 Installing CA certificate in Linux certificate store...");
@@ -236,44 +134,7 @@ async fn install_linux_ca(ca_manager: &CaManager) -> Result<()> {
 
     if update_output.status.success() {
         println!("✅ CA certificate installed successfully in Linux certificate store");
-        update_ca_installation_status(ca_manager, true, "linux-update-ca-certificates").await?;
-    } else {
-        let error = String::from_utf8_lossy(&update_output.stderr);
-        return Err(anyhow!("Failed to update CA certificates: {}", error));
-    }
-
-    Ok(())
-}
-
-/// Install CA certificate on Linux (sync version)
-fn install_linux_ca_sync(ca_manager: &CaManager) -> Result<()> {
-    let ca_cert_path = ca_manager.ca_cert_path();
-
-    println!("📋 Installing CA certificate in Linux certificate store...");
-    println!("   This requires administrator privileges.");
-
-    // Copy certificate to system CA directory
-    let system_ca_path = "/usr/local/share/ca-certificates/algo-chuck-ca.crt";
-
-    let copy_output = Command::new("sudo")
-        .args(["cp", ca_cert_path.to_str().unwrap(), system_ca_path])
-        .output()
-        .with_context(|| "Failed to copy CA certificate")?;
-
-    if !copy_output.status.success() {
-        let error = String::from_utf8_lossy(&copy_output.stderr);
-        return Err(anyhow!("Failed to copy CA certificate: {}", error));
-    }
-
-    // Update CA certificates
-    let update_output = Command::new("sudo")
-        .args(["update-ca-certificates"])
-        .output()
-        .with_context(|| "Failed to update CA certificates")?;
-
-    if update_output.status.success() {
-        println!("✅ CA certificate installed successfully in Linux certificate store");
-        update_ca_installation_status_sync(ca_manager, true, "linux-update-ca-certificates")?;
+        update_ca_installation_status(ca_manager, true, "linux-update-ca-certificates")?;
     } else {
         let error = String::from_utf8_lossy(&update_output.stderr);
         return Err(anyhow!("Failed to update CA certificates: {}", error));
@@ -283,7 +144,7 @@ fn install_linux_ca_sync(ca_manager: &CaManager) -> Result<()> {
 }
 
 /// Remove CA certificate from macOS keychain
-async fn uninstall_macos_ca(ca_manager: &CaManager) -> Result<()> {
+fn uninstall_macos_ca(ca_manager: &CaManager) -> Result<()> {
     println!("📋 Removing CA certificate from macOS keychain...");
     println!("   This requires administrator privileges and will prompt for your password.");
 
@@ -315,7 +176,7 @@ async fn uninstall_macos_ca(ca_manager: &CaManager) -> Result<()> {
 
         if hashes.is_empty() {
             println!("ℹ️  No certificates found to remove");
-            update_ca_installation_status(ca_manager, false, "").await?;
+            update_ca_installation_status(ca_manager, false, "")?;
             return Ok(());
         }
 
@@ -352,100 +213,19 @@ async fn uninstall_macos_ca(ca_manager: &CaManager) -> Result<()> {
             eprintln!("⚠️  No certificates were successfully removed");
         }
 
-        update_ca_installation_status(ca_manager, false, "").await?;
+        update_ca_installation_status(ca_manager, false, "")?;
     } else {
         let error = String::from_utf8_lossy(&find_output.stderr);
         eprintln!("⚠️  Warning: Failed to find certificates: {}", error);
         // Don't fail here, certificate might not have been installed
-        update_ca_installation_status(ca_manager, false, "").await?;
-    }
-
-    Ok(())
-}
-
-/// Remove CA certificate from macOS keychain (sync version)
-fn uninstall_macos_ca_sync(ca_manager: &CaManager) -> Result<()> {
-    println!("📋 Removing CA certificate from macOS keychain...");
-    println!("   This requires administrator privileges and will prompt for your password.");
-
-    // First, find all certificates with our common name and get their SHA-1 hashes
-    let find_output = Command::new("security")
-        .args([
-            "find-certificate",
-            "-a",
-            "-Z",
-            "-c",
-            "Algo Chuck Local CA",
-            "/Library/Keychains/System.keychain",
-        ])
-        .output()
-        .with_context(|| "Failed to find certificates")?;
-
-    if find_output.status.success() {
-        let output_str = String::from_utf8_lossy(&find_output.stdout);
-
-        // Extract SHA-1 hashes from the output
-        let mut hashes = Vec::new();
-        for line in output_str.lines() {
-            if line.starts_with("SHA-1 hash: ") {
-                if let Some(hash) = line.strip_prefix("SHA-1 hash: ") {
-                    hashes.push(hash.to_string());
-                }
-            }
-        }
-
-        if hashes.is_empty() {
-            println!("ℹ️  No certificates found to remove");
-            update_ca_installation_status_sync(ca_manager, false, "")?;
-            return Ok(());
-        }
-
-        println!("   Found {} certificate(s) to remove", hashes.len());
-
-        // Delete each certificate by its SHA-1 hash
-        let mut removed_count = 0;
-        for hash in &hashes {
-            let delete_output = Command::new("sudo")
-                .args([
-                    "security",
-                    "delete-certificate",
-                    "-Z",
-                    hash,
-                    "/Library/Keychains/System.keychain",
-                ])
-                .output()
-                .with_context(|| format!("Failed to delete certificate with hash {}", hash))?;
-
-            if delete_output.status.success() {
-                removed_count += 1;
-            } else {
-                let error = String::from_utf8_lossy(&delete_output.stderr);
-                eprintln!("⚠️  Warning removing certificate {}: {}", hash, error);
-            }
-        }
-
-        if removed_count > 0 {
-            println!(
-                "✅ CA certificate(s) removed successfully from macOS keychain ({} removed)",
-                removed_count
-            );
-        } else {
-            eprintln!("⚠️  No certificates were successfully removed");
-        }
-
-        update_ca_installation_status_sync(ca_manager, false, "")?;
-    } else {
-        let error = String::from_utf8_lossy(&find_output.stderr);
-        eprintln!("⚠️  Warning: Failed to find certificates: {}", error);
-        // Don't fail here, certificate might not have been installed
-        update_ca_installation_status_sync(ca_manager, false, "")?;
+        update_ca_installation_status(ca_manager, false, "")?;
     }
 
     Ok(())
 }
 
 /// Remove CA certificate from Windows certificate store
-async fn uninstall_windows_ca(ca_manager: &CaManager) -> Result<()> {
+fn uninstall_windows_ca(ca_manager: &CaManager) -> Result<()> {
     println!("📋 Removing CA certificate from Windows certificate store...");
 
     // Use PowerShell to remove certificate
@@ -459,45 +239,19 @@ async fn uninstall_windows_ca(ca_manager: &CaManager) -> Result<()> {
 
     if output.status.success() {
         println!("✅ CA certificate removed successfully from Windows certificate store");
-        update_ca_installation_status(ca_manager, false, "").await?;
+        update_ca_installation_status(ca_manager, false, "")?;
     } else {
         let error = String::from_utf8_lossy(&output.stderr);
         eprintln!("⚠️  Warning: {}", error);
         // Don't fail here, certificate might not have been installed
-        update_ca_installation_status(ca_manager, false, "").await?;
-    }
-
-    Ok(())
-}
-
-/// Remove CA certificate from Windows certificate store (sync version)
-fn uninstall_windows_ca_sync(ca_manager: &CaManager) -> Result<()> {
-    println!("📋 Removing CA certificate from Windows certificate store...");
-
-    // Use PowerShell to remove certificate
-    let output = Command::new("powershell")
-        .args([
-            "-Command",
-            "Get-ChildItem -Path Cert:\\LocalMachine\\Root | Where-Object {$_.Subject -like '*Algo Chuck Local CA*'} | Remove-Item",
-        ])
-        .output()
-        .with_context(|| "Failed to execute PowerShell command")?;
-
-    if output.status.success() {
-        println!("✅ CA certificate removed successfully from Windows certificate store");
-        update_ca_installation_status_sync(ca_manager, false, "")?;
-    } else {
-        let error = String::from_utf8_lossy(&output.stderr);
-        eprintln!("⚠️  Warning: {}", error);
-        // Don't fail here, certificate might not have been installed
-        update_ca_installation_status_sync(ca_manager, false, "")?;
+        update_ca_installation_status(ca_manager, false, "")?;
     }
 
     Ok(())
 }
 
 /// Remove CA certificate from Linux certificate store
-async fn uninstall_linux_ca(ca_manager: &CaManager) -> Result<()> {
+fn uninstall_linux_ca(ca_manager: &CaManager) -> Result<()> {
     println!("📋 Removing CA certificate from Linux certificate store...");
 
     // Remove certificate file
@@ -523,77 +277,19 @@ async fn uninstall_linux_ca(ca_manager: &CaManager) -> Result<()> {
 
     if update_output.status.success() {
         println!("✅ CA certificate removed successfully from Linux certificate store");
-        update_ca_installation_status(ca_manager, false, "").await?;
+        update_ca_installation_status(ca_manager, false, "")?;
     } else {
         let error = String::from_utf8_lossy(&update_output.stderr);
         eprintln!("⚠️  Warning: {}", error);
         // Don't fail here, update might have succeeded partially
-        update_ca_installation_status(ca_manager, false, "").await?;
-    }
-
-    Ok(())
-}
-
-/// Remove CA certificate from Linux certificate store (sync version)
-fn uninstall_linux_ca_sync(ca_manager: &CaManager) -> Result<()> {
-    println!("📋 Removing CA certificate from Linux certificate store...");
-
-    // Remove certificate file
-    let remove_output = Command::new("sudo")
-        .args([
-            "rm",
-            "-f",
-            "/usr/local/share/ca-certificates/algo-chuck-ca.crt",
-        ])
-        .output()
-        .with_context(|| "Failed to remove CA certificate")?;
-
-    if !remove_output.status.success() {
-        let error = String::from_utf8_lossy(&remove_output.stderr);
-        eprintln!("⚠️  Warning: {}", error);
-    }
-
-    // Update CA certificates
-    let update_output = Command::new("sudo")
-        .args(["update-ca-certificates"])
-        .output()
-        .with_context(|| "Failed to update CA certificates")?;
-
-    if update_output.status.success() {
-        println!("✅ CA certificate removed successfully from Linux certificate store");
-        update_ca_installation_status_sync(ca_manager, false, "")?;
-    } else {
-        let error = String::from_utf8_lossy(&update_output.stderr);
-        eprintln!("⚠️  Warning: {}", error);
-        // Don't fail here, update might have succeeded partially
-        update_ca_installation_status_sync(ca_manager, false, "")?;
+        update_ca_installation_status(ca_manager, false, "")?;
     }
 
     Ok(())
 }
 
 /// Update CA installation status in metadata
-async fn update_ca_installation_status(
-    ca_manager: &CaManager,
-    installed: bool,
-    method: &str,
-) -> Result<()> {
-    // Only update if CA files exist, otherwise silently succeed
-    if ca_manager.ca_exists() {
-        let mut ca_info = ca_manager.load_ca_info()?;
-        ca_info.ca.installed_in_system = installed;
-        ca_info.ca.installation_method = if installed {
-            Some(method.to_string())
-        } else {
-            None
-        };
-        ca_manager.save_ca_info(&ca_info)?;
-    }
-    Ok(())
-}
-
-/// Update CA installation status in metadata (sync version)
-fn update_ca_installation_status_sync(
+fn update_ca_installation_status(
     ca_manager: &CaManager,
     installed: bool,
     method: &str,
