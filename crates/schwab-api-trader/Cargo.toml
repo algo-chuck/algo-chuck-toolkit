@@ -11,6 +11,7 @@ schwab-api-types = { path = "../schwab-api-types" }
 schwab-api-core = { path = "../schwab-api-core" }
 schwab-api-oauth = { path = "../schwab-api-oauth" }
 serde = { workspace = true, features = ["derive"] }
+serde_urlencoded = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true, features = ["full"] }
 reqwest = { workspace = true }
