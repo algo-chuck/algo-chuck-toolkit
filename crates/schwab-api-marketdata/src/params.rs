@@ -22,17 +22,26 @@ impl MarketdataParams {
         fields: Option<&str>,
         indicative: Option<bool>,
     ) -> RequestParams<'a> {
-        let mut query_parts = vec![format!("symbols={symbols}")];
+        // Pre-calculate capacity for query string
+        let mut capacity = "symbols=".len() + symbols.len();
 
         if let Some(f) = fields {
-            query_parts.push(format!("fields={f}"));
+            capacity += "&fields=".len() + f.len();
+        }
+        if indicative.is_some() {
+            capacity += "&indicative=false".len(); // worst case
         }
 
+        let mut query = String::with_capacity(capacity);
+        use std::fmt::Write;
+        let _ = write!(query, "symbols={}", symbols);
+
+        if let Some(f) = fields {
+            let _ = write!(query, "&fields={}", f);
+        }
         if let Some(ind) = indicative {
-            query_parts.push(format!("indicative={ind}"));
+            let _ = write!(query, "&indicative={}", ind);
         }
-
-        let query = query_parts.join("&");
 
         RequestParams {
             access_token,
@@ -82,55 +91,58 @@ impl MarketdataParams {
         exp_month: Option<&str>,
         option_type: Option<&str>,
     ) -> RequestParams<'a> {
-        let mut query_parts = vec![format!("symbol={symbol}")];
+        // Pre-calculate rough capacity (symbol + up to 16 optional params with ~20 chars each)
+        let capacity = "symbol=".len() + symbol.len() + 400;
+
+        let mut query = String::with_capacity(capacity);
+        use std::fmt::Write;
+        let _ = write!(query, "symbol={}", symbol);
 
         if let Some(ct) = contract_type {
-            query_parts.push(format!("contractType={ct}"));
+            let _ = write!(query, "&contractType={}", ct);
         }
         if let Some(sc) = strike_count {
-            query_parts.push(format!("strikeCount={sc}"));
+            let _ = write!(query, "&strikeCount={}", sc);
         }
         if let Some(iq) = include_underlying_quote {
-            query_parts.push(format!("includeUnderlyingQuote={iq}"));
+            let _ = write!(query, "&includeUnderlyingQuote={}", iq);
         }
         if let Some(s) = strategy {
-            query_parts.push(format!("strategy={s}"));
+            let _ = write!(query, "&strategy={}", s);
         }
         if let Some(i) = interval {
-            query_parts.push(format!("interval={i}"));
+            let _ = write!(query, "&interval={}", i);
         }
         if let Some(st) = strike {
-            query_parts.push(format!("strike={st}"));
+            let _ = write!(query, "&strike={}", st);
         }
         if let Some(r) = range {
-            query_parts.push(format!("range={r}"));
+            let _ = write!(query, "&range={}", r);
         }
         if let Some(fd) = from_date {
-            query_parts.push(format!("fromDate={fd}"));
+            let _ = write!(query, "&fromDate={}", fd);
         }
         if let Some(td) = to_date {
-            query_parts.push(format!("toDate={td}"));
+            let _ = write!(query, "&toDate={}", td);
         }
         if let Some(v) = volatility {
-            query_parts.push(format!("volatility={v}"));
+            let _ = write!(query, "&volatility={}", v);
         }
         if let Some(up) = underlying_price {
-            query_parts.push(format!("underlyingPrice={up}"));
+            let _ = write!(query, "&underlyingPrice={}", up);
         }
         if let Some(ir) = interest_rate {
-            query_parts.push(format!("interestRate={ir}"));
+            let _ = write!(query, "&interestRate={}", ir);
         }
         if let Some(dte) = days_to_expiration {
-            query_parts.push(format!("daysToExpiration={dte}"));
+            let _ = write!(query, "&daysToExpiration={}", dte);
         }
         if let Some(em) = exp_month {
-            query_parts.push(format!("expMonth={em}"));
+            let _ = write!(query, "&expMonth={}", em);
         }
         if let Some(ot) = option_type {
-            query_parts.push(format!("optionType={ot}"));
+            let _ = write!(query, "&optionType={}", ot);
         }
-
-        let query = query_parts.join("&");
 
         RequestParams {
             access_token,
@@ -168,34 +180,37 @@ impl MarketdataParams {
         need_extended_hours_data: Option<bool>,
         need_previous_close: Option<bool>,
     ) -> RequestParams<'a> {
-        let mut query_parts = vec![format!("symbol={symbol}")];
+        // Pre-calculate rough capacity
+        let capacity = "symbol=".len() + symbol.len() + 200;
+
+        let mut query = String::with_capacity(capacity);
+        use std::fmt::Write;
+        let _ = write!(query, "symbol={}", symbol);
 
         if let Some(pt) = period_type {
-            query_parts.push(format!("periodType={pt}"));
+            let _ = write!(query, "&periodType={}", pt);
         }
         if let Some(p) = period {
-            query_parts.push(format!("period={p}"));
+            let _ = write!(query, "&period={}", p);
         }
         if let Some(ft) = frequency_type {
-            query_parts.push(format!("frequencyType={ft}"));
+            let _ = write!(query, "&frequencyType={}", ft);
         }
         if let Some(f) = frequency {
-            query_parts.push(format!("frequency={f}"));
+            let _ = write!(query, "&frequency={}", f);
         }
         if let Some(sd) = start_date {
-            query_parts.push(format!("startDate={sd}"));
+            let _ = write!(query, "&startDate={}", sd);
         }
         if let Some(ed) = end_date {
-            query_parts.push(format!("endDate={ed}"));
+            let _ = write!(query, "&endDate={}", ed);
         }
         if let Some(nehd) = need_extended_hours_data {
-            query_parts.push(format!("needExtendedHoursData={nehd}"));
+            let _ = write!(query, "&needExtendedHoursData={}", nehd);
         }
         if let Some(npc) = need_previous_close {
-            query_parts.push(format!("needPreviousClose={npc}"));
+            let _ = write!(query, "&needPreviousClose={}", npc);
         }
-
-        let query = query_parts.join("&");
 
         RequestParams {
             access_token,
@@ -213,19 +228,11 @@ impl MarketdataParams {
         sort: Option<&str>,
         frequency: Option<i32>,
     ) -> RequestParams<'a> {
-        let mut query_parts = vec![];
-
-        if let Some(s) = sort {
-            query_parts.push(format!("sort={s}"));
-        }
-        if let Some(f) = frequency {
-            query_parts.push(format!("frequency={f}"));
-        }
-
-        let query = if query_parts.is_empty() {
-            None
-        } else {
-            Some(query_parts.join("&"))
+        let query = match (sort, frequency) {
+            (None, None) => None,
+            (Some(s), None) => Some(format!("sort={}", s)),
+            (None, Some(f)) => Some(format!("frequency={}", f)),
+            (Some(s), Some(f)) => Some(format!("sort={}&frequency={}", s, f)),
         };
 
         RequestParams {
@@ -243,13 +250,10 @@ impl MarketdataParams {
         markets: &str,
         date: Option<&str>,
     ) -> RequestParams<'a> {
-        let mut query_parts = vec![format!("markets={markets}")];
-
-        if let Some(d) = date {
-            query_parts.push(format!("date={d}"));
-        }
-
-        let query = query_parts.join("&");
+        let query = match date {
+            Some(d) => format!("markets={}&date={}", markets, d),
+            None => format!("markets={}", markets),
+        };
 
         RequestParams {
             access_token,

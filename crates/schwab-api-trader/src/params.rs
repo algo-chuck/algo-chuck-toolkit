@@ -62,22 +62,40 @@ impl TraderParams {
         max_results: Option<i32>,
         status: Option<&str>,
     ) -> RequestParams<'a> {
-        let mut query_parts = vec![
-            format!("fromEnteredTime={from_entered_time}"),
-            format!("toEnteredTime={to_entered_time}"),
-        ];
-        if let Some(max) = max_results {
-            query_parts.push(format!("maxResults={max}"));
+        // Pre-calculate capacity for query string
+        let mut capacity = "fromEnteredTime=".len()
+            + from_entered_time.len()
+            + "&toEnteredTime=".len()
+            + to_entered_time.len();
+
+        if max_results.is_some() {
+            capacity += "&maxResults=".len() + 10; // i32 max digits
         }
         if let Some(s) = status {
-            query_parts.push(format!("status={s}"));
+            capacity += "&status=".len() + s.len();
         }
+
+        let mut query = String::with_capacity(capacity);
+        use std::fmt::Write;
+        let _ = write!(
+            query,
+            "fromEnteredTime={}&toEnteredTime={}",
+            from_entered_time, to_entered_time
+        );
+
+        if let Some(max) = max_results {
+            let _ = write!(query, "&maxResults={}", max);
+        }
+        if let Some(s) = status {
+            let _ = write!(query, "&status={}", s);
+        }
+
         RequestParams {
             access_token,
             body: None,
             path: format!("/accounts/{account_hash}/orders"),
             method: Method::GET,
-            query: Some(query_parts.join("&")),
+            query: Some(query),
         }
     }
 
@@ -150,22 +168,40 @@ impl TraderParams {
         max_results: Option<i32>,
         status: Option<&str>,
     ) -> RequestParams<'a> {
-        let mut query_parts = vec![
-            format!("fromEnteredTime={from_entered_time}"),
-            format!("toEnteredTime={to_entered_time}"),
-        ];
-        if let Some(max) = max_results {
-            query_parts.push(format!("maxResults={max}"));
+        // Pre-calculate capacity for query string
+        let mut capacity = "fromEnteredTime=".len()
+            + from_entered_time.len()
+            + "&toEnteredTime=".len()
+            + to_entered_time.len();
+
+        if max_results.is_some() {
+            capacity += "&maxResults=".len() + 10; // i32 max digits
         }
         if let Some(s) = status {
-            query_parts.push(format!("status={s}"));
+            capacity += "&status=".len() + s.len();
         }
+
+        let mut query = String::with_capacity(capacity);
+        use std::fmt::Write;
+        let _ = write!(
+            query,
+            "fromEnteredTime={}&toEnteredTime={}",
+            from_entered_time, to_entered_time
+        );
+
+        if let Some(max) = max_results {
+            let _ = write!(query, "&maxResults={}", max);
+        }
+        if let Some(s) = status {
+            let _ = write!(query, "&status={}", s);
+        }
+
         RequestParams {
             access_token,
             body: None,
             path: "/orders".to_string(),
             method: Method::GET,
-            query: Some(query_parts.join("&")),
+            query: Some(query),
         }
     }
 
@@ -193,20 +229,36 @@ impl TraderParams {
         types: &str,
         symbol: Option<&str>,
     ) -> RequestParams<'a> {
-        let mut query_parts = vec![
-            format!("startDate={start_date}"),
-            format!("endDate={end_date}"),
-            format!("types={types}"),
-        ];
+        // Pre-calculate capacity for query string
+        let mut capacity = "startDate=".len()
+            + start_date.len()
+            + "&endDate=".len()
+            + end_date.len()
+            + "&types=".len()
+            + types.len();
+
         if let Some(sym) = symbol {
-            query_parts.push(format!("symbol={sym}"));
+            capacity += "&symbol=".len() + sym.len();
         }
+
+        let mut query = String::with_capacity(capacity);
+        use std::fmt::Write;
+        let _ = write!(
+            query,
+            "startDate={}&endDate={}&types={}",
+            start_date, end_date, types
+        );
+
+        if let Some(sym) = symbol {
+            let _ = write!(query, "&symbol={}", sym);
+        }
+
         RequestParams {
             access_token,
             body: None,
             path: format!("/accounts/{account_hash}/transactions"),
             method: Method::GET,
-            query: Some(query_parts.join("&")),
+            query: Some(query),
         }
     }
 
