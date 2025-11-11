@@ -38,10 +38,20 @@ pub struct SyncMarketdataClient<C: SyncHttpClient> {
 }
 
 impl<C: SyncHttpClient> SyncMarketdataClient<C> {
-    pub fn new(client: C) -> Self {
+    pub fn new(client: C, access_token: impl Into<String>) -> Self {
         Self {
-            client: ApiClient::new(client),
+            client: ApiClient::new(client, access_token),
         }
+    }
+
+    /// Update the access token (e.g., after refresh)
+    pub fn set_access_token(&self, new_token: impl Into<String>) {
+        self.client.set_access_token(new_token);
+    }
+
+    /// Get the current access token
+    pub fn get_access_token(&self) -> String {
+        self.client.get_access_token()
     }
 }
 
@@ -61,23 +71,21 @@ where
     /// Get quotes for multiple symbols
     pub fn get_quotes(
         &self,
-        access_token: &str,
         symbols: &str,
         fields: Option<&str>,
         indicative: Option<bool>,
     ) -> Result<HashMap<String, QuoteResponseObject>, HttpError> {
-        let params = MarketdataParams::get_quotes(access_token, symbols, fields, indicative);
+        let params = MarketdataParams::get_quotes(symbols, fields, indicative);
         self.client.fetch_sync(&params)
     }
 
     /// Get quote for a single symbol
     pub fn get_quote(
         &self,
-        access_token: &str,
         symbol: &str,
         fields: Option<&str>,
     ) -> Result<HashMap<String, QuoteResponseObject>, HttpError> {
-        let params = MarketdataParams::get_quote(access_token, symbol, fields);
+        let params = MarketdataParams::get_quote(symbol, fields);
         self.client.fetch_sync(&params)
     }
 
@@ -106,7 +114,6 @@ where
     #[allow(clippy::too_many_arguments)]
     pub fn get_chain(
         &self,
-        access_token: &str,
         symbol: &str,
         contract_type: Option<&str>,
         strike_count: Option<i32>,
@@ -125,7 +132,6 @@ where
         option_type: Option<&str>,
     ) -> Result<OptionChain, HttpError> {
         let params = MarketdataParams::get_chain(
-            access_token,
             symbol,
             contract_type,
             strike_count,
@@ -147,12 +153,8 @@ where
     }
 
     /// Get option expiration chain for an optionable symbol
-    pub fn get_expiration_chain(
-        &self,
-        access_token: &str,
-        symbol: &str,
-    ) -> Result<ExpirationChain, HttpError> {
-        let params = MarketdataParams::get_expiration_chain(access_token, symbol);
+    pub fn get_expiration_chain(&self, symbol: &str) -> Result<ExpirationChain, HttpError> {
+        let params = MarketdataParams::get_expiration_chain(symbol);
         self.client.fetch_sync(&params)
     }
 
@@ -160,7 +162,6 @@ where
     #[allow(clippy::too_many_arguments)]
     pub fn get_price_history(
         &self,
-        access_token: &str,
         symbol: &str,
         period_type: Option<&str>,
         period: Option<i32>,
@@ -172,7 +173,6 @@ where
         need_previous_close: Option<bool>,
     ) -> Result<CandleList, HttpError> {
         let params = MarketdataParams::get_price_history(
-            access_token,
             symbol,
             period_type,
             period,
@@ -189,55 +189,50 @@ where
     /// Get movers for a specific index
     pub fn get_movers(
         &self,
-        access_token: &str,
         symbol: &str,
         sort: Option<&str>,
         frequency: Option<i32>,
     ) -> Result<GetMovers200Response, HttpError> {
-        let params = MarketdataParams::get_movers(access_token, symbol, sort, frequency);
+        let params = MarketdataParams::get_movers(symbol, sort, frequency);
         self.client.fetch_sync(&params)
     }
 
     /// Get market hours for multiple markets
     pub fn get_market_hours(
         &self,
-        access_token: &str,
         markets: &str,
         date: Option<&str>,
     ) -> Result<HashMap<String, HashMap<String, Hours>>, HttpError> {
-        let params = MarketdataParams::get_market_hours(access_token, markets, date);
+        let params = MarketdataParams::get_market_hours(markets, date);
         self.client.fetch_sync(&params)
     }
 
     /// Get market hours for a single market
     pub fn get_market_hour(
         &self,
-        access_token: &str,
         market: &str,
         date: Option<&str>,
     ) -> Result<HashMap<String, HashMap<String, Hours>>, HttpError> {
-        let params = MarketdataParams::get_market_hour(access_token, market, date);
+        let params = MarketdataParams::get_market_hour(market, date);
         self.client.fetch_sync(&params)
     }
 
     /// Get instruments by symbol and projection
     pub fn get_instruments(
         &self,
-        access_token: &str,
         symbol: &str,
         projection: &str,
     ) -> Result<HashMap<String, Vec<InstrumentResponse>>, HttpError> {
-        let params = MarketdataParams::get_instruments(access_token, symbol, projection);
+        let params = MarketdataParams::get_instruments(symbol, projection);
         self.client.fetch_sync(&params)
     }
 
     /// Get instrument by CUSIP
     pub fn get_instruments_by_cusip(
         &self,
-        access_token: &str,
         cusip: &str,
     ) -> Result<HashMap<String, Vec<InstrumentResponse>>, HttpError> {
-        let params = MarketdataParams::get_instruments_by_cusip(access_token, cusip);
+        let params = MarketdataParams::get_instruments_by_cusip(cusip);
         self.client.fetch_sync(&params)
     }
 }

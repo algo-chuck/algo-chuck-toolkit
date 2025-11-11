@@ -2,8 +2,9 @@
 
 /// Parameters for building and executing HTTP requests to the Schwab API.
 ///
-/// This struct encapsulates all the information needed to make an API request,
-/// including authentication, HTTP method, path, query parameters, and optional body.
+/// This struct encapsulates the information needed to make an API request,
+/// including HTTP method, path, query parameters, and optional body.
+/// The access token is now stored in the `ApiClient` itself.
 ///
 /// # Type Parameters
 ///
@@ -16,7 +17,6 @@
 /// use http::Method;
 ///
 /// let params = RequestParams {
-///     access_token: "your_token_here",
 ///     body: None,
 ///     method: Method::GET,
 ///     path: "/accounts".to_string(),
@@ -24,10 +24,7 @@
 /// };
 /// ```
 #[derive(Debug)]
-pub struct RequestParams<'a, B = ()> {
-    /// The OAuth2 access token for authenticating the request
-    pub access_token: &'a str,
-
+pub struct RequestParams<B = ()> {
     /// Optional request body (for POST, PUT, PATCH requests)
     pub body: Option<B>,
 

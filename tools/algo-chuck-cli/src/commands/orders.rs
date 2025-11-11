@@ -36,17 +36,14 @@ pub fn handle_account_orders_command(matches: &ArgMatches) -> Result<()> {
     let max_results = matches.get_one::<i64>("max-results").map(|x| *x as i32);
     let status = matches.get_one::<String>("status").map(|s| s.as_str());
 
-    let client = SyncTraderClient::new(ureq::Agent::new());
-    let data = client
-        .get_orders_by_path_param(
-            &access_token,
-            account_number,
-            from_entered_time,
-            to_entered_time,
-            max_results,
-            status,
-        )
-        ?;
+    let client = SyncTraderClient::new(ureq::Agent::new(), access_token);
+    let data = client.get_orders_by_path_param(
+        account_number,
+        from_entered_time,
+        to_entered_time,
+        max_results,
+        status,
+    )?;
     println!("{:#?}", data);
 
     Ok(())
@@ -74,10 +71,8 @@ pub fn handle_account_order_command(matches: &ArgMatches) -> Result<()> {
         .get_one::<i64>("order-id")
         .ok_or_else(|| anyhow::anyhow!("Order ID is required"))?;
 
-    let client = SyncTraderClient::new(ureq::Agent::new());
-    let data = client
-        .get_order(&access_token, account_number, *order_id)
-        ?;
+    let client = SyncTraderClient::new(ureq::Agent::new(), access_token);
+    let data = client.get_order(account_number, *order_id)?;
     println!("{:#?}", data);
 
     Ok(())
@@ -109,16 +104,13 @@ pub fn handle_orders_command(matches: &ArgMatches) -> Result<()> {
     let max_results = matches.get_one::<i64>("max-results").map(|x| *x as i32);
     let status = matches.get_one::<String>("status").map(|s| s.as_str());
 
-    let client = SyncTraderClient::new(ureq::Agent::new());
-    let data = client
-        .get_orders_by_query_param(
-            &access_token,
-            from_entered_time,
-            to_entered_time,
-            max_results,
-            status,
-        )
-        ?;
+    let client = SyncTraderClient::new(ureq::Agent::new(), access_token);
+    let data = client.get_orders_by_query_param(
+        from_entered_time,
+        to_entered_time,
+        max_results,
+        status,
+    )?;
     println!("{:#?}", data);
 
     Ok(())
@@ -145,10 +137,8 @@ pub fn handle_place_order_command(matches: &ArgMatches) -> Result<()> {
     // Read order JSON from file or stdin
     let order_json = read_json(matches)?;
 
-    let client = SyncTraderClient::new(ureq::Agent::new());
-    client
-        .place_order(&access_token, account_number, &order_json)
-        ?;
+    let client = SyncTraderClient::new(ureq::Agent::new(), access_token);
+    client.place_order(account_number, &order_json)?;
 
     println!("✅ Order placed successfully");
 
@@ -177,10 +167,8 @@ pub fn handle_cancel_order_command(matches: &ArgMatches) -> Result<()> {
         .get_one::<i64>("order-id")
         .ok_or_else(|| anyhow::anyhow!("Order ID is required"))?;
 
-    let client = SyncTraderClient::new(ureq::Agent::new());
-    client
-        .cancel_order(&access_token, account_number, *order_id)
-        ?;
+    let client = SyncTraderClient::new(ureq::Agent::new(), access_token);
+    client.cancel_order(account_number, *order_id)?;
 
     println!("✅ Order canceled successfully");
 
@@ -212,10 +200,8 @@ pub fn handle_replace_order_command(matches: &ArgMatches) -> Result<()> {
     // Read order JSON from file or stdin
     let order_json = read_json(matches)?;
 
-    let client = SyncTraderClient::new(ureq::Agent::new());
-    client
-        .replace_order(&access_token, account_number, *order_id, &order_json)
-        ?;
+    let client = SyncTraderClient::new(ureq::Agent::new(), access_token);
+    client.replace_order(account_number, *order_id, &order_json)?;
 
     println!("✅ Order replaced successfully");
 
@@ -243,10 +229,8 @@ pub fn handle_preview_order_command(matches: &ArgMatches) -> Result<()> {
     // Read preview JSON from file or stdin
     let preview_json = read_json(matches)?;
 
-    let client = SyncTraderClient::new(ureq::Agent::new());
-    let preview = client
-        .preview_order(&access_token, account_number, &preview_json)
-        ?;
+    let client = SyncTraderClient::new(ureq::Agent::new(), access_token);
+    let preview = client.preview_order(account_number, &preview_json)?;
 
     println!("{:#?}", preview);
 

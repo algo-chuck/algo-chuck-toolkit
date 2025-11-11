@@ -23,9 +23,9 @@ pub fn handle_movers_command(matches: &ArgMatches) -> Result<()> {
         .get_one::<String>("frequency")
         .and_then(|s| s.parse().ok());
 
-    let client = SyncMarketdataClient::new(ureq::Agent::new());
+    let client = SyncMarketdataClient::new(ureq::Agent::new(), access_token);
     let data = client
-        .get_movers(&access_token, symbol, sort, frequency)
+        .get_movers( symbol, sort, frequency)
         ?;
 
     println!("{:#?}", data);

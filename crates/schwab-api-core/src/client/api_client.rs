@@ -3,6 +3,7 @@
 use http::{Request, Response};
 use serde::Serialize;
 use serde::de::{DeserializeOwned, Error as DeError};
+use std::sync::{Arc, RwLock};
 
 use crate::client::HttpClient;
 use crate::client::params::RequestParams;
@@ -16,6 +17,9 @@ use crate::response::{HttpResponse, SchwabSuccess};
 /// This client provides a unified interface for making HTTP requests to any
 /// Schwab API endpoint (Trader, Market Data, etc.) with either async or sync
 /// HTTP clients.
+///
+/// The client stores the access token internally, eliminating the need to pass it
+/// with every request. The token can be updated at runtime using `set_access_token()`.
 ///
 /// # Type Parameters
 ///
@@ -36,24 +40,58 @@ use crate::response::{HttpResponse, SchwabSuccess};
 /// }
 ///
 /// let http_client = ureq::Agent::new();
-/// let client = ApiClient::<_, TraderConfig>::new(http_client);
+/// let client = ApiClient::<_, TraderConfig>::new(http_client, "your_access_token");
+///
+/// // Update token when refreshed
+/// client.set_access_token("new_access_token");
 /// ```
 pub struct ApiClient<C, Cfg: ApiConfig> {
     pub client: HttpClient<C>,
+    access_token: Arc<RwLock<String>>,
     _config: std::marker::PhantomData<Cfg>,
 }
 
 impl<C, Cfg: ApiConfig> ApiClient<C, Cfg> {
-    /// Create a new API client with the given HTTP client.
+    /// Create a new API client with the given HTTP client and access token.
     ///
     /// # Arguments
     ///
     /// * `client` - An HTTP client implementing either `AsyncHttpClient` or `SyncHttpClient`
-    pub fn new(client: C) -> Self {
+    /// * `access_token` - The OAuth2 access token for authentication
+    pub fn new(client: C, access_token: impl Into<String>) -> Self {
         Self {
             client: HttpClient::new(client),
+            access_token: Arc::new(RwLock::new(access_token.into())),
             _config: std::marker::PhantomData,
         }
+    }
+
+    /// Update the access token used for authentication.
+    ///
+    /// This is useful when the token has been refreshed and you want to continue
+    /// using the same client instance with the new token.
+    ///
+    /// # Arguments
+    ///
+    /// * `new_token` - The new access token to use
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// // After refreshing the token
+    /// let new_token = oauth_client.refresh_access_token(&refresh_token).await?;
+    /// client.set_access_token(&new_token.access_token);
+    /// ```
+    pub fn set_access_token(&self, new_token: impl Into<String>) {
+        let mut token = self.access_token.write().unwrap();
+        *token = new_token.into();
+    }
+
+    /// Get a copy of the current access token.
+    ///
+    /// This is useful for debugging or if you need to persist the token externally.
+    pub fn get_access_token(&self) -> String {
+        self.access_token.read().unwrap().clone()
     }
 
     /// Build a complete URL from a path and optional query string.
@@ -83,7 +121,7 @@ impl<C, Cfg: ApiConfig> ApiClient<C, Cfg> {
     ///
     /// This method constructs a complete HTTP request including:
     /// - URL (base + path + query)
-    /// - Authorization header with Bearer token
+    /// - Authorization header with Bearer token (from stored token)
     /// - Request body (serialized as JSON if present)
     ///
     /// # Arguments
@@ -98,7 +136,11 @@ impl<C, Cfg: ApiConfig> ApiClient<C, Cfg> {
         params: &RequestParams<B>,
     ) -> Result<Request<String>, HttpError> {
         let url = self.build_url(&params.path, params.query.as_deref());
-        let bearer_token = format!("Bearer {}", params.access_token);
+
+        // Use the stored access token
+        let token = self.access_token.read().unwrap();
+        let bearer_token = format!("Bearer {}", *token);
+        drop(token); // Release the read lock
 
         // Serialize the body if present
         let final_body = match &params.body {
@@ -181,7 +223,7 @@ where
     /// # Returns
     ///
     /// A `Result` containing the deserialized response or an error
-    pub async fn fetch<'a, R, B>(&self, params: &'a RequestParams<'a, B>) -> Result<R, HttpError>
+    pub async fn fetch<R, B>(&self, params: &RequestParams<B>) -> Result<R, HttpError>
     where
         R: DeserializeOwned,
         B: Serialize,
@@ -213,7 +255,7 @@ where
     /// # Returns
     ///
     /// A `Result` indicating success or an error
-    pub async fn execute<'a, B>(&self, params: &'a RequestParams<'a, B>) -> Result<(), HttpError>
+    pub async fn execute<B>(&self, params: &RequestParams<B>) -> Result<(), HttpError>
     where
         B: Serialize,
     {
@@ -254,7 +296,7 @@ where
     /// # Returns
     ///
     /// A `Result` containing the deserialized response or an error
-    pub fn fetch_sync<'a, R, B>(&self, params: &'a RequestParams<'a, B>) -> Result<R, HttpError>
+    pub fn fetch_sync<R, B>(&self, params: &RequestParams<B>) -> Result<R, HttpError>
     where
         R: DeserializeOwned,
         B: Serialize,
@@ -282,7 +324,7 @@ where
     /// # Returns
     ///
     /// A `Result` indicating success or an error
-    pub fn execute_sync<'a, B>(&self, params: &'a RequestParams<'a, B>) -> Result<(), HttpError>
+    pub fn execute_sync<B>(&self, params: &RequestParams<B>) -> Result<(), HttpError>
     where
         B: Serialize,
     {

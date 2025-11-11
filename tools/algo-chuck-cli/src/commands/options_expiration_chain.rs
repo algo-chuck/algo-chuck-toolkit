@@ -18,8 +18,8 @@ pub fn handle_expiration_chain_command(matches: &ArgMatches) -> Result<()> {
         .get_one::<String>("symbol")
         .ok_or_else(|| anyhow::anyhow!("Symbol is required"))?;
 
-    let client = SyncMarketdataClient::new(ureq::Agent::new());
-    let data = client.get_expiration_chain(&access_token, symbol)?;
+    let client = SyncMarketdataClient::new(ureq::Agent::new(), access_token);
+    let data = client.get_expiration_chain( symbol)?;
 
     println!("{:#?}", data);
     Ok(())

@@ -26,9 +26,9 @@ pub fn handle_quotes_command(matches: &ArgMatches) -> Result<()> {
     let fields = matches.get_one::<String>("fields").map(|s| s.as_str());
     let indicative = matches.get_flag("indicative").then_some(true);
 
-    let client = SyncMarketdataClient::new(ureq::Agent::new());
+    let client = SyncMarketdataClient::new(ureq::Agent::new(), access_token);
     let data = client
-        .get_quotes(&access_token, symbols, fields, indicative)
+        .get_quotes( symbols, fields, indicative)
         ?;
 
     println!("{:#?}", data);
@@ -57,8 +57,8 @@ pub fn handle_quote_command(matches: &ArgMatches) -> Result<()> {
     // Get optional parameters
     let fields = matches.get_one::<String>("fields").map(|s| s.as_str());
 
-    let client = SyncMarketdataClient::new(ureq::Agent::new());
-    let data = client.get_quote(&access_token, symbol, fields)?;
+    let client = SyncMarketdataClient::new(ureq::Agent::new(), access_token);
+    let data = client.get_quote( symbol, fields)?;
 
     println!("{:#?}", data);
 

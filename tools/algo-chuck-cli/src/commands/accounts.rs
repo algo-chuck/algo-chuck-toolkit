@@ -17,8 +17,9 @@ pub fn handle_account_numbers_command(_matches: &ArgMatches) -> Result<()> {
         .get_access_token()?
         .ok_or_else(|| anyhow::anyhow!("No access token found. Please run 'chuck login' first."))?;
 
-    let client = SyncTraderClient::new(ureq::Agent::new());
-    let data = client.get_account_numbers(&access_token)?;
+    // Create client with access token
+    let client = SyncTraderClient::new(ureq::Agent::new(), access_token);
+    let data = client.get_account_numbers()?;
     println!("{:#?}", data);
 
     Ok(())
@@ -40,8 +41,9 @@ pub fn handle_accounts_command(matches: &ArgMatches) -> Result<()> {
     // Get optional fields parameter
     let fields = matches.get_one::<String>("fields").map(|s| s.as_str());
 
-    let client = SyncTraderClient::new(ureq::Agent::new());
-    let data = client.get_accounts(&access_token, fields)?;
+    // Create client with access token
+    let client = SyncTraderClient::new(ureq::Agent::new(), access_token);
+    let data = client.get_accounts(fields)?;
     println!("{:#?}", data);
 
     Ok(())
@@ -49,7 +51,7 @@ pub fn handle_accounts_command(matches: &ArgMatches) -> Result<()> {
 
 /// Handle the account command for data retrieval
 pub fn handle_account_command(matches: &ArgMatches) -> Result<()> {
-    println!("🚀 Fetching Account");
+    println!("🚀 Fetching Single Account");
 
     // Load configuration and TokenManager
     let config_manager = ConfigManager::new()?;
@@ -60,16 +62,18 @@ pub fn handle_account_command(matches: &ArgMatches) -> Result<()> {
         .get_access_token()?
         .ok_or_else(|| anyhow::anyhow!("No access token found. Please run 'chuck login' first."))?;
 
-    // Get required account number parameter
+    // Get required account-number argument
     let account_number = matches
         .get_one::<String>("account-number")
-        .ok_or_else(|| anyhow::anyhow!("Account number is required"))?;
+        .ok_or_else(|| anyhow::anyhow!("account-number is required"))?
+        .as_str();
 
     // Get optional fields parameter
     let fields = matches.get_one::<String>("fields").map(|s| s.as_str());
 
-    let client = SyncTraderClient::new(ureq::Agent::new());
-    let data = client.get_account(&access_token, account_number, fields)?;
+    // Create client with access token
+    let client = SyncTraderClient::new(ureq::Agent::new(), access_token);
+    let data = client.get_account(account_number, fields)?;
     println!("{:#?}", data);
 
     Ok(())

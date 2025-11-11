@@ -37,17 +37,14 @@ pub fn handle_transactions_command(matches: &ArgMatches) -> Result<()> {
     // Get optional symbol parameter
     let symbol = matches.get_one::<String>("symbol").map(|s| s.as_str());
 
-    let client = SyncTraderClient::new(ureq::Agent::new());
-    let data = client
-        .get_transactions_by_path_param(
-            &access_token,
-            account_number,
-            start_date,
-            end_date,
-            types,
-            symbol,
-        )
-        ?;
+    let client = SyncTraderClient::new(ureq::Agent::new(), access_token);
+    let data = client.get_transactions_by_path_param(
+        account_number,
+        start_date,
+        end_date,
+        types,
+        symbol,
+    )?;
     println!("{:#?}", data);
 
     Ok(())
@@ -75,10 +72,8 @@ pub fn handle_transaction_command(matches: &ArgMatches) -> Result<()> {
         .get_one::<i64>("transaction-id")
         .ok_or_else(|| anyhow::anyhow!("Transaction ID is required"))?;
 
-    let client = SyncTraderClient::new(ureq::Agent::new());
-    let data = client
-        .get_transactions_by_id(&access_token, account_number, *transaction_id)
-        ?;
+    let client = SyncTraderClient::new(ureq::Agent::new(), access_token);
+    let data = client.get_transactions_by_id(account_number, *transaction_id)?;
     println!("{:#?}", data);
 
     Ok(())

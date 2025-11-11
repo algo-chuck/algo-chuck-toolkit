@@ -18,8 +18,8 @@ pub fn handle_user_preference_command(_matches: &ArgMatches) -> Result<()> {
         .get_access_token()?
         .ok_or_else(|| anyhow::anyhow!("No access token found. Please run 'chuck login' first."))?;
 
-    let client = SyncTraderClient::new(ureq::Agent::new());
-    let data = client.get_user_preference(&access_token)?;
+    let client = SyncTraderClient::new(ureq::Agent::new(), access_token);
+    let data = client.get_user_preference()?;
     println!("{:#?}", data);
 
     Ok(())

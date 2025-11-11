@@ -50,28 +50,25 @@ pub fn handle_chain_command(matches: &ArgMatches) -> Result<()> {
     let exp_month = matches.get_one::<String>("exp-month").map(|s| s.as_str());
     let option_type = matches.get_one::<String>("option-type").map(|s| s.as_str());
 
-    let client = SyncMarketdataClient::new(ureq::Agent::new());
-    let data = client
-        .get_chain(
-            &access_token,
-            symbol,
-            contract_type,
-            strike_count,
-            include_quote,
-            strategy,
-            interval,
-            strike,
-            range,
-            from_date,
-            to_date,
-            volatility,
-            underlying_price,
-            interest_rate,
-            days_to_expiration,
-            exp_month,
-            option_type,
-        )
-        ?;
+    let client = SyncMarketdataClient::new(ureq::Agent::new(), access_token);
+    let data = client.get_chain(
+        symbol,
+        contract_type,
+        strike_count,
+        include_quote,
+        strategy,
+        interval,
+        strike,
+        range,
+        from_date,
+        to_date,
+        volatility,
+        underlying_price,
+        interest_rate,
+        days_to_expiration,
+        exp_month,
+        option_type,
+    )?;
 
     println!("{:#?}", data);
     Ok(())

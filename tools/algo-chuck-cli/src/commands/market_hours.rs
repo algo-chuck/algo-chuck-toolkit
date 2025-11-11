@@ -20,8 +20,8 @@ pub fn handle_market_hours_command(matches: &ArgMatches) -> Result<()> {
 
     let date = matches.get_one::<String>("date").map(|s| s.as_str());
 
-    let client = SyncMarketdataClient::new(ureq::Agent::new());
-    let data = client.get_market_hours(&access_token, markets, date)?;
+    let client = SyncMarketdataClient::new(ureq::Agent::new(), access_token);
+    let data = client.get_market_hours( markets, date)?;
 
     println!("{:#?}", data);
     Ok(())
@@ -43,8 +43,8 @@ pub fn handle_market_hour_command(matches: &ArgMatches) -> Result<()> {
 
     let date = matches.get_one::<String>("date").map(|s| s.as_str());
 
-    let client = SyncMarketdataClient::new(ureq::Agent::new());
-    let data = client.get_market_hour(&access_token, market, date)?;
+    let client = SyncMarketdataClient::new(ureq::Agent::new(), access_token);
+    let data = client.get_market_hour( market, date)?;
 
     println!("{:#?}", data);
     Ok(())

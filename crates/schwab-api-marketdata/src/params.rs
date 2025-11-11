@@ -21,11 +21,10 @@ pub struct MarketdataParams;
 impl MarketdataParams {
     /// Build params for getQuotes operation - Get quotes for multiple symbols
     pub fn get_quotes<'a>(
-        access_token: &'a str,
         symbols: &str,
         fields: Option<&str>,
         indicative: Option<bool>,
-    ) -> RequestParams<'a> {
+    ) -> RequestParams {
         #[derive(Serialize)]
         struct Query<'a> {
             symbols: &'a str,
@@ -43,7 +42,6 @@ impl MarketdataParams {
         .ok();
 
         RequestParams {
-            access_token,
             method: Method::GET,
             path: "/quotes".to_string(),
             query,
@@ -53,10 +51,9 @@ impl MarketdataParams {
 
     /// Build params for getQuote operation - Get quote for a single symbol
     pub fn get_quote<'a>(
-        access_token: &'a str,
         symbol: &str,
         fields: Option<&str>,
-    ) -> RequestParams<'a> {
+    ) -> RequestParams {
         #[derive(Serialize)]
         struct Query<'a> {
             #[serde(skip_serializing_if = "Option::is_none")]
@@ -67,7 +64,6 @@ impl MarketdataParams {
         let query = serde_urlencoded::to_string(&Query { fields }).ok();
 
         RequestParams {
-            access_token,
             method: Method::GET,
             path,
             query,
@@ -78,7 +74,6 @@ impl MarketdataParams {
     /// Build params for getChain operation - Get option chain for an optionable symbol
     #[allow(clippy::too_many_arguments)]
     pub fn get_chain<'a>(
-        access_token: &'a str,
         symbol: &str,
         contract_type: Option<&str>,
         strike_count: Option<i32>,
@@ -95,7 +90,7 @@ impl MarketdataParams {
         days_to_expiration: Option<i32>,
         exp_month: Option<&str>,
         option_type: Option<&str>,
-    ) -> RequestParams<'a> {
+    ) -> RequestParams {
         #[derive(Serialize)]
         struct Query<'a> {
             symbol: &'a str,
@@ -162,7 +157,6 @@ impl MarketdataParams {
         .ok();
 
         RequestParams {
-            access_token,
             method: Method::GET,
             path: "/chains".to_string(),
             query,
@@ -171,7 +165,7 @@ impl MarketdataParams {
     }
 
     /// Build params for getExpirationChain operation - Get option expiration chain
-    pub fn get_expiration_chain<'a>(access_token: &'a str, symbol: &str) -> RequestParams<'a> {
+    pub fn get_expiration_chain<'a>(symbol: &str) -> RequestParams {
         #[derive(Serialize)]
         struct Query<'a> {
             symbol: &'a str,
@@ -180,7 +174,6 @@ impl MarketdataParams {
         let query = serde_urlencoded::to_string(&Query { symbol }).ok();
 
         RequestParams {
-            access_token,
             method: Method::GET,
             path: "/expirationchain".to_string(),
             query,
@@ -191,7 +184,6 @@ impl MarketdataParams {
     /// Build params for getPriceHistory operation - Get price history for a symbol
     #[allow(clippy::too_many_arguments)]
     pub fn get_price_history<'a>(
-        access_token: &'a str,
         symbol: &str,
         period_type: Option<&str>,
         period: Option<i32>,
@@ -201,7 +193,7 @@ impl MarketdataParams {
         end_date: Option<i64>,
         need_extended_hours_data: Option<bool>,
         need_previous_close: Option<bool>,
-    ) -> RequestParams<'a> {
+    ) -> RequestParams {
         #[derive(Serialize)]
         struct Query<'a> {
             symbol: &'a str,
@@ -243,7 +235,6 @@ impl MarketdataParams {
         .ok();
 
         RequestParams {
-            access_token,
             method: Method::GET,
             path: "/pricehistory".to_string(),
             query,
@@ -253,11 +244,10 @@ impl MarketdataParams {
 
     /// Build params for getMovers operation - Get movers for a specific index
     pub fn get_movers<'a>(
-        access_token: &'a str,
         symbol: &str,
         sort: Option<&str>,
         frequency: Option<i32>,
-    ) -> RequestParams<'a> {
+    ) -> RequestParams {
         #[derive(Serialize)]
         struct Query<'a> {
             #[serde(skip_serializing_if = "Option::is_none")]
@@ -269,7 +259,6 @@ impl MarketdataParams {
         let query = serde_urlencoded::to_string(&Query { sort, frequency }).ok();
 
         RequestParams {
-            access_token,
             method: Method::GET,
             path: format!("/movers/{symbol}"),
             query,
@@ -279,10 +268,9 @@ impl MarketdataParams {
 
     /// Build params for getMarketHours operation - Get market hours for multiple markets
     pub fn get_market_hours<'a>(
-        access_token: &'a str,
         markets: &str,
         date: Option<&str>,
-    ) -> RequestParams<'a> {
+    ) -> RequestParams {
         #[derive(Serialize)]
         struct Query<'a> {
             markets: &'a str,
@@ -293,7 +281,6 @@ impl MarketdataParams {
         let query = serde_urlencoded::to_string(&Query { markets, date }).ok();
 
         RequestParams {
-            access_token,
             method: Method::GET,
             path: "/markets".to_string(),
             query,
@@ -303,10 +290,9 @@ impl MarketdataParams {
 
     /// Build params for getMarketHour operation - Get market hours for a single market
     pub fn get_market_hour<'a>(
-        access_token: &'a str,
         market: &str,
         date: Option<&str>,
-    ) -> RequestParams<'a> {
+    ) -> RequestParams {
         #[derive(Serialize)]
         struct Query<'a> {
             #[serde(skip_serializing_if = "Option::is_none")]
@@ -316,7 +302,6 @@ impl MarketdataParams {
         let query = serde_urlencoded::to_string(&Query { date }).ok();
 
         RequestParams {
-            access_token,
             method: Method::GET,
             path: format!("/markets/{market}"),
             query,
@@ -326,10 +311,9 @@ impl MarketdataParams {
 
     /// Build params for getInstruments operation - Get instruments by symbol and projection
     pub fn get_instruments<'a>(
-        access_token: &'a str,
         symbol: &str,
         projection: &str,
-    ) -> RequestParams<'a> {
+    ) -> RequestParams {
         #[derive(Serialize)]
         struct Query<'a> {
             symbol: &'a str,
@@ -339,7 +323,6 @@ impl MarketdataParams {
         let query = serde_urlencoded::to_string(&Query { symbol, projection }).ok();
 
         RequestParams {
-            access_token,
             method: Method::GET,
             path: "/instruments".to_string(),
             query,
@@ -348,9 +331,8 @@ impl MarketdataParams {
     }
 
     /// Build params for getInstrumentsByCusip operation - Get instrument by CUSIP
-    pub fn get_instruments_by_cusip<'a>(access_token: &'a str, cusip: &str) -> RequestParams<'a> {
+    pub fn get_instruments_by_cusip<'a>(cusip: &str) -> RequestParams {
         RequestParams {
-            access_token,
             method: Method::GET,
             path: format!("/instruments/{cusip}"),
             query: None,

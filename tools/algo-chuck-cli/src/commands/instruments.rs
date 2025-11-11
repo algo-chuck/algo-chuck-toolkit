@@ -22,9 +22,9 @@ pub fn handle_instruments_command(matches: &ArgMatches) -> Result<()> {
         .get_one::<String>("projection")
         .ok_or_else(|| anyhow::anyhow!("Projection is required"))?;
 
-    let client = SyncMarketdataClient::new(ureq::Agent::new());
+    let client = SyncMarketdataClient::new(ureq::Agent::new(), access_token);
     let data = client
-        .get_instruments(&access_token, symbol, projection)
+        .get_instruments( symbol, projection)
         ?;
 
     println!("{:#?}", data);
@@ -45,9 +45,9 @@ pub fn handle_instrument_command(matches: &ArgMatches) -> Result<()> {
         .get_one::<String>("cusip")
         .ok_or_else(|| anyhow::anyhow!("CUSIP is required"))?;
 
-    let client = SyncMarketdataClient::new(ureq::Agent::new());
+    let client = SyncMarketdataClient::new(ureq::Agent::new(), access_token);
     let data = client
-        .get_instruments_by_cusip(&access_token, cusip)
+        .get_instruments_by_cusip( cusip)
         ?;
 
     println!("{:#?}", data);

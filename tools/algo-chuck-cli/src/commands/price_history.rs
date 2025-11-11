@@ -37,21 +37,18 @@ pub fn handle_price_history_command(matches: &ArgMatches) -> Result<()> {
     let need_extended_hours = matches.get_flag("extended-hours").then_some(true);
     let need_previous_close = matches.get_flag("previous-close").then_some(true);
 
-    let client = SyncMarketdataClient::new(ureq::Agent::new());
-    let data = client
-        .get_price_history(
-            &access_token,
-            symbol,
-            period_type,
-            period,
-            frequency_type,
-            frequency,
-            start_date,
-            end_date,
-            need_extended_hours,
-            need_previous_close,
-        )
-        ?;
+    let client = SyncMarketdataClient::new(ureq::Agent::new(), access_token);
+    let data = client.get_price_history(
+        symbol,
+        period_type,
+        period,
+        frequency_type,
+        frequency,
+        start_date,
+        end_date,
+        need_extended_hours,
+        need_previous_close,
+    )?;
 
     println!("{:#?}", data);
     Ok(())
