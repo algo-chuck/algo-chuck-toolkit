@@ -1,16 +1,13 @@
 //! Request parameter builders for Schwab Market Data API endpoints.
 //!
-//! This module provides type-safe parameter construction for all Market Data API operations.
-//! Each method corresponds to an API endpoint and returns a `RequestParams` struct
-//! configured with the appropriate HTTP method, path, and query parameters.
-//!
-//! Query parameters are serialized using `serde_urlencoded` for proper URL encoding
-//! and consistent handling of optional parameters.
+//! This module provides simplified parameter construction using the public parameter
+//! structs from `schwab-api-types`. Each method accepts a parameter struct and returns
+//! a `RequestParams` configured for the specific endpoint.
 
 use http::Method;
-use serde::Serialize;
 
 use schwab_api_core::RequestParams;
+use schwab_api_types::marketdata_params::*;
 
 /// Parameter builders for all Schwab Market Data API endpoints.
 ///
@@ -20,26 +17,8 @@ pub struct MarketdataParams;
 
 impl MarketdataParams {
     /// Build params for getQuotes operation - Get quotes for multiple symbols
-    pub fn get_quotes<'a>(
-        symbols: &str,
-        fields: Option<&str>,
-        indicative: Option<bool>,
-    ) -> RequestParams {
-        #[derive(Serialize)]
-        struct Query<'a> {
-            symbols: &'a str,
-            #[serde(skip_serializing_if = "Option::is_none")]
-            fields: Option<&'a str>,
-            #[serde(skip_serializing_if = "Option::is_none")]
-            indicative: Option<bool>,
-        }
-
-        let query = serde_urlencoded::to_string(&Query {
-            symbols,
-            fields,
-            indicative,
-        })
-        .ok();
+    pub fn get_quotes(params: &GetQuotesParams) -> RequestParams {
+        let query = serde_urlencoded::to_string(params).ok();
 
         RequestParams {
             method: Method::GET,
@@ -50,18 +29,9 @@ impl MarketdataParams {
     }
 
     /// Build params for getQuote operation - Get quote for a single symbol
-    pub fn get_quote<'a>(
-        symbol: &str,
-        fields: Option<&str>,
-    ) -> RequestParams {
-        #[derive(Serialize)]
-        struct Query<'a> {
-            #[serde(skip_serializing_if = "Option::is_none")]
-            fields: Option<&'a str>,
-        }
-
-        let path = format!("/{symbol}/quotes");
-        let query = serde_urlencoded::to_string(&Query { fields }).ok();
+    pub fn get_quote(params: &GetQuoteParams) -> RequestParams {
+        let query = serde_urlencoded::to_string(params).ok();
+        let path = format!("/{}/quotes", params.symbol);
 
         RequestParams {
             method: Method::GET,
@@ -72,89 +42,8 @@ impl MarketdataParams {
     }
 
     /// Build params for getChain operation - Get option chain for an optionable symbol
-    #[allow(clippy::too_many_arguments)]
-    pub fn get_chain<'a>(
-        symbol: &str,
-        contract_type: Option<&str>,
-        strike_count: Option<i32>,
-        include_underlying_quote: Option<bool>,
-        strategy: Option<&str>,
-        interval: Option<f64>,
-        strike: Option<f64>,
-        range: Option<&str>,
-        from_date: Option<&str>,
-        to_date: Option<&str>,
-        volatility: Option<f64>,
-        underlying_price: Option<f64>,
-        interest_rate: Option<f64>,
-        days_to_expiration: Option<i32>,
-        exp_month: Option<&str>,
-        option_type: Option<&str>,
-    ) -> RequestParams {
-        #[derive(Serialize)]
-        struct Query<'a> {
-            symbol: &'a str,
-            #[serde(rename = "contractType")]
-            #[serde(skip_serializing_if = "Option::is_none")]
-            contract_type: Option<&'a str>,
-            #[serde(rename = "strikeCount")]
-            #[serde(skip_serializing_if = "Option::is_none")]
-            strike_count: Option<i32>,
-            #[serde(rename = "includeUnderlyingQuote")]
-            #[serde(skip_serializing_if = "Option::is_none")]
-            include_underlying_quote: Option<bool>,
-            #[serde(skip_serializing_if = "Option::is_none")]
-            strategy: Option<&'a str>,
-            #[serde(skip_serializing_if = "Option::is_none")]
-            interval: Option<f64>,
-            #[serde(skip_serializing_if = "Option::is_none")]
-            strike: Option<f64>,
-            #[serde(skip_serializing_if = "Option::is_none")]
-            range: Option<&'a str>,
-            #[serde(rename = "fromDate")]
-            #[serde(skip_serializing_if = "Option::is_none")]
-            from_date: Option<&'a str>,
-            #[serde(rename = "toDate")]
-            #[serde(skip_serializing_if = "Option::is_none")]
-            to_date: Option<&'a str>,
-            #[serde(skip_serializing_if = "Option::is_none")]
-            volatility: Option<f64>,
-            #[serde(rename = "underlyingPrice")]
-            #[serde(skip_serializing_if = "Option::is_none")]
-            underlying_price: Option<f64>,
-            #[serde(rename = "interestRate")]
-            #[serde(skip_serializing_if = "Option::is_none")]
-            interest_rate: Option<f64>,
-            #[serde(rename = "daysToExpiration")]
-            #[serde(skip_serializing_if = "Option::is_none")]
-            days_to_expiration: Option<i32>,
-            #[serde(rename = "expMonth")]
-            #[serde(skip_serializing_if = "Option::is_none")]
-            exp_month: Option<&'a str>,
-            #[serde(rename = "optionType")]
-            #[serde(skip_serializing_if = "Option::is_none")]
-            option_type: Option<&'a str>,
-        }
-
-        let query = serde_urlencoded::to_string(&Query {
-            symbol,
-            contract_type,
-            strike_count,
-            include_underlying_quote,
-            strategy,
-            interval,
-            strike,
-            range,
-            from_date,
-            to_date,
-            volatility,
-            underlying_price,
-            interest_rate,
-            days_to_expiration,
-            exp_month,
-            option_type,
-        })
-        .ok();
+    pub fn get_chain(params: &GetChainParams) -> RequestParams {
+        let query = serde_urlencoded::to_string(params).ok();
 
         RequestParams {
             method: Method::GET,
@@ -165,13 +54,8 @@ impl MarketdataParams {
     }
 
     /// Build params for getExpirationChain operation - Get option expiration chain
-    pub fn get_expiration_chain<'a>(symbol: &str) -> RequestParams {
-        #[derive(Serialize)]
-        struct Query<'a> {
-            symbol: &'a str,
-        }
-
-        let query = serde_urlencoded::to_string(&Query { symbol }).ok();
+    pub fn get_expiration_chain(params: &GetExpirationChainParams) -> RequestParams {
+        let query = serde_urlencoded::to_string(params).ok();
 
         RequestParams {
             method: Method::GET,
@@ -182,57 +66,8 @@ impl MarketdataParams {
     }
 
     /// Build params for getPriceHistory operation - Get price history for a symbol
-    #[allow(clippy::too_many_arguments)]
-    pub fn get_price_history<'a>(
-        symbol: &str,
-        period_type: Option<&str>,
-        period: Option<i32>,
-        frequency_type: Option<&str>,
-        frequency: Option<i32>,
-        start_date: Option<i64>,
-        end_date: Option<i64>,
-        need_extended_hours_data: Option<bool>,
-        need_previous_close: Option<bool>,
-    ) -> RequestParams {
-        #[derive(Serialize)]
-        struct Query<'a> {
-            symbol: &'a str,
-            #[serde(rename = "periodType")]
-            #[serde(skip_serializing_if = "Option::is_none")]
-            period_type: Option<&'a str>,
-            #[serde(skip_serializing_if = "Option::is_none")]
-            period: Option<i32>,
-            #[serde(rename = "frequencyType")]
-            #[serde(skip_serializing_if = "Option::is_none")]
-            frequency_type: Option<&'a str>,
-            #[serde(skip_serializing_if = "Option::is_none")]
-            frequency: Option<i32>,
-            #[serde(rename = "startDate")]
-            #[serde(skip_serializing_if = "Option::is_none")]
-            start_date: Option<i64>,
-            #[serde(rename = "endDate")]
-            #[serde(skip_serializing_if = "Option::is_none")]
-            end_date: Option<i64>,
-            #[serde(rename = "needExtendedHoursData")]
-            #[serde(skip_serializing_if = "Option::is_none")]
-            need_extended_hours_data: Option<bool>,
-            #[serde(rename = "needPreviousClose")]
-            #[serde(skip_serializing_if = "Option::is_none")]
-            need_previous_close: Option<bool>,
-        }
-
-        let query = serde_urlencoded::to_string(&Query {
-            symbol,
-            period_type,
-            period,
-            frequency_type,
-            frequency,
-            start_date,
-            end_date,
-            need_extended_hours_data,
-            need_previous_close,
-        })
-        .ok();
+    pub fn get_price_history(params: &GetPriceHistoryParams) -> RequestParams {
+        let query = serde_urlencoded::to_string(params).ok();
 
         RequestParams {
             method: Method::GET,
@@ -243,42 +78,20 @@ impl MarketdataParams {
     }
 
     /// Build params for getMovers operation - Get movers for a specific index
-    pub fn get_movers<'a>(
-        symbol: &str,
-        sort: Option<&str>,
-        frequency: Option<i32>,
-    ) -> RequestParams {
-        #[derive(Serialize)]
-        struct Query<'a> {
-            #[serde(skip_serializing_if = "Option::is_none")]
-            sort: Option<&'a str>,
-            #[serde(skip_serializing_if = "Option::is_none")]
-            frequency: Option<i32>,
-        }
-
-        let query = serde_urlencoded::to_string(&Query { sort, frequency }).ok();
+    pub fn get_movers(params: &GetMoversParams) -> RequestParams {
+        let query = serde_urlencoded::to_string(params).ok();
 
         RequestParams {
             method: Method::GET,
-            path: format!("/movers/{symbol}"),
+            path: format!("/movers/{}", params.symbol),
             query,
             body: None,
         }
     }
 
     /// Build params for getMarketHours operation - Get market hours for multiple markets
-    pub fn get_market_hours<'a>(
-        markets: &str,
-        date: Option<&str>,
-    ) -> RequestParams {
-        #[derive(Serialize)]
-        struct Query<'a> {
-            markets: &'a str,
-            #[serde(skip_serializing_if = "Option::is_none")]
-            date: Option<&'a str>,
-        }
-
-        let query = serde_urlencoded::to_string(&Query { markets, date }).ok();
+    pub fn get_market_hours(params: &GetMarketHoursParams) -> RequestParams {
+        let query = serde_urlencoded::to_string(params).ok();
 
         RequestParams {
             method: Method::GET,
@@ -289,38 +102,20 @@ impl MarketdataParams {
     }
 
     /// Build params for getMarketHour operation - Get market hours for a single market
-    pub fn get_market_hour<'a>(
-        market: &str,
-        date: Option<&str>,
-    ) -> RequestParams {
-        #[derive(Serialize)]
-        struct Query<'a> {
-            #[serde(skip_serializing_if = "Option::is_none")]
-            date: Option<&'a str>,
-        }
-
-        let query = serde_urlencoded::to_string(&Query { date }).ok();
+    pub fn get_market_hour(params: &GetMarketHourParams) -> RequestParams {
+        let query = serde_urlencoded::to_string(params).ok();
 
         RequestParams {
             method: Method::GET,
-            path: format!("/markets/{market}"),
+            path: format!("/markets/{}", params.market),
             query,
             body: None,
         }
     }
 
     /// Build params for getInstruments operation - Get instruments by symbol and projection
-    pub fn get_instruments<'a>(
-        symbol: &str,
-        projection: &str,
-    ) -> RequestParams {
-        #[derive(Serialize)]
-        struct Query<'a> {
-            symbol: &'a str,
-            projection: &'a str,
-        }
-
-        let query = serde_urlencoded::to_string(&Query { symbol, projection }).ok();
+    pub fn get_instruments(params: &GetInstrumentsParams) -> RequestParams {
+        let query = serde_urlencoded::to_string(params).ok();
 
         RequestParams {
             method: Method::GET,
@@ -331,10 +126,10 @@ impl MarketdataParams {
     }
 
     /// Build params for getInstrumentsByCusip operation - Get instrument by CUSIP
-    pub fn get_instruments_by_cusip<'a>(cusip: &str) -> RequestParams {
+    pub fn get_instruments_by_cusip(params: &GetInstrumentByCusipParams) -> RequestParams {
         RequestParams {
             method: Method::GET,
-            path: format!("/instruments/{cusip}"),
+            path: format!("/instruments/{}", params.cusip),
             query: None,
             body: None,
         }

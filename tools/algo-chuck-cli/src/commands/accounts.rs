@@ -3,6 +3,7 @@ use clap::ArgMatches;
 
 use crate::config::{ConfigManager, TokenManager};
 use schwab_api_trader::SyncTraderClient;
+use schwab_api_types::trader_params::{GetAccountParams, GetAccountsParams};
 
 /// Handle the account numbers command for data retrieval (synchronous)
 pub fn handle_account_numbers_command(_matches: &ArgMatches) -> Result<()> {
@@ -43,7 +44,8 @@ pub fn handle_accounts_command(matches: &ArgMatches) -> Result<()> {
 
     // Create client with access token
     let client = SyncTraderClient::new(ureq::Agent::new(), access_token);
-    let data = client.get_accounts(fields)?;
+    let params = GetAccountsParams { fields };
+    let data = client.get_accounts(&params)?;
     println!("{:#?}", data);
 
     Ok(())
@@ -73,7 +75,11 @@ pub fn handle_account_command(matches: &ArgMatches) -> Result<()> {
 
     // Create client with access token
     let client = SyncTraderClient::new(ureq::Agent::new(), access_token);
-    let data = client.get_account(account_number, fields)?;
+    let params = GetAccountParams {
+        account_hash: account_number,
+        fields,
+    };
+    let data = client.get_account(&params)?;
     println!("{:#?}", data);
 
     Ok(())

@@ -3,6 +3,7 @@ use clap::ArgMatches;
 
 use crate::config::{ConfigManager, TokenManager};
 use schwab_api_marketdata::SyncMarketdataClient;
+use schwab_api_types::marketdata_params::{GetMarketHourParams, GetMarketHoursParams};
 
 /// Handle the market hours command
 pub fn handle_market_hours_command(matches: &ArgMatches) -> Result<()> {
@@ -16,12 +17,14 @@ pub fn handle_market_hours_command(matches: &ArgMatches) -> Result<()> {
 
     let markets = matches
         .get_one::<String>("markets")
-        .ok_or_else(|| anyhow::anyhow!("Markets are required"))?;
+        .ok_or_else(|| anyhow::anyhow!("Markets are required"))?
+        .as_str();
 
     let date = matches.get_one::<String>("date").map(|s| s.as_str());
 
     let client = SyncMarketdataClient::new(ureq::Agent::new(), access_token);
-    let data = client.get_market_hours( markets, date)?;
+    let params = GetMarketHoursParams { markets, date };
+    let data = client.get_market_hours(&params)?;
 
     println!("{:#?}", data);
     Ok(())
@@ -39,12 +42,14 @@ pub fn handle_market_hour_command(matches: &ArgMatches) -> Result<()> {
 
     let market = matches
         .get_one::<String>("market")
-        .ok_or_else(|| anyhow::anyhow!("Market is required"))?;
+        .ok_or_else(|| anyhow::anyhow!("Market is required"))?
+        .as_str();
 
     let date = matches.get_one::<String>("date").map(|s| s.as_str());
 
     let client = SyncMarketdataClient::new(ureq::Agent::new(), access_token);
-    let data = client.get_market_hour( market, date)?;
+    let params = GetMarketHourParams { market, date };
+    let data = client.get_market_hour(&params)?;
 
     println!("{:#?}", data);
     Ok(())

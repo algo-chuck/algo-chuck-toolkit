@@ -3,6 +3,7 @@ use clap::ArgMatches;
 
 use crate::config::{ConfigManager, TokenManager};
 use schwab_api_marketdata::SyncMarketdataClient;
+use schwab_api_types::marketdata_params::GetChainParams;
 
 /// Handle the option-chain command
 pub fn handle_chain_command(matches: &ArgMatches) -> Result<()> {
@@ -16,7 +17,8 @@ pub fn handle_chain_command(matches: &ArgMatches) -> Result<()> {
 
     let symbol = matches
         .get_one::<String>("symbol")
-        .ok_or_else(|| anyhow::anyhow!("Symbol is required"))?;
+        .ok_or_else(|| anyhow::anyhow!("Symbol is required"))?
+        .as_str();
 
     let contract_type = matches
         .get_one::<String>("contract-type")
@@ -24,7 +26,7 @@ pub fn handle_chain_command(matches: &ArgMatches) -> Result<()> {
     let strike_count = matches
         .get_one::<String>("strike-count")
         .and_then(|s| s.parse().ok());
-    let include_quote = matches.get_flag("include-quote").then_some(true);
+    let include_underlying_quote = matches.get_flag("include-quote").then_some(true);
     let strategy = matches.get_one::<String>("strategy").map(|s| s.as_str());
     let interval = matches
         .get_one::<String>("interval")
@@ -51,11 +53,11 @@ pub fn handle_chain_command(matches: &ArgMatches) -> Result<()> {
     let option_type = matches.get_one::<String>("option-type").map(|s| s.as_str());
 
     let client = SyncMarketdataClient::new(ureq::Agent::new(), access_token);
-    let data = client.get_chain(
+    let params = GetChainParams {
         symbol,
         contract_type,
         strike_count,
-        include_quote,
+        include_underlying_quote,
         strategy,
         interval,
         strike,
@@ -68,7 +70,8 @@ pub fn handle_chain_command(matches: &ArgMatches) -> Result<()> {
         days_to_expiration,
         exp_month,
         option_type,
-    )?;
+    };
+    let data = client.get_chain(&params)?;
 
     println!("{:#?}", data);
     Ok(())

@@ -5,6 +5,10 @@ use std::io::Read;
 
 use crate::config::{ConfigManager, TokenManager};
 use schwab_api_trader::SyncTraderClient;
+use schwab_api_types::trader_params::{
+    CancelOrderParams, GetOrderParams, GetOrdersByPathParams, GetOrdersByQueryParams,
+    PlaceOrderParams, ReplaceOrderParams,
+};
 
 /// Handle the account orders command for data retrieval
 pub fn handle_account_orders_command(matches: &ArgMatches) -> Result<()> {
@@ -22,28 +26,32 @@ pub fn handle_account_orders_command(matches: &ArgMatches) -> Result<()> {
     // Get required parameters
     let account_number = matches
         .get_one::<String>("account-number")
-        .ok_or_else(|| anyhow::anyhow!("Account number is required"))?;
+        .ok_or_else(|| anyhow::anyhow!("Account number is required"))?
+        .as_str();
 
     let from_entered_time = matches
         .get_one::<String>("from-entered-time")
-        .ok_or_else(|| anyhow::anyhow!("From entered time is required"))?;
+        .ok_or_else(|| anyhow::anyhow!("From entered time is required"))?
+        .as_str();
 
     let to_entered_time = matches
         .get_one::<String>("to-entered-time")
-        .ok_or_else(|| anyhow::anyhow!("To entered time is required"))?;
+        .ok_or_else(|| anyhow::anyhow!("To entered time is required"))?
+        .as_str();
 
     // Get optional parameters
     let max_results = matches.get_one::<i64>("max-results").map(|x| *x as i32);
     let status = matches.get_one::<String>("status").map(|s| s.as_str());
 
     let client = SyncTraderClient::new(ureq::Agent::new(), access_token);
-    let data = client.get_orders_by_path_param(
-        account_number,
+    let params = GetOrdersByPathParams {
+        account_hash: account_number,
         from_entered_time,
         to_entered_time,
         max_results,
         status,
-    )?;
+    };
+    let data = client.get_orders_by_path_param(&params)?;
     println!("{:#?}", data);
 
     Ok(())
@@ -65,14 +73,19 @@ pub fn handle_account_order_command(matches: &ArgMatches) -> Result<()> {
     // Get required parameters
     let account_number = matches
         .get_one::<String>("account-number")
-        .ok_or_else(|| anyhow::anyhow!("Account number is required"))?;
+        .ok_or_else(|| anyhow::anyhow!("Account number is required"))?
+        .as_str();
 
     let order_id = matches
         .get_one::<i64>("order-id")
         .ok_or_else(|| anyhow::anyhow!("Order ID is required"))?;
 
     let client = SyncTraderClient::new(ureq::Agent::new(), access_token);
-    let data = client.get_order(account_number, *order_id)?;
+    let params = GetOrderParams {
+        account_hash: account_number,
+        order_id: *order_id,
+    };
+    let data = client.get_order(&params)?;
     println!("{:#?}", data);
 
     Ok(())
@@ -94,23 +107,26 @@ pub fn handle_orders_command(matches: &ArgMatches) -> Result<()> {
     // Get required parameters
     let from_entered_time = matches
         .get_one::<String>("from-entered-time")
-        .ok_or_else(|| anyhow::anyhow!("From entered time is required"))?;
+        .ok_or_else(|| anyhow::anyhow!("From entered time is required"))?
+        .as_str();
 
     let to_entered_time = matches
         .get_one::<String>("to-entered-time")
-        .ok_or_else(|| anyhow::anyhow!("To entered time is required"))?;
+        .ok_or_else(|| anyhow::anyhow!("To entered time is required"))?
+        .as_str();
 
     // Get optional parameters
     let max_results = matches.get_one::<i64>("max-results").map(|x| *x as i32);
     let status = matches.get_one::<String>("status").map(|s| s.as_str());
 
     let client = SyncTraderClient::new(ureq::Agent::new(), access_token);
-    let data = client.get_orders_by_query_param(
+    let params = GetOrdersByQueryParams {
         from_entered_time,
         to_entered_time,
         max_results,
         status,
-    )?;
+    };
+    let data = client.get_orders_by_query_param(&params)?;
     println!("{:#?}", data);
 
     Ok(())
@@ -132,13 +148,18 @@ pub fn handle_place_order_command(matches: &ArgMatches) -> Result<()> {
     // Get required parameters
     let account_number = matches
         .get_one::<String>("account-number")
-        .ok_or_else(|| anyhow::anyhow!("Account number is required"))?;
+        .ok_or_else(|| anyhow::anyhow!("Account number is required"))?
+        .as_str();
 
     // Read order JSON from file or stdin
     let order_json = read_json(matches)?;
 
     let client = SyncTraderClient::new(ureq::Agent::new(), access_token);
-    client.place_order(account_number, &order_json)?;
+    let params = PlaceOrderParams {
+        account_hash: account_number,
+        order: &order_json,
+    };
+    client.place_order(&params)?;
 
     println!("✅ Order placed successfully");
 
@@ -161,14 +182,19 @@ pub fn handle_cancel_order_command(matches: &ArgMatches) -> Result<()> {
     // Get required parameters
     let account_number = matches
         .get_one::<String>("account-number")
-        .ok_or_else(|| anyhow::anyhow!("Account number is required"))?;
+        .ok_or_else(|| anyhow::anyhow!("Account number is required"))?
+        .as_str();
 
     let order_id = matches
         .get_one::<i64>("order-id")
         .ok_or_else(|| anyhow::anyhow!("Order ID is required"))?;
 
     let client = SyncTraderClient::new(ureq::Agent::new(), access_token);
-    client.cancel_order(account_number, *order_id)?;
+    let params = CancelOrderParams {
+        account_hash: account_number,
+        order_id: *order_id,
+    };
+    client.cancel_order(&params)?;
 
     println!("✅ Order canceled successfully");
 
@@ -191,7 +217,8 @@ pub fn handle_replace_order_command(matches: &ArgMatches) -> Result<()> {
     // Get required parameters
     let account_number = matches
         .get_one::<String>("account-number")
-        .ok_or_else(|| anyhow::anyhow!("Account number is required"))?;
+        .ok_or_else(|| anyhow::anyhow!("Account number is required"))?
+        .as_str();
 
     let order_id = matches
         .get_one::<i64>("order-id")
@@ -201,7 +228,12 @@ pub fn handle_replace_order_command(matches: &ArgMatches) -> Result<()> {
     let order_json = read_json(matches)?;
 
     let client = SyncTraderClient::new(ureq::Agent::new(), access_token);
-    client.replace_order(account_number, *order_id, &order_json)?;
+    let params = ReplaceOrderParams {
+        account_hash: account_number,
+        order_id: *order_id,
+        order: &order_json,
+    };
+    client.replace_order(&params)?;
 
     println!("✅ Order replaced successfully");
 
@@ -224,13 +256,19 @@ pub fn handle_preview_order_command(matches: &ArgMatches) -> Result<()> {
     // Get required parameters
     let account_number = matches
         .get_one::<String>("account-number")
-        .ok_or_else(|| anyhow::anyhow!("Account number is required"))?;
+        .ok_or_else(|| anyhow::anyhow!("Account number is required"))?
+        .as_str();
 
     // Read preview JSON from file or stdin
     let preview_json = read_json(matches)?;
 
     let client = SyncTraderClient::new(ureq::Agent::new(), access_token);
-    let preview = client.preview_order(account_number, &preview_json)?;
+    use schwab_api_types::trader_params::PreviewOrderParams;
+    let params = PreviewOrderParams {
+        account_hash: account_number,
+        order: &preview_json,
+    };
+    let preview = client.preview_order(&params)?;
 
     println!("{:#?}", preview);
 

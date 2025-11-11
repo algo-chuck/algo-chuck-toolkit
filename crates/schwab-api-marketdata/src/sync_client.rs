@@ -71,21 +71,18 @@ where
     /// Get quotes for multiple symbols
     pub fn get_quotes(
         &self,
-        symbols: &str,
-        fields: Option<&str>,
-        indicative: Option<bool>,
+        params: &schwab_api_types::marketdata_params::GetQuotesParams<'_>,
     ) -> Result<HashMap<String, QuoteResponseObject>, HttpError> {
-        let params = MarketdataParams::get_quotes(symbols, fields, indicative);
+        let params = MarketdataParams::get_quotes(params);
         self.client.fetch_sync(&params)
     }
 
     /// Get quote for a single symbol
     pub fn get_quote(
         &self,
-        symbol: &str,
-        fields: Option<&str>,
+        params: &schwab_api_types::marketdata_params::GetQuoteParams<'_>,
     ) -> Result<HashMap<String, QuoteResponseObject>, HttpError> {
-        let params = MarketdataParams::get_quote(symbol, fields);
+        let params = MarketdataParams::get_quote(params);
         self.client.fetch_sync(&params)
     }
 
@@ -111,128 +108,74 @@ where
     ///
     /// **Workaround**: Access the raw JSON from the error/warning output, or update the
     /// schwab-api-types crate with the corrected structure.
-    #[allow(clippy::too_many_arguments)]
     pub fn get_chain(
         &self,
-        symbol: &str,
-        contract_type: Option<&str>,
-        strike_count: Option<i32>,
-        include_underlying_quote: Option<bool>,
-        strategy: Option<&str>,
-        interval: Option<f64>,
-        strike: Option<f64>,
-        range: Option<&str>,
-        from_date: Option<&str>,
-        to_date: Option<&str>,
-        volatility: Option<f64>,
-        underlying_price: Option<f64>,
-        interest_rate: Option<f64>,
-        days_to_expiration: Option<i32>,
-        exp_month: Option<&str>,
-        option_type: Option<&str>,
+        params: &schwab_api_types::marketdata_params::GetChainParams<'_>,
     ) -> Result<OptionChain, HttpError> {
-        let params = MarketdataParams::get_chain(
-            symbol,
-            contract_type,
-            strike_count,
-            include_underlying_quote,
-            strategy,
-            interval,
-            strike,
-            range,
-            from_date,
-            to_date,
-            volatility,
-            underlying_price,
-            interest_rate,
-            days_to_expiration,
-            exp_month,
-            option_type,
-        );
+        let params = MarketdataParams::get_chain(params);
         self.client.fetch_sync(&params)
     }
 
     /// Get option expiration chain for an optionable symbol
-    pub fn get_expiration_chain(&self, symbol: &str) -> Result<ExpirationChain, HttpError> {
-        let params = MarketdataParams::get_expiration_chain(symbol);
+    pub fn get_expiration_chain(
+        &self,
+        params: &schwab_api_types::marketdata_params::GetExpirationChainParams<'_>,
+    ) -> Result<ExpirationChain, HttpError> {
+        let params = MarketdataParams::get_expiration_chain(params);
         self.client.fetch_sync(&params)
     }
 
     /// Get price history for a symbol
-    #[allow(clippy::too_many_arguments)]
     pub fn get_price_history(
         &self,
-        symbol: &str,
-        period_type: Option<&str>,
-        period: Option<i32>,
-        frequency_type: Option<&str>,
-        frequency: Option<i32>,
-        start_date: Option<i64>,
-        end_date: Option<i64>,
-        need_extended_hours_data: Option<bool>,
-        need_previous_close: Option<bool>,
+        params: &schwab_api_types::marketdata_params::GetPriceHistoryParams<'_>,
     ) -> Result<CandleList, HttpError> {
-        let params = MarketdataParams::get_price_history(
-            symbol,
-            period_type,
-            period,
-            frequency_type,
-            frequency,
-            start_date,
-            end_date,
-            need_extended_hours_data,
-            need_previous_close,
-        );
+        let params = MarketdataParams::get_price_history(params);
         self.client.fetch_sync(&params)
     }
 
     /// Get movers for a specific index
     pub fn get_movers(
         &self,
-        symbol: &str,
-        sort: Option<&str>,
-        frequency: Option<i32>,
+        params: &schwab_api_types::marketdata_params::GetMoversParams<'_>,
     ) -> Result<GetMovers200Response, HttpError> {
-        let params = MarketdataParams::get_movers(symbol, sort, frequency);
+        let params = MarketdataParams::get_movers(params);
         self.client.fetch_sync(&params)
     }
 
     /// Get market hours for multiple markets
     pub fn get_market_hours(
         &self,
-        markets: &str,
-        date: Option<&str>,
+        params: &schwab_api_types::marketdata_params::GetMarketHoursParams<'_>,
     ) -> Result<HashMap<String, HashMap<String, Hours>>, HttpError> {
-        let params = MarketdataParams::get_market_hours(markets, date);
+        let params = MarketdataParams::get_market_hours(params);
         self.client.fetch_sync(&params)
     }
 
     /// Get market hours for a single market
     pub fn get_market_hour(
         &self,
-        market: &str,
-        date: Option<&str>,
+        params: &schwab_api_types::marketdata_params::GetMarketHourParams<'_>,
     ) -> Result<HashMap<String, HashMap<String, Hours>>, HttpError> {
-        let params = MarketdataParams::get_market_hour(market, date);
+        let params = MarketdataParams::get_market_hour(params);
         self.client.fetch_sync(&params)
     }
 
     /// Get instruments by symbol and projection
     pub fn get_instruments(
         &self,
-        symbol: &str,
-        projection: &str,
+        params: &schwab_api_types::marketdata_params::GetInstrumentsParams<'_>,
     ) -> Result<HashMap<String, Vec<InstrumentResponse>>, HttpError> {
-        let params = MarketdataParams::get_instruments(symbol, projection);
+        let params = MarketdataParams::get_instruments(params);
         self.client.fetch_sync(&params)
     }
 
     /// Get instrument by CUSIP
     pub fn get_instruments_by_cusip(
         &self,
-        cusip: &str,
+        params: &schwab_api_types::marketdata_params::GetInstrumentByCusipParams<'_>,
     ) -> Result<HashMap<String, Vec<InstrumentResponse>>, HttpError> {
-        let params = MarketdataParams::get_instruments_by_cusip(cusip);
+        let params = MarketdataParams::get_instruments_by_cusip(params);
         self.client.fetch_sync(&params)
     }
 }

@@ -87,126 +87,101 @@ where
     }
 
     /// Fetch all accounts for the user.
-    pub async fn get_accounts(&self, fields: Option<&str>) -> Result<Vec<Account>, HttpError> {
-        let params = TraderParams::get_accounts(fields);
+    pub async fn get_accounts(
+        &self,
+        params: &schwab_api_types::trader_params::GetAccountsParams<'_>,
+    ) -> Result<Vec<Account>, HttpError> {
+        let params = TraderParams::get_accounts(params);
         self.client.fetch(&params).await
     }
 
     /// Fetch a specific account by `account_hash` (Schwab's encrypted account ID).
     pub async fn get_account(
         &self,
-        account_hash: &str,
-        fields: Option<&str>,
+        params: &schwab_api_types::trader_params::GetAccountParams<'_>,
     ) -> Result<Account, HttpError> {
-        let params = TraderParams::get_account(account_hash, fields);
+        let params = TraderParams::get_account(params);
         self.client.fetch(&params).await
     }
 
     /// Fetch all orders for a specific account.
     pub async fn get_orders_by_path_param(
         &self,
-        account_hash: &str,
-        from_entered_time: &str,
-        to_entered_time: &str,
-        max_results: Option<i32>,
-        status: Option<&str>,
+        params: &schwab_api_types::trader_params::GetOrdersByPathParams<'_>,
     ) -> Result<Vec<Order>, HttpError> {
-        let params = TraderParams::get_orders_by_path_param(
-            account_hash,
-            from_entered_time,
-            to_entered_time,
-            max_results,
-            status,
-        );
+        let params = TraderParams::get_orders_by_path_param(params);
         self.client.fetch(&params).await
     }
 
     /// Fetch orders across all accounts.
     pub async fn get_orders_by_query_param(
         &self,
-        from_entered_time: &str,
-        to_entered_time: &str,
-        max_results: Option<i32>,
-        status: Option<&str>,
+        params: &schwab_api_types::trader_params::GetOrdersByQueryParams<'_>,
     ) -> Result<Vec<Order>, HttpError> {
-        let params = TraderParams::get_orders_by_query_param(
-            from_entered_time,
-            to_entered_time,
-            max_results,
-            status,
-        );
+        let params = TraderParams::get_orders_by_query_param(params);
         self.client.fetch(&params).await
     }
 
     /// Fetch a specific order by its `order_id` for a given account.
-    pub async fn get_order(&self, account_hash: &str, order_id: i64) -> Result<Order, HttpError> {
-        let params = TraderParams::get_order(account_hash, order_id);
+    pub async fn get_order(
+        &self,
+        params: &schwab_api_types::trader_params::GetOrderParams<'_>,
+    ) -> Result<Order, HttpError> {
+        let params = TraderParams::get_order(params);
         self.client.fetch(&params).await
     }
 
     /// Place an order for a specific account.
     pub async fn place_order(
         &self,
-        account_hash: &str,
-        order: &OrderRequest,
+        params: &schwab_api_types::trader_params::PlaceOrderParams<'_>,
     ) -> Result<(), HttpError> {
-        let params = TraderParams::place_order(account_hash, order);
+        let params = TraderParams::place_order(params);
         self.client.execute(&params).await
     }
 
     /// Replace an existing order.
     pub async fn replace_order(
         &self,
-        account_hash: &str,
-        order_id: i64,
-        order: &OrderRequest,
+        params: &schwab_api_types::trader_params::ReplaceOrderParams<'_>,
     ) -> Result<(), HttpError> {
-        let params = TraderParams::replace_order(account_hash, order_id, order);
+        let params = TraderParams::replace_order(params);
         self.client.execute(&params).await
     }
 
     /// Cancel an order.
-    pub async fn cancel_order(&self, account_hash: &str, order_id: i64) -> Result<(), HttpError> {
-        let params = TraderParams::cancel_order(account_hash, order_id);
+    pub async fn cancel_order(
+        &self,
+        params: &schwab_api_types::trader_params::CancelOrderParams<'_>,
+    ) -> Result<(), HttpError> {
+        let params = TraderParams::cancel_order(params);
         self.client.execute(&params).await
     }
 
     /// Preview an order (dry-run validation).
     pub async fn preview_order(
         &self,
-        account_hash: &str,
-        order: &PreviewOrder,
+        params: &schwab_api_types::trader_params::PreviewOrderParams<'_>,
     ) -> Result<PreviewOrder, HttpError> {
-        let params = TraderParams::preview_order(account_hash, order);
+        let params = TraderParams::preview_order(params);
         self.client.fetch(&params).await
     }
 
     /// Fetch transactions for a specific account.
     pub async fn get_transactions_by_path_param(
         &self,
-        account_hash: &str,
-        start_date: &str,
-        end_date: &str,
-        types: &str,
-        symbol: Option<&str>,
+        params: &schwab_api_types::trader_params::GetTransactionsByPathParams<'_>,
     ) -> Result<Vec<Transaction>, HttpError> {
-        let params = TraderParams::get_transactions_by_path_param(
-            account_hash,
-            start_date,
-            end_date,
-            types,
-            symbol,
-        );
+        let params = TraderParams::get_transactions_by_path_param(params);
         self.client.fetch(&params).await
     }
 
     /// Fetch a specific transaction by its `transaction_id`.
     pub async fn get_transactions_by_id(
         &self,
-        account_hash: &str,
-        transaction_id: i64,
+        params: &schwab_api_types::trader_params::GetTransactionByIdParams<'_>,
     ) -> Result<Vec<Transaction>, HttpError> {
-        let params = TraderParams::get_transactions_by_id(account_hash, transaction_id);
+        let params = TraderParams::get_transactions_by_id(params);
         self.client.fetch(&params).await
     }
 

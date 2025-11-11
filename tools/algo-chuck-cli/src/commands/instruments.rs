@@ -3,6 +3,7 @@ use clap::ArgMatches;
 
 use crate::config::{ConfigManager, TokenManager};
 use schwab_api_marketdata::SyncMarketdataClient;
+use schwab_api_types::marketdata_params::{GetInstrumentByCusipParams, GetInstrumentsParams};
 
 /// Handle the instruments command
 pub fn handle_instruments_command(matches: &ArgMatches) -> Result<()> {
@@ -16,16 +17,17 @@ pub fn handle_instruments_command(matches: &ArgMatches) -> Result<()> {
 
     let symbol = matches
         .get_one::<String>("symbol")
-        .ok_or_else(|| anyhow::anyhow!("Symbol is required"))?;
+        .ok_or_else(|| anyhow::anyhow!("Symbol is required"))?
+        .as_str();
 
     let projection = matches
         .get_one::<String>("projection")
-        .ok_or_else(|| anyhow::anyhow!("Projection is required"))?;
+        .ok_or_else(|| anyhow::anyhow!("Projection is required"))?
+        .as_str();
 
     let client = SyncMarketdataClient::new(ureq::Agent::new(), access_token);
-    let data = client
-        .get_instruments( symbol, projection)
-        ?;
+    let params = GetInstrumentsParams { symbol, projection };
+    let data = client.get_instruments(&params)?;
 
     println!("{:#?}", data);
     Ok(())
@@ -43,12 +45,12 @@ pub fn handle_instrument_command(matches: &ArgMatches) -> Result<()> {
 
     let cusip = matches
         .get_one::<String>("cusip")
-        .ok_or_else(|| anyhow::anyhow!("CUSIP is required"))?;
+        .ok_or_else(|| anyhow::anyhow!("CUSIP is required"))?
+        .as_str();
 
     let client = SyncMarketdataClient::new(ureq::Agent::new(), access_token);
-    let data = client
-        .get_instruments_by_cusip( cusip)
-        ?;
+    let params = GetInstrumentByCusipParams { cusip };
+    let data = client.get_instruments_by_cusip(&params)?;
 
     println!("{:#?}", data);
     Ok(())

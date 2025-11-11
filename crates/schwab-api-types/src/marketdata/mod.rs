@@ -112,3 +112,6 @@ pub mod settlement_type;
 pub use self::settlement_type::SettlementType;
 pub mod underlying;
 pub use self::underlying::Underlying;
+
+pub mod params;
+pub use self::params::*;

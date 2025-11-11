@@ -164,3 +164,6 @@ pub mod user_preference;
 pub use self::user_preference::UserPreference;
 pub mod user_preference_account;
 pub use self::user_preference_account::UserPreferenceAccount;
+
+pub mod params;
+pub use self::params::*;

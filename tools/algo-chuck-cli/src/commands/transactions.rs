@@ -3,6 +3,7 @@ use clap::ArgMatches;
 
 use crate::config::{ConfigManager, TokenManager};
 use schwab_api_trader::SyncTraderClient;
+use schwab_api_types::trader_params::{GetTransactionByIdParams, GetTransactionsByPathParams};
 
 /// Handle the transactions command for data retrieval
 pub fn handle_transactions_command(matches: &ArgMatches) -> Result<()> {
@@ -20,31 +21,36 @@ pub fn handle_transactions_command(matches: &ArgMatches) -> Result<()> {
     // Get required parameters
     let account_number = matches
         .get_one::<String>("account-number")
-        .ok_or_else(|| anyhow::anyhow!("Account number is required"))?;
+        .ok_or_else(|| anyhow::anyhow!("Account number is required"))?
+        .as_str();
 
     let start_date = matches
         .get_one::<String>("start-date")
-        .ok_or_else(|| anyhow::anyhow!("Start date is required"))?;
+        .ok_or_else(|| anyhow::anyhow!("Start date is required"))?
+        .as_str();
 
     let end_date = matches
         .get_one::<String>("end-date")
-        .ok_or_else(|| anyhow::anyhow!("End date is required"))?;
+        .ok_or_else(|| anyhow::anyhow!("End date is required"))?
+        .as_str();
 
     let types = matches
         .get_one::<String>("types")
-        .ok_or_else(|| anyhow::anyhow!("Types is required"))?;
+        .ok_or_else(|| anyhow::anyhow!("Types is required"))?
+        .as_str();
 
     // Get optional symbol parameter
     let symbol = matches.get_one::<String>("symbol").map(|s| s.as_str());
 
     let client = SyncTraderClient::new(ureq::Agent::new(), access_token);
-    let data = client.get_transactions_by_path_param(
-        account_number,
+    let params = GetTransactionsByPathParams {
+        account_hash: account_number,
         start_date,
         end_date,
         types,
         symbol,
-    )?;
+    };
+    let data = client.get_transactions_by_path_param(&params)?;
     println!("{:#?}", data);
 
     Ok(())
@@ -66,14 +72,19 @@ pub fn handle_transaction_command(matches: &ArgMatches) -> Result<()> {
     // Get required parameters
     let account_number = matches
         .get_one::<String>("account-number")
-        .ok_or_else(|| anyhow::anyhow!("Account number is required"))?;
+        .ok_or_else(|| anyhow::anyhow!("Account number is required"))?
+        .as_str();
 
     let transaction_id = matches
         .get_one::<i64>("transaction-id")
         .ok_or_else(|| anyhow::anyhow!("Transaction ID is required"))?;
 
     let client = SyncTraderClient::new(ureq::Agent::new(), access_token);
-    let data = client.get_transactions_by_id(account_number, *transaction_id)?;
+    let params = GetTransactionByIdParams {
+        account_hash: account_number,
+        transaction_id: *transaction_id,
+    };
+    let data = client.get_transactions_by_id(&params)?;
     println!("{:#?}", data);
 
     Ok(())

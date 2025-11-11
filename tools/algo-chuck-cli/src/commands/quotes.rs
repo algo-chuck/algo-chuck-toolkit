@@ -3,6 +3,7 @@ use clap::ArgMatches;
 
 use crate::config::{ConfigManager, TokenManager};
 use schwab_api_marketdata::SyncMarketdataClient;
+use schwab_api_types::marketdata_params::{GetQuoteParams, GetQuotesParams};
 
 /// Handle the quotes command for multiple symbols
 pub fn handle_quotes_command(matches: &ArgMatches) -> Result<()> {
@@ -27,9 +28,12 @@ pub fn handle_quotes_command(matches: &ArgMatches) -> Result<()> {
     let indicative = matches.get_flag("indicative").then_some(true);
 
     let client = SyncMarketdataClient::new(ureq::Agent::new(), access_token);
-    let data = client
-        .get_quotes( symbols, fields, indicative)
-        ?;
+    let params = GetQuotesParams {
+        symbols: symbols.as_str(),
+        fields,
+        indicative,
+    };
+    let data = client.get_quotes(&params)?;
 
     println!("{:#?}", data);
 
@@ -52,15 +56,16 @@ pub fn handle_quote_command(matches: &ArgMatches) -> Result<()> {
     // Get required parameters
     let symbol = matches
         .get_one::<String>("symbol")
-        .ok_or_else(|| anyhow::anyhow!("Symbol is required"))?;
+        .ok_or_else(|| anyhow::anyhow!("Symbol is required"))?
+        .as_str();
 
     // Get optional parameters
     let fields = matches.get_one::<String>("fields").map(|s| s.as_str());
 
     let client = SyncMarketdataClient::new(ureq::Agent::new(), access_token);
-    let data = client.get_quote( symbol, fields)?;
+    let params = GetQuoteParams { symbol, fields };
+    let data = client.get_quote(&params)?;
 
     println!("{:#?}", data);
-
     Ok(())
 }
