@@ -1,10 +1,18 @@
+//! Request parameter builders for Schwab Trader API endpoints.
+//!
+//! This module provides type-safe parameter construction for all Trader API operations.
+//! Each method corresponds to an API endpoint and returns a `RequestParams` struct
+//! configured with the appropriate HTTP method, path, and query parameters.
+
 use http::Method;
 
 use schwab_api_core::RequestParams;
 use schwab_api_types::{OrderRequest, PreviewOrder};
 
 /// Parameter builders for all Schwab Trader API endpoints.
+///
 /// Function names match OpenAPI operationIds (converted to snake_case).
+/// All methods are static and return `RequestParams` configured for the specific endpoint.
 pub struct TraderParams;
 
 impl TraderParams {

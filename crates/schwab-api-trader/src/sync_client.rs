@@ -1,10 +1,32 @@
+//! Synchronous client implementation for Schwab Trader API.
+//!
+//! This module provides a blocking/sync client for interacting with the Schwab Trader API,
+//! supporting operations like account management, order placement, and transaction history.
+
 use schwab_api_core::{ApiClient, HttpError, SyncHttpClient};
 use schwab_api_types::trader::*;
 use std::ops::Deref;
 
 use crate::{TraderConfig, TraderParams};
 
-/// Synchronous/blocking client for Schwab Trader API
+/// Synchronous/blocking client for Schwab Trader API.
+///
+/// This client provides blocking methods for all Trader API operations, including:
+/// - Account queries and management
+/// - Order placement, modification, and cancellation
+/// - Transaction history
+/// - User preferences
+///
+/// # Examples
+///
+/// ```ignore
+/// use schwab_api_trader::SyncTraderClient;
+///
+/// let http_client = ureq::Agent::new();
+/// let client = SyncTraderClient::new(http_client);
+///
+/// let accounts = client.get_account_numbers("your_token")?;
+/// ```
 pub struct SyncTraderClient<C: SyncHttpClient> {
     client: ApiClient<C, TraderConfig>,
 }

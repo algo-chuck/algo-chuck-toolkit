@@ -1,9 +1,17 @@
+//! Request parameter builders for Schwab Market Data API endpoints.
+//!
+//! This module provides type-safe parameter construction for all Market Data API operations.
+//! Each method corresponds to an API endpoint and returns a `RequestParams` struct
+//! configured with the appropriate HTTP method, path, and query parameters.
+
 use http::Method;
 
 use schwab_api_core::RequestParams;
 
 /// Parameter builders for all Schwab Market Data API endpoints.
+///
 /// Function names match OpenAPI operationIds (converted to snake_case).
+/// All methods are static and return `RequestParams` configured for the specific endpoint.
 pub struct MarketdataParams;
 
 impl MarketdataParams {

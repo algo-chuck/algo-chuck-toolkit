@@ -1,10 +1,32 @@
+//! Asynchronous client implementation for Schwab Trader API.
+//!
+//! This module provides an async client for interacting with the Schwab Trader API,
+//! supporting operations like account management, order placement, and transaction history.
+
 use schwab_api_core::{ApiClient, AsyncHttpClient, HttpError};
 use schwab_api_types::trader::*;
 use std::ops::Deref;
 
 use crate::{TraderConfig, TraderParams};
 
-/// Async client for Schwab Trader API
+/// Asynchronous client for Schwab Trader API.
+///
+/// This client provides async methods for all Trader API operations, including:
+/// - Account queries and management
+/// - Order placement, modification, and cancellation
+/// - Transaction history
+/// - User preferences
+///
+/// # Examples
+///
+/// ```ignore
+/// use schwab_api_trader::AsyncTraderClient;
+///
+/// let http_client = reqwest::Client::new();
+/// let client = AsyncTraderClient::new(http_client);
+///
+/// let accounts = client.get_account_numbers("your_token").await?;
+/// ```
 pub struct AsyncTraderClient<C: AsyncHttpClient> {
     client: ApiClient<C, TraderConfig>,
 }

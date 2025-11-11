@@ -1,3 +1,8 @@
+//! Synchronous client implementation for Schwab Market Data API.
+//!
+//! This module provides a blocking/sync client for interacting with the Schwab Market Data API,
+//! supporting operations like quotes, option chains, price history, and market hours.
+
 use schwab_api_core::{ApiClient, HttpError, SyncHttpClient};
 use schwab_api_types::{
     CandleList, ExpirationChain, GetMovers200Response, Hours, InstrumentResponse, OptionChain,
@@ -8,7 +13,26 @@ use std::ops::Deref;
 
 use crate::{MarketdataConfig, MarketdataParams};
 
-/// Sync client for Schwab Market Data API
+/// Synchronous/blocking client for Schwab Market Data API.
+///
+/// This client provides blocking methods for all Market Data API operations, including:
+/// - Real-time and delayed quotes
+/// - Option chains and expirations
+/// - Price history and candlestick data
+/// - Market movers
+/// - Market hours
+/// - Instrument searches
+///
+/// # Examples
+///
+/// ```ignore
+/// use schwab_api_marketdata::SyncMarketdataClient;
+///
+/// let http_client = ureq::Agent::new();
+/// let client = SyncMarketdataClient::new(http_client);
+///
+/// let quotes = client.get_quote("your_token", "AAPL", None)?;
+/// ```
 pub struct SyncMarketdataClient<C: SyncHttpClient> {
     client: ApiClient<C, MarketdataConfig>,
 }

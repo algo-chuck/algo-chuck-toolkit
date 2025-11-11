@@ -1,3 +1,8 @@
+//! Asynchronous client implementation for Schwab Market Data API.
+//!
+//! This module provides an async client for interacting with the Schwab Market Data API,
+//! supporting operations like quotes, option chains, price history, and market hours.
+
 use schwab_api_core::{ApiClient, AsyncHttpClient, HttpError};
 use schwab_api_types::{
     CandleList, ExpirationChain, GetMovers200Response, Hours, InstrumentResponse, OptionChain,
@@ -8,7 +13,26 @@ use std::ops::Deref;
 
 use crate::{MarketdataConfig, MarketdataParams};
 
-/// Async client for Schwab Market Data API
+/// Asynchronous client for Schwab Market Data API.
+///
+/// This client provides async methods for all Market Data API operations, including:
+/// - Real-time and delayed quotes
+/// - Option chains and expirations
+/// - Price history and candlestick data
+/// - Market movers
+/// - Market hours
+/// - Instrument searches
+///
+/// # Examples
+///
+/// ```ignore
+/// use schwab_api_marketdata::AsyncMarketdataClient;
+///
+/// let http_client = reqwest::Client::new();
+/// let client = AsyncMarketdataClient::new(http_client);
+///
+/// let quotes = client.get_quote("your_token", "AAPL", None).await?;
+/// ```
 pub struct AsyncMarketdataClient<C: AsyncHttpClient> {
     client: ApiClient<C, MarketdataConfig>,
 }
