@@ -3,8 +3,12 @@
 //! This module provides type-safe parameter construction for all Trader API operations.
 //! Each method corresponds to an API endpoint and returns a `RequestParams` struct
 //! configured with the appropriate HTTP method, path, and query parameters.
+//!
+//! Query parameters are serialized using `serde_urlencoded` for proper URL encoding
+//! and consistent handling of optional parameters.
 
 use http::Method;
+use serde::Serialize;
 
 use schwab_api_core::RequestParams;
 use schwab_api_types::{OrderRequest, PreviewOrder};
@@ -29,12 +33,20 @@ impl TraderParams {
 
     /// Build params for getAccounts operation
     pub fn get_accounts<'a>(access_token: &'a str, fields: Option<&str>) -> RequestParams<'a> {
+        #[derive(Serialize)]
+        struct Query<'a> {
+            #[serde(skip_serializing_if = "Option::is_none")]
+            fields: Option<&'a str>,
+        }
+
+        let query = serde_urlencoded::to_string(&Query { fields }).ok();
+
         RequestParams {
             access_token,
             body: None,
             path: "/accounts".to_string(),
             method: Method::GET,
-            query: fields.map(|f| format!("fields={f}")),
+            query,
         }
     }
 
@@ -44,12 +56,20 @@ impl TraderParams {
         account_hash: &str,
         fields: Option<&str>,
     ) -> RequestParams<'a> {
+        #[derive(Serialize)]
+        struct Query<'a> {
+            #[serde(skip_serializing_if = "Option::is_none")]
+            fields: Option<&'a str>,
+        }
+
+        let query = serde_urlencoded::to_string(&Query { fields }).ok();
+
         RequestParams {
             access_token,
             body: None,
             path: format!("/accounts/{account_hash}"),
             method: Method::GET,
-            query: fields.map(|f| format!("fields={f}")),
+            query,
         }
     }
 
@@ -62,40 +82,32 @@ impl TraderParams {
         max_results: Option<i32>,
         status: Option<&str>,
     ) -> RequestParams<'a> {
-        // Pre-calculate capacity for query string
-        let mut capacity = "fromEnteredTime=".len()
-            + from_entered_time.len()
-            + "&toEnteredTime=".len()
-            + to_entered_time.len();
+        #[derive(Serialize)]
+        struct Query<'a> {
+            #[serde(rename = "fromEnteredTime")]
+            from_entered_time: &'a str,
+            #[serde(rename = "toEnteredTime")]
+            to_entered_time: &'a str,
+            #[serde(rename = "maxResults", skip_serializing_if = "Option::is_none")]
+            max_results: Option<i32>,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            status: Option<&'a str>,
+        }
 
-        if max_results.is_some() {
-            capacity += "&maxResults=".len() + 10; // i32 max digits
-        }
-        if let Some(s) = status {
-            capacity += "&status=".len() + s.len();
-        }
-
-        let mut query = String::with_capacity(capacity);
-        use std::fmt::Write;
-        let _ = write!(
-            query,
-            "fromEnteredTime={}&toEnteredTime={}",
-            from_entered_time, to_entered_time
-        );
-
-        if let Some(max) = max_results {
-            let _ = write!(query, "&maxResults={}", max);
-        }
-        if let Some(s) = status {
-            let _ = write!(query, "&status={}", s);
-        }
+        let query = serde_urlencoded::to_string(&Query {
+            from_entered_time,
+            to_entered_time,
+            max_results,
+            status,
+        })
+        .ok();
 
         RequestParams {
             access_token,
             body: None,
             path: format!("/accounts/{account_hash}/orders"),
             method: Method::GET,
-            query: Some(query),
+            query,
         }
     }
 
@@ -168,40 +180,32 @@ impl TraderParams {
         max_results: Option<i32>,
         status: Option<&str>,
     ) -> RequestParams<'a> {
-        // Pre-calculate capacity for query string
-        let mut capacity = "fromEnteredTime=".len()
-            + from_entered_time.len()
-            + "&toEnteredTime=".len()
-            + to_entered_time.len();
+        #[derive(Serialize)]
+        struct Query<'a> {
+            #[serde(rename = "fromEnteredTime")]
+            from_entered_time: &'a str,
+            #[serde(rename = "toEnteredTime")]
+            to_entered_time: &'a str,
+            #[serde(rename = "maxResults", skip_serializing_if = "Option::is_none")]
+            max_results: Option<i32>,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            status: Option<&'a str>,
+        }
 
-        if max_results.is_some() {
-            capacity += "&maxResults=".len() + 10; // i32 max digits
-        }
-        if let Some(s) = status {
-            capacity += "&status=".len() + s.len();
-        }
-
-        let mut query = String::with_capacity(capacity);
-        use std::fmt::Write;
-        let _ = write!(
-            query,
-            "fromEnteredTime={}&toEnteredTime={}",
-            from_entered_time, to_entered_time
-        );
-
-        if let Some(max) = max_results {
-            let _ = write!(query, "&maxResults={}", max);
-        }
-        if let Some(s) = status {
-            let _ = write!(query, "&status={}", s);
-        }
+        let query = serde_urlencoded::to_string(&Query {
+            from_entered_time,
+            to_entered_time,
+            max_results,
+            status,
+        })
+        .ok();
 
         RequestParams {
             access_token,
             body: None,
             path: "/orders".to_string(),
             method: Method::GET,
-            query: Some(query),
+            query,
         }
     }
 
@@ -229,36 +233,31 @@ impl TraderParams {
         types: &str,
         symbol: Option<&str>,
     ) -> RequestParams<'a> {
-        // Pre-calculate capacity for query string
-        let mut capacity = "startDate=".len()
-            + start_date.len()
-            + "&endDate=".len()
-            + end_date.len()
-            + "&types=".len()
-            + types.len();
-
-        if let Some(sym) = symbol {
-            capacity += "&symbol=".len() + sym.len();
+        #[derive(Serialize)]
+        struct Query<'a> {
+            #[serde(rename = "startDate")]
+            start_date: &'a str,
+            #[serde(rename = "endDate")]
+            end_date: &'a str,
+            types: &'a str,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            symbol: Option<&'a str>,
         }
 
-        let mut query = String::with_capacity(capacity);
-        use std::fmt::Write;
-        let _ = write!(
-            query,
-            "startDate={}&endDate={}&types={}",
-            start_date, end_date, types
-        );
-
-        if let Some(sym) = symbol {
-            let _ = write!(query, "&symbol={}", sym);
-        }
+        let query = serde_urlencoded::to_string(&Query {
+            start_date,
+            end_date,
+            types,
+            symbol,
+        })
+        .ok();
 
         RequestParams {
             access_token,
             body: None,
             path: format!("/accounts/{account_hash}/transactions"),
             method: Method::GET,
-            query: Some(query),
+            query,
         }
     }
 

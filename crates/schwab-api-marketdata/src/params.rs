@@ -3,8 +3,12 @@
 //! This module provides type-safe parameter construction for all Market Data API operations.
 //! Each method corresponds to an API endpoint and returns a `RequestParams` struct
 //! configured with the appropriate HTTP method, path, and query parameters.
+//!
+//! Query parameters are serialized using `serde_urlencoded` for proper URL encoding
+//! and consistent handling of optional parameters.
 
 use http::Method;
+use serde::Serialize;
 
 use schwab_api_core::RequestParams;
 
@@ -22,32 +26,27 @@ impl MarketdataParams {
         fields: Option<&str>,
         indicative: Option<bool>,
     ) -> RequestParams<'a> {
-        // Pre-calculate capacity for query string
-        let mut capacity = "symbols=".len() + symbols.len();
+        #[derive(Serialize)]
+        struct Query<'a> {
+            symbols: &'a str,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            fields: Option<&'a str>,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            indicative: Option<bool>,
+        }
 
-        if let Some(f) = fields {
-            capacity += "&fields=".len() + f.len();
-        }
-        if indicative.is_some() {
-            capacity += "&indicative=false".len(); // worst case
-        }
-
-        let mut query = String::with_capacity(capacity);
-        use std::fmt::Write;
-        let _ = write!(query, "symbols={}", symbols);
-
-        if let Some(f) = fields {
-            let _ = write!(query, "&fields={}", f);
-        }
-        if let Some(ind) = indicative {
-            let _ = write!(query, "&indicative={}", ind);
-        }
+        let query = serde_urlencoded::to_string(&Query {
+            symbols,
+            fields,
+            indicative,
+        })
+        .ok();
 
         RequestParams {
             access_token,
             method: Method::GET,
             path: "/quotes".to_string(),
-            query: Some(query),
+            query,
             body: None,
         }
     }
@@ -58,8 +57,14 @@ impl MarketdataParams {
         symbol: &str,
         fields: Option<&str>,
     ) -> RequestParams<'a> {
+        #[derive(Serialize)]
+        struct Query<'a> {
+            #[serde(skip_serializing_if = "Option::is_none")]
+            fields: Option<&'a str>,
+        }
+
         let path = format!("/{symbol}/quotes");
-        let query = fields.map(|f| format!("fields={f}"));
+        let query = serde_urlencoded::to_string(&Query { fields }).ok();
 
         RequestParams {
             access_token,
@@ -91,77 +96,94 @@ impl MarketdataParams {
         exp_month: Option<&str>,
         option_type: Option<&str>,
     ) -> RequestParams<'a> {
-        // Pre-calculate rough capacity (symbol + up to 16 optional params with ~20 chars each)
-        let capacity = "symbol=".len() + symbol.len() + 400;
+        #[derive(Serialize)]
+        struct Query<'a> {
+            symbol: &'a str,
+            #[serde(rename = "contractType")]
+            #[serde(skip_serializing_if = "Option::is_none")]
+            contract_type: Option<&'a str>,
+            #[serde(rename = "strikeCount")]
+            #[serde(skip_serializing_if = "Option::is_none")]
+            strike_count: Option<i32>,
+            #[serde(rename = "includeUnderlyingQuote")]
+            #[serde(skip_serializing_if = "Option::is_none")]
+            include_underlying_quote: Option<bool>,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            strategy: Option<&'a str>,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            interval: Option<f64>,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            strike: Option<f64>,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            range: Option<&'a str>,
+            #[serde(rename = "fromDate")]
+            #[serde(skip_serializing_if = "Option::is_none")]
+            from_date: Option<&'a str>,
+            #[serde(rename = "toDate")]
+            #[serde(skip_serializing_if = "Option::is_none")]
+            to_date: Option<&'a str>,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            volatility: Option<f64>,
+            #[serde(rename = "underlyingPrice")]
+            #[serde(skip_serializing_if = "Option::is_none")]
+            underlying_price: Option<f64>,
+            #[serde(rename = "interestRate")]
+            #[serde(skip_serializing_if = "Option::is_none")]
+            interest_rate: Option<f64>,
+            #[serde(rename = "daysToExpiration")]
+            #[serde(skip_serializing_if = "Option::is_none")]
+            days_to_expiration: Option<i32>,
+            #[serde(rename = "expMonth")]
+            #[serde(skip_serializing_if = "Option::is_none")]
+            exp_month: Option<&'a str>,
+            #[serde(rename = "optionType")]
+            #[serde(skip_serializing_if = "Option::is_none")]
+            option_type: Option<&'a str>,
+        }
 
-        let mut query = String::with_capacity(capacity);
-        use std::fmt::Write;
-        let _ = write!(query, "symbol={}", symbol);
-
-        if let Some(ct) = contract_type {
-            let _ = write!(query, "&contractType={}", ct);
-        }
-        if let Some(sc) = strike_count {
-            let _ = write!(query, "&strikeCount={}", sc);
-        }
-        if let Some(iq) = include_underlying_quote {
-            let _ = write!(query, "&includeUnderlyingQuote={}", iq);
-        }
-        if let Some(s) = strategy {
-            let _ = write!(query, "&strategy={}", s);
-        }
-        if let Some(i) = interval {
-            let _ = write!(query, "&interval={}", i);
-        }
-        if let Some(st) = strike {
-            let _ = write!(query, "&strike={}", st);
-        }
-        if let Some(r) = range {
-            let _ = write!(query, "&range={}", r);
-        }
-        if let Some(fd) = from_date {
-            let _ = write!(query, "&fromDate={}", fd);
-        }
-        if let Some(td) = to_date {
-            let _ = write!(query, "&toDate={}", td);
-        }
-        if let Some(v) = volatility {
-            let _ = write!(query, "&volatility={}", v);
-        }
-        if let Some(up) = underlying_price {
-            let _ = write!(query, "&underlyingPrice={}", up);
-        }
-        if let Some(ir) = interest_rate {
-            let _ = write!(query, "&interestRate={}", ir);
-        }
-        if let Some(dte) = days_to_expiration {
-            let _ = write!(query, "&daysToExpiration={}", dte);
-        }
-        if let Some(em) = exp_month {
-            let _ = write!(query, "&expMonth={}", em);
-        }
-        if let Some(ot) = option_type {
-            let _ = write!(query, "&optionType={}", ot);
-        }
+        let query = serde_urlencoded::to_string(&Query {
+            symbol,
+            contract_type,
+            strike_count,
+            include_underlying_quote,
+            strategy,
+            interval,
+            strike,
+            range,
+            from_date,
+            to_date,
+            volatility,
+            underlying_price,
+            interest_rate,
+            days_to_expiration,
+            exp_month,
+            option_type,
+        })
+        .ok();
 
         RequestParams {
             access_token,
             method: Method::GET,
             path: "/chains".to_string(),
-            query: Some(query),
+            query,
             body: None,
         }
     }
 
     /// Build params for getExpirationChain operation - Get option expiration chain
     pub fn get_expiration_chain<'a>(access_token: &'a str, symbol: &str) -> RequestParams<'a> {
-        let query = format!("symbol={symbol}");
+        #[derive(Serialize)]
+        struct Query<'a> {
+            symbol: &'a str,
+        }
+
+        let query = serde_urlencoded::to_string(&Query { symbol }).ok();
 
         RequestParams {
             access_token,
             method: Method::GET,
             path: "/expirationchain".to_string(),
-            query: Some(query),
+            query,
             body: None,
         }
     }
@@ -180,43 +202,51 @@ impl MarketdataParams {
         need_extended_hours_data: Option<bool>,
         need_previous_close: Option<bool>,
     ) -> RequestParams<'a> {
-        // Pre-calculate rough capacity
-        let capacity = "symbol=".len() + symbol.len() + 200;
+        #[derive(Serialize)]
+        struct Query<'a> {
+            symbol: &'a str,
+            #[serde(rename = "periodType")]
+            #[serde(skip_serializing_if = "Option::is_none")]
+            period_type: Option<&'a str>,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            period: Option<i32>,
+            #[serde(rename = "frequencyType")]
+            #[serde(skip_serializing_if = "Option::is_none")]
+            frequency_type: Option<&'a str>,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            frequency: Option<i32>,
+            #[serde(rename = "startDate")]
+            #[serde(skip_serializing_if = "Option::is_none")]
+            start_date: Option<i64>,
+            #[serde(rename = "endDate")]
+            #[serde(skip_serializing_if = "Option::is_none")]
+            end_date: Option<i64>,
+            #[serde(rename = "needExtendedHoursData")]
+            #[serde(skip_serializing_if = "Option::is_none")]
+            need_extended_hours_data: Option<bool>,
+            #[serde(rename = "needPreviousClose")]
+            #[serde(skip_serializing_if = "Option::is_none")]
+            need_previous_close: Option<bool>,
+        }
 
-        let mut query = String::with_capacity(capacity);
-        use std::fmt::Write;
-        let _ = write!(query, "symbol={}", symbol);
-
-        if let Some(pt) = period_type {
-            let _ = write!(query, "&periodType={}", pt);
-        }
-        if let Some(p) = period {
-            let _ = write!(query, "&period={}", p);
-        }
-        if let Some(ft) = frequency_type {
-            let _ = write!(query, "&frequencyType={}", ft);
-        }
-        if let Some(f) = frequency {
-            let _ = write!(query, "&frequency={}", f);
-        }
-        if let Some(sd) = start_date {
-            let _ = write!(query, "&startDate={}", sd);
-        }
-        if let Some(ed) = end_date {
-            let _ = write!(query, "&endDate={}", ed);
-        }
-        if let Some(nehd) = need_extended_hours_data {
-            let _ = write!(query, "&needExtendedHoursData={}", nehd);
-        }
-        if let Some(npc) = need_previous_close {
-            let _ = write!(query, "&needPreviousClose={}", npc);
-        }
+        let query = serde_urlencoded::to_string(&Query {
+            symbol,
+            period_type,
+            period,
+            frequency_type,
+            frequency,
+            start_date,
+            end_date,
+            need_extended_hours_data,
+            need_previous_close,
+        })
+        .ok();
 
         RequestParams {
             access_token,
             method: Method::GET,
             path: "/pricehistory".to_string(),
-            query: Some(query),
+            query,
             body: None,
         }
     }
@@ -228,12 +258,15 @@ impl MarketdataParams {
         sort: Option<&str>,
         frequency: Option<i32>,
     ) -> RequestParams<'a> {
-        let query = match (sort, frequency) {
-            (None, None) => None,
-            (Some(s), None) => Some(format!("sort={}", s)),
-            (None, Some(f)) => Some(format!("frequency={}", f)),
-            (Some(s), Some(f)) => Some(format!("sort={}&frequency={}", s, f)),
-        };
+        #[derive(Serialize)]
+        struct Query<'a> {
+            #[serde(skip_serializing_if = "Option::is_none")]
+            sort: Option<&'a str>,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            frequency: Option<i32>,
+        }
+
+        let query = serde_urlencoded::to_string(&Query { sort, frequency }).ok();
 
         RequestParams {
             access_token,
@@ -250,16 +283,20 @@ impl MarketdataParams {
         markets: &str,
         date: Option<&str>,
     ) -> RequestParams<'a> {
-        let query = match date {
-            Some(d) => format!("markets={}&date={}", markets, d),
-            None => format!("markets={}", markets),
-        };
+        #[derive(Serialize)]
+        struct Query<'a> {
+            markets: &'a str,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            date: Option<&'a str>,
+        }
+
+        let query = serde_urlencoded::to_string(&Query { markets, date }).ok();
 
         RequestParams {
             access_token,
             method: Method::GET,
             path: "/markets".to_string(),
-            query: Some(query),
+            query,
             body: None,
         }
     }
@@ -270,7 +307,13 @@ impl MarketdataParams {
         market: &str,
         date: Option<&str>,
     ) -> RequestParams<'a> {
-        let query = date.map(|d| format!("date={d}"));
+        #[derive(Serialize)]
+        struct Query<'a> {
+            #[serde(skip_serializing_if = "Option::is_none")]
+            date: Option<&'a str>,
+        }
+
+        let query = serde_urlencoded::to_string(&Query { date }).ok();
 
         RequestParams {
             access_token,
@@ -287,13 +330,19 @@ impl MarketdataParams {
         symbol: &str,
         projection: &str,
     ) -> RequestParams<'a> {
-        let query = format!("symbol={symbol}&projection={projection}");
+        #[derive(Serialize)]
+        struct Query<'a> {
+            symbol: &'a str,
+            projection: &'a str,
+        }
+
+        let query = serde_urlencoded::to_string(&Query { symbol, projection }).ok();
 
         RequestParams {
             access_token,
             method: Method::GET,
             path: "/instruments".to_string(),
-            query: Some(query),
+            query,
             body: None,
         }
     }
