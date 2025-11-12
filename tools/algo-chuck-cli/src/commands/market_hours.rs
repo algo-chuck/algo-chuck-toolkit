@@ -1,9 +1,8 @@
 use anyhow::Result;
 use clap::ArgMatches;
+use schwab_api::prelude::{SyncMarketdataClient, types::marketdata};
 
 use crate::config::{ConfigManager, TokenManager};
-use schwab_api_marketdata::SyncMarketdataClient;
-use schwab_api_types::marketdata::{GetMarketHourParams, GetMarketHoursParams};
 
 /// Handle the market hours command
 pub fn handle_market_hours_command(matches: &ArgMatches) -> Result<()> {
@@ -23,7 +22,7 @@ pub fn handle_market_hours_command(matches: &ArgMatches) -> Result<()> {
     let date = matches.get_one::<String>("date").map(|s| s.as_str());
 
     let client = SyncMarketdataClient::new(ureq::Agent::new(), access_token);
-    let params = GetMarketHoursParams { markets, date };
+    let params = marketdata::GetMarketHoursParams { markets, date };
     let data = client.get_market_hours(&params)?;
 
     println!("{:#?}", data);
@@ -48,7 +47,7 @@ pub fn handle_market_hour_command(matches: &ArgMatches) -> Result<()> {
     let date = matches.get_one::<String>("date").map(|s| s.as_str());
 
     let client = SyncMarketdataClient::new(ureq::Agent::new(), access_token);
-    let params = GetMarketHourParams { market, date };
+    let params = marketdata::GetMarketHourParams { market, date };
     let data = client.get_market_hour(&params)?;
 
     println!("{:#?}", data);

@@ -1,9 +1,8 @@
 use anyhow::Result;
 use clap::ArgMatches;
+use schwab_api::prelude::{SyncMarketdataClient, types::marketdata};
 
 use crate::config::{ConfigManager, TokenManager};
-use schwab_api_marketdata::SyncMarketdataClient;
-use schwab_api_types::marketdata::GetChainParams;
 
 /// Handle the option-chain command
 pub fn handle_chain_command(matches: &ArgMatches) -> Result<()> {
@@ -53,7 +52,7 @@ pub fn handle_chain_command(matches: &ArgMatches) -> Result<()> {
     let option_type = matches.get_one::<String>("option-type").map(|s| s.as_str());
 
     let client = SyncMarketdataClient::new(ureq::Agent::new(), access_token);
-    let params = GetChainParams {
+    let params = marketdata::GetChainParams {
         symbol,
         contract_type,
         strike_count,

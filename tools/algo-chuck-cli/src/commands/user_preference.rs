@@ -1,8 +1,8 @@
 use anyhow::Result;
 use clap::ArgMatches;
+use schwab_api::prelude::SyncTraderClient;
 
 use crate::config::{ConfigManager, TokenManager};
-use schwab_api_trader::SyncTraderClient;
 
 /// Handle the user preference command for data retrieval
 pub fn handle_user_preference_command(_matches: &ArgMatches) -> Result<()> {

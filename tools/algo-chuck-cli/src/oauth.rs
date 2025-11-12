@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use schwab_api_oauth::{OAuthConfig, SyncOAuthClient, TokenResponse};
+use schwab_api::prelude::{OAuthConfig, SyncOAuthClient, TokenResponse};
 
 use crate::config::SchwabConfig;
 

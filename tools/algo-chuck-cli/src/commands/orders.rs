@@ -1,14 +1,10 @@
 use anyhow::Result;
 use clap::ArgMatches;
+use schwab_api::prelude::{SyncTraderClient, types::trader};
 use serde::de::DeserializeOwned;
 use std::io::Read;
 
 use crate::config::{ConfigManager, TokenManager};
-use schwab_api_trader::SyncTraderClient;
-use schwab_api_types::trader::{
-    CancelOrderParams, GetOrderParams, GetOrdersByPathParams, GetOrdersByQueryParams,
-    PlaceOrderParams, ReplaceOrderParams,
-};
 
 /// Handle the account orders command for data retrieval
 pub fn handle_account_orders_command(matches: &ArgMatches) -> Result<()> {
@@ -44,7 +40,7 @@ pub fn handle_account_orders_command(matches: &ArgMatches) -> Result<()> {
     let status = matches.get_one::<String>("status").map(|s| s.as_str());
 
     let client = SyncTraderClient::new(ureq::Agent::new(), access_token);
-    let params = GetOrdersByPathParams {
+    let params = trader::GetOrdersByPathParams {
         account_hash: account_number,
         from_entered_time,
         to_entered_time,
@@ -81,7 +77,7 @@ pub fn handle_account_order_command(matches: &ArgMatches) -> Result<()> {
         .ok_or_else(|| anyhow::anyhow!("Order ID is required"))?;
 
     let client = SyncTraderClient::new(ureq::Agent::new(), access_token);
-    let params = GetOrderParams {
+    let params = trader::GetOrderParams {
         account_hash: account_number,
         order_id: *order_id,
     };
@@ -120,7 +116,7 @@ pub fn handle_orders_command(matches: &ArgMatches) -> Result<()> {
     let status = matches.get_one::<String>("status").map(|s| s.as_str());
 
     let client = SyncTraderClient::new(ureq::Agent::new(), access_token);
-    let params = GetOrdersByQueryParams {
+    let params = trader::GetOrdersByQueryParams {
         from_entered_time,
         to_entered_time,
         max_results,
@@ -155,7 +151,7 @@ pub fn handle_place_order_command(matches: &ArgMatches) -> Result<()> {
     let order_json = read_json(matches)?;
 
     let client = SyncTraderClient::new(ureq::Agent::new(), access_token);
-    let params = PlaceOrderParams {
+    let params = trader::PlaceOrderParams {
         account_hash: account_number,
         order: &order_json,
     };
@@ -190,7 +186,7 @@ pub fn handle_cancel_order_command(matches: &ArgMatches) -> Result<()> {
         .ok_or_else(|| anyhow::anyhow!("Order ID is required"))?;
 
     let client = SyncTraderClient::new(ureq::Agent::new(), access_token);
-    let params = CancelOrderParams {
+    let params = trader::CancelOrderParams {
         account_hash: account_number,
         order_id: *order_id,
     };
@@ -228,7 +224,7 @@ pub fn handle_replace_order_command(matches: &ArgMatches) -> Result<()> {
     let order_json = read_json(matches)?;
 
     let client = SyncTraderClient::new(ureq::Agent::new(), access_token);
-    let params = ReplaceOrderParams {
+    let params = trader::ReplaceOrderParams {
         account_hash: account_number,
         order_id: *order_id,
         order: &order_json,
@@ -263,8 +259,7 @@ pub fn handle_preview_order_command(matches: &ArgMatches) -> Result<()> {
     let preview_json = read_json(matches)?;
 
     let client = SyncTraderClient::new(ureq::Agent::new(), access_token);
-    use schwab_api_types::trader::PreviewOrderParams;
-    let params = PreviewOrderParams {
+    let params = trader::PreviewOrderParams {
         account_hash: account_number,
         order: &preview_json,
     };

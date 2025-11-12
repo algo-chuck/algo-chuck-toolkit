@@ -1,9 +1,8 @@
 use anyhow::Result;
 use clap::ArgMatches;
+use schwab_api::prelude::{SyncMarketdataClient, types::marketdata};
 
 use crate::config::{ConfigManager, TokenManager};
-use schwab_api_marketdata::SyncMarketdataClient;
-use schwab_api_types::marketdata::{GetInstrumentByCusipParams, GetInstrumentsParams};
 
 /// Handle the instruments command
 pub fn handle_instruments_command(matches: &ArgMatches) -> Result<()> {
@@ -26,7 +25,7 @@ pub fn handle_instruments_command(matches: &ArgMatches) -> Result<()> {
         .as_str();
 
     let client = SyncMarketdataClient::new(ureq::Agent::new(), access_token);
-    let params = GetInstrumentsParams { symbol, projection };
+    let params = marketdata::GetInstrumentsParams { symbol, projection };
     let data = client.get_instruments(&params)?;
 
     println!("{:#?}", data);
@@ -49,7 +48,7 @@ pub fn handle_instrument_command(matches: &ArgMatches) -> Result<()> {
         .as_str();
 
     let client = SyncMarketdataClient::new(ureq::Agent::new(), access_token);
-    let params = GetInstrumentByCusipParams { cusip };
+    let params = marketdata::GetInstrumentByCusipParams { cusip };
     let data = client.get_instruments_by_cusip(&params)?;
 
     println!("{:#?}", data);

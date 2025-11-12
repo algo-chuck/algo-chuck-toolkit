@@ -1,9 +1,8 @@
 use anyhow::Result;
 use clap::ArgMatches;
+use schwab_api::prelude::{SyncTraderClient, types::trader};
 
 use crate::config::{ConfigManager, TokenManager};
-use schwab_api_trader::SyncTraderClient;
-use schwab_api_types::trader::{GetTransactionByIdParams, GetTransactionsByPathParams};
 
 /// Handle the transactions command for data retrieval
 pub fn handle_transactions_command(matches: &ArgMatches) -> Result<()> {
@@ -43,7 +42,7 @@ pub fn handle_transactions_command(matches: &ArgMatches) -> Result<()> {
     let symbol = matches.get_one::<String>("symbol").map(|s| s.as_str());
 
     let client = SyncTraderClient::new(ureq::Agent::new(), access_token);
-    let params = GetTransactionsByPathParams {
+    let params = trader::GetTransactionsByPathParams {
         account_hash: account_number,
         start_date,
         end_date,
@@ -80,7 +79,7 @@ pub fn handle_transaction_command(matches: &ArgMatches) -> Result<()> {
         .ok_or_else(|| anyhow::anyhow!("Transaction ID is required"))?;
 
     let client = SyncTraderClient::new(ureq::Agent::new(), access_token);
-    let params = GetTransactionByIdParams {
+    let params = trader::GetTransactionByIdParams {
         account_hash: account_number,
         transaction_id: *transaction_id,
     };

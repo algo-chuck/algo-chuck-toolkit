@@ -1,9 +1,8 @@
 use anyhow::Result;
 use clap::ArgMatches;
+use schwab_api::prelude::{SyncMarketdataClient, types::marketdata};
 
 use crate::config::{ConfigManager, TokenManager};
-use schwab_api_marketdata::SyncMarketdataClient;
-use schwab_api_types::marketdata::GetPriceHistoryParams;
 
 /// Handle the price-history command
 pub fn handle_price_history_command(matches: &ArgMatches) -> Result<()> {
@@ -40,7 +39,7 @@ pub fn handle_price_history_command(matches: &ArgMatches) -> Result<()> {
     let need_previous_close = matches.get_flag("previous-close").then_some(true);
 
     let client = SyncMarketdataClient::new(ureq::Agent::new(), access_token);
-    let params = GetPriceHistoryParams {
+    let params = marketdata::GetPriceHistoryParams {
         symbol,
         period_type,
         period,

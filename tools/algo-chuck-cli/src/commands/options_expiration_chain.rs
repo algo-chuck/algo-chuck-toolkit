@@ -1,9 +1,8 @@
 use anyhow::Result;
 use clap::ArgMatches;
+use schwab_api::prelude::{SyncMarketdataClient, types::marketdata};
 
 use crate::config::{ConfigManager, TokenManager};
-use schwab_api_marketdata::SyncMarketdataClient;
-use schwab_api_types::marketdata::GetExpirationChainParams;
 
 /// Handle the expiration-chain command
 pub fn handle_expiration_chain_command(matches: &ArgMatches) -> Result<()> {
@@ -21,7 +20,7 @@ pub fn handle_expiration_chain_command(matches: &ArgMatches) -> Result<()> {
         .as_str();
 
     let client = SyncMarketdataClient::new(ureq::Agent::new(), access_token);
-    let params = GetExpirationChainParams { symbol };
+    let params = marketdata::GetExpirationChainParams { symbol };
     let data = client.get_expiration_chain(&params)?;
 
     println!("{:#?}", data);

@@ -1,9 +1,8 @@
 use anyhow::Result;
 use clap::ArgMatches;
+use schwab_api::prelude::{SyncMarketdataClient, types::marketdata};
 
 use crate::config::{ConfigManager, TokenManager};
-use schwab_api_marketdata::SyncMarketdataClient;
-use schwab_api_types::marketdata::{GetQuoteParams, GetQuotesParams};
 
 /// Handle the quotes command for multiple symbols
 pub fn handle_quotes_command(matches: &ArgMatches) -> Result<()> {
@@ -28,7 +27,7 @@ pub fn handle_quotes_command(matches: &ArgMatches) -> Result<()> {
     let indicative = matches.get_flag("indicative").then_some(true);
 
     let client = SyncMarketdataClient::new(ureq::Agent::new(), access_token);
-    let params = GetQuotesParams {
+    let params = marketdata::GetQuotesParams {
         symbols: symbols.as_str(),
         fields,
         indicative,
@@ -63,7 +62,7 @@ pub fn handle_quote_command(matches: &ArgMatches) -> Result<()> {
     let fields = matches.get_one::<String>("fields").map(|s| s.as_str());
 
     let client = SyncMarketdataClient::new(ureq::Agent::new(), access_token);
-    let params = GetQuoteParams { symbol, fields };
+    let params = marketdata::GetQuoteParams { symbol, fields };
     let data = client.get_quote(&params)?;
 
     println!("{:#?}", data);

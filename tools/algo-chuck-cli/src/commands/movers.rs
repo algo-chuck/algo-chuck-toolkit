@@ -1,9 +1,8 @@
 use anyhow::Result;
 use clap::ArgMatches;
+use schwab_api::prelude::{SyncMarketdataClient, types::marketdata};
 
 use crate::config::{ConfigManager, TokenManager};
-use schwab_api_marketdata::SyncMarketdataClient;
-use schwab_api_types::marketdata::GetMoversParams;
 
 /// Handle the movers command
 pub fn handle_movers_command(matches: &ArgMatches) -> Result<()> {
@@ -26,7 +25,7 @@ pub fn handle_movers_command(matches: &ArgMatches) -> Result<()> {
         .and_then(|s| s.parse().ok());
 
     let client = SyncMarketdataClient::new(ureq::Agent::new(), access_token);
-    let params = GetMoversParams {
+    let params = marketdata::GetMoversParams {
         symbol,
         sort,
         frequency,
