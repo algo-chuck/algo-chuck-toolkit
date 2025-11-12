@@ -1,6 +1,6 @@
 use anyhow::Result;
 use clap::ArgMatches;
-use schwab_api::prelude::{SyncMarketdataClient, types::marketdata};
+use schwab_api::prelude::{SyncMarketdataClient, marketdata};
 
 use crate::config::{ConfigManager, TokenManager};
 

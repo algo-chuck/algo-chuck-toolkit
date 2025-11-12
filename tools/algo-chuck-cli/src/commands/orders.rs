@@ -1,6 +1,6 @@
 use anyhow::Result;
 use clap::ArgMatches;
-use schwab_api::prelude::{SyncTraderClient, types::trader};
+use schwab_api::prelude::{SyncTraderClient, trader};
 use serde::de::DeserializeOwned;
 use std::io::Read;
 
