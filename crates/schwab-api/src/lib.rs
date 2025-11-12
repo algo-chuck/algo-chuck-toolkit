@@ -102,9 +102,20 @@ pub use schwab_api_trader as trader;
 
 /// Convenience prelude that re-exports commonly used types
 pub mod prelude {
+    // Core types and errors (always available)
     pub use crate::core::{ApiClient, HttpError, SchwabError};
+
+    // Types module - access as types::trader:: or types::marketdata::
     pub use crate::types;
 
+    // Re-export individual type modules for convenience
+    #[cfg(feature = "trader")]
+    pub use crate::types::trader;
+
+    #[cfg(feature = "marketdata")]
+    pub use crate::types::marketdata;
+
+    // OAuth types and clients
     #[cfg(feature = "oauth")]
     pub use crate::oauth::{OAuthConfig, OAuthError, TokenResponse};
 
@@ -114,17 +125,22 @@ pub mod prelude {
     #[cfg(all(feature = "oauth", feature = "ureq-client"))]
     pub use crate::oauth::SyncOAuthClient;
 
+    // Trader clients
     #[cfg(all(feature = "trader", feature = "reqwest-client"))]
     pub use crate::trader::AsyncTraderClient;
 
     #[cfg(all(feature = "trader", feature = "ureq-client"))]
     pub use crate::trader::SyncTraderClient;
 
+    // Market data clients
     #[cfg(all(feature = "marketdata", feature = "reqwest-client"))]
     pub use crate::marketdata::AsyncMarketdataClient;
 
     #[cfg(all(feature = "marketdata", feature = "ureq-client"))]
     pub use crate::marketdata::SyncMarketdataClient;
+
+    /// Convenient Result type alias using HttpError
+    pub type Result<T> = std::result::Result<T, crate::core::HttpError>;
 }
 
 /// Version of the schwab-api crate
