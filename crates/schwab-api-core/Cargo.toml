@@ -7,12 +7,14 @@ license.workspace = true
 description = "Core traits, errors, and foundational functionality for the Schwab API"
 
 [features]
-default = ["reqwest-client"]
+default = ["reqwest-client", "trader", "marketdata"]
 reqwest-client = ["dep:reqwest"]
 ureq-client = ["dep:ureq"]
+trader = ["schwab-api-types/trader"]
+marketdata = ["schwab-api-types/marketdata"]
 
 [dependencies]
-schwab-api-types = { path = "../schwab-api-types" }
+schwab-api-types = { path = "../schwab-api-types", default-features = false }
 serde = { workspace = true, features = ["derive", "std"] }
 serde_json = { workspace = true, features = ["std"] }
 thiserror = { workspace = true }

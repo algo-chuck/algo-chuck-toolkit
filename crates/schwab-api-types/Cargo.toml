@@ -6,6 +6,12 @@ authors.workspace = true
 license.workspace = true
 description = "Core types and data structures for the Schwab API"
 
+[features]
+default = ["trader", "marketdata"]
+# Feature flags to control which API types are compiled
+trader = []     # Enable trader API types (accounts, orders, transactions)
+marketdata = [] # Enable market data API types (quotes, options, price history)
+
 [dependencies]
 serde = { workspace = true, features = ["derive", "alloc"] }
 serde_with = { version = "3.8", default-features = false, features = ["base64", "std", "macros"] }

@@ -11,7 +11,10 @@
 //! ## Features
 //!
 //! - `reqwest-client` - Enable async HTTP client using reqwest (default)
-//! - `ureq-client` - Enable sync/blocking HTTP client using ureq (default)
+//! - `ureq-client` - Enable sync/blocking HTTP client using ureq
+//! - `trader` - Include trader API error types (default)
+//! - `marketdata` - Include market data API error types (default)
+//! - `default` - Enables `reqwest-client`, `trader`, and `marketdata`
 //!
 //! ## Examples
 //!

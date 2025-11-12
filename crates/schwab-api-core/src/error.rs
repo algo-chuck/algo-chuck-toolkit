@@ -6,15 +6,19 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use schwab_api_types::ServiceError;
+#[cfg(feature = "marketdata")]
 use schwab_api_types::marketdata::ErrorResponse;
+#[cfg(feature = "trader")]
+use schwab_api_types::trader::ServiceError;
 
 /// Errors returned by the Schwab API (parsed from non-success HTTP responses).
 #[derive(Error, Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum SchwabError {
+    #[cfg(feature = "trader")]
     #[error("Trader API Error ({status}): {detail:#?}")]
     Trader { status: u16, detail: ServiceError },
+    #[cfg(feature = "marketdata")]
     #[error("Marketdata API Error ({status}): {detail:#?}")]
     Marketdata { status: u16, detail: ErrorResponse },
     #[error("Unknown Schwab API response structure: {0}")]

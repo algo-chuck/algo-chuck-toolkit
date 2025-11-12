@@ -80,7 +80,7 @@ impl TraderParams {
     /// Build params for placeOrder operation
     pub fn place_order<'a>(
         params: &PlaceOrderParams<'a>,
-    ) -> RequestParams<&'a schwab_api_types::OrderRequest> {
+    ) -> RequestParams<&'a schwab_api_types::trader::OrderRequest> {
         RequestParams {
             body: Some(params.order),
             path: format!("/accounts/{}/orders", params.account_hash),
@@ -105,7 +105,7 @@ impl TraderParams {
     /// Build params for replaceOrder operation
     pub fn replace_order<'a>(
         params: &ReplaceOrderParams<'a>,
-    ) -> RequestParams<&'a schwab_api_types::OrderRequest> {
+    ) -> RequestParams<&'a schwab_api_types::trader::OrderRequest> {
         RequestParams {
             body: Some(params.order),
             path: format!(
@@ -132,7 +132,7 @@ impl TraderParams {
     /// Build params for previewOrder operation
     pub fn preview_order<'a>(
         params: &PreviewOrderParams<'a>,
-    ) -> RequestParams<&'a schwab_api_types::PreviewOrder> {
+    ) -> RequestParams<&'a schwab_api_types::trader::PreviewOrder> {
         RequestParams {
             body: Some(params.order),
             path: format!("/accounts/{}/previewOrder", params.account_hash),

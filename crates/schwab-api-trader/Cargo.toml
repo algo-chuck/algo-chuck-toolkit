@@ -7,8 +7,8 @@ license.workspace = true
 description = "Trading API client for the Schwab API"
 
 [dependencies]
-schwab-api-types = { path = "../schwab-api-types" }
-schwab-api-core = { path = "../schwab-api-core" }
+schwab-api-types = { path = "../schwab-api-types", default-features = false, features = ["trader"] }
+schwab-api-core = { path = "../schwab-api-core", default-features = false, features = ["trader", "reqwest-client", "ureq-client"] }
 schwab-api-oauth = { path = "../schwab-api-oauth" }
 serde = { workspace = true, features = ["derive"] }
 serde_urlencoded = { workspace = true }
