@@ -5,7 +5,7 @@
 //!
 //! Run with: cargo run --example minimal --no-default-features
 
-use schwab_api::{VERSION, types::Candle};
+use schwab_api::{VERSION, types::marketdata::Candle};
 
 fn main() {
     println!("🎯 Minimal Schwab API Example");

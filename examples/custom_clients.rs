@@ -15,16 +15,16 @@ async fn example_reqwest_async() {
 
     // Option A: Owned client (takes ownership)
     let client = reqwest::Client::new();
-    let _trader = AsyncTraderClient::new(client);
+    let _trader = AsyncTraderClient::new(client, "access_token");
 
     // Option B: Borrowed client (useful in server contexts)
     let client = reqwest::Client::new();
-    let _trader = AsyncTraderClient::new(&client);
+    let _trader = AsyncTraderClient::new(&client, "access_token");
     // client can still be used elsewhere
 
     // Option C: Arc-wrapped client (explicit shared ownership)
     let client = Arc::new(reqwest::Client::new());
-    let _trader = AsyncTraderClient::new(Arc::clone(&client));
+    let _trader = AsyncTraderClient::new(Arc::clone(&client), "access_token");
     // client can be cloned and shared across threads
 }
 
@@ -39,7 +39,7 @@ async fn server_example() {
 
     // Each request handler can clone the Arc and create its own trader client
     let client_clone = Arc::clone(&shared_client);
-    let _trader = AsyncTraderClient::new(client_clone);
+    let _trader = AsyncTraderClient::new(client_clone, "access_token");
 
     // The Arc allows efficient sharing without copying the underlying client
 }
