@@ -3,7 +3,7 @@ use clap::ArgMatches;
 
 use crate::config::{ConfigManager, TokenManager};
 use schwab_api_marketdata::SyncMarketdataClient;
-use schwab_api_types::marketdata_params::{GetQuoteParams, GetQuotesParams};
+use schwab_api_types::marketdata::{GetQuoteParams, GetQuotesParams};
 
 /// Handle the quotes command for multiple symbols
 pub fn handle_quotes_command(matches: &ArgMatches) -> Result<()> {

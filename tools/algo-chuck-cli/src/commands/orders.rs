@@ -5,7 +5,7 @@ use std::io::Read;
 
 use crate::config::{ConfigManager, TokenManager};
 use schwab_api_trader::SyncTraderClient;
-use schwab_api_types::trader_params::{
+use schwab_api_types::trader::{
     CancelOrderParams, GetOrderParams, GetOrdersByPathParams, GetOrdersByQueryParams,
     PlaceOrderParams, ReplaceOrderParams,
 };
@@ -263,7 +263,7 @@ pub fn handle_preview_order_command(matches: &ArgMatches) -> Result<()> {
     let preview_json = read_json(matches)?;
 
     let client = SyncTraderClient::new(ureq::Agent::new(), access_token);
-    use schwab_api_types::trader_params::PreviewOrderParams;
+    use schwab_api_types::trader::PreviewOrderParams;
     let params = PreviewOrderParams {
         account_hash: account_number,
         order: &preview_json,

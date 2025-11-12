@@ -3,7 +3,7 @@ use clap::ArgMatches;
 
 use crate::config::{ConfigManager, TokenManager};
 use schwab_api_marketdata::SyncMarketdataClient;
-use schwab_api_types::marketdata_params::GetPriceHistoryParams;
+use schwab_api_types::marketdata::GetPriceHistoryParams;
 
 /// Handle the price-history command
 pub fn handle_price_history_command(matches: &ArgMatches) -> Result<()> {

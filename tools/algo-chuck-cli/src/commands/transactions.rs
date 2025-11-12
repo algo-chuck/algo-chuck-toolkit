@@ -3,7 +3,7 @@ use clap::ArgMatches;
 
 use crate::config::{ConfigManager, TokenManager};
 use schwab_api_trader::SyncTraderClient;
-use schwab_api_types::trader_params::{GetTransactionByIdParams, GetTransactionsByPathParams};
+use schwab_api_types::trader::{GetTransactionByIdParams, GetTransactionsByPathParams};
 
 /// Handle the transactions command for data retrieval
 pub fn handle_transactions_command(matches: &ArgMatches) -> Result<()> {

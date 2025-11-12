@@ -3,7 +3,7 @@ use clap::ArgMatches;
 
 use crate::config::{ConfigManager, TokenManager};
 use schwab_api_marketdata::SyncMarketdataClient;
-use schwab_api_types::marketdata_params::GetExpirationChainParams;
+use schwab_api_types::marketdata::GetExpirationChainParams;
 
 /// Handle the expiration-chain command
 pub fn handle_expiration_chain_command(matches: &ArgMatches) -> Result<()> {

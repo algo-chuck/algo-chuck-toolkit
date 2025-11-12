@@ -3,7 +3,7 @@ use clap::ArgMatches;
 
 use crate::config::{ConfigManager, TokenManager};
 use schwab_api_marketdata::SyncMarketdataClient;
-use schwab_api_types::marketdata_params::{GetMarketHourParams, GetMarketHoursParams};
+use schwab_api_types::marketdata::{GetMarketHourParams, GetMarketHoursParams};
 
 /// Handle the market hours command
 pub fn handle_market_hours_command(matches: &ArgMatches) -> Result<()> {

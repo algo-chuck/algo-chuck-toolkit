@@ -3,7 +3,7 @@ use clap::ArgMatches;
 
 use crate::config::{ConfigManager, TokenManager};
 use schwab_api_marketdata::SyncMarketdataClient;
-use schwab_api_types::marketdata_params::{GetInstrumentByCusipParams, GetInstrumentsParams};
+use schwab_api_types::marketdata::{GetInstrumentByCusipParams, GetInstrumentsParams};
 
 /// Handle the instruments command
 pub fn handle_instruments_command(matches: &ArgMatches) -> Result<()> {

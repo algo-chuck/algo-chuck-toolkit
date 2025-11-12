@@ -3,7 +3,7 @@ use clap::ArgMatches;
 
 use crate::config::{ConfigManager, TokenManager};
 use schwab_api_marketdata::SyncMarketdataClient;
-use schwab_api_types::marketdata_params::GetMoversParams;
+use schwab_api_types::marketdata::GetMoversParams;
 
 /// Handle the movers command
 pub fn handle_movers_command(matches: &ArgMatches) -> Result<()> {
