@@ -9,7 +9,7 @@
 use http::Method;
 
 use schwab_api_core::RequestParams;
-use schwab_api_types::trader_params::*;
+use schwab_api_types::trader::*;
 
 /// Parameter builders for all Schwab Trader API endpoints.
 ///

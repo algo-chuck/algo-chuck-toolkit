@@ -7,7 +7,7 @@ license.workspace = true
 description = "Core types and data structures for the Schwab API"
 
 [dependencies]
-serde = { workspace = true, features = ["derive"] }
+serde = { workspace = true, features = ["derive", "alloc"] }
 serde_with = { version = "3.8", default-features = false, features = ["base64", "std", "macros"] }
 serde_repr = "0.1"
 uuid = { workspace = true, features = ["serde", "v4"] }

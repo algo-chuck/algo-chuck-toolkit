@@ -59,19 +59,13 @@ where
     }
 
     /// Fetch all accounts for the user.
-    pub fn get_accounts(
-        &self,
-        params: &schwab_api_types::trader_params::GetAccountsParams<'_>,
-    ) -> Result<Vec<Account>, HttpError> {
+    pub fn get_accounts(&self, params: &GetAccountsParams<'_>) -> Result<Vec<Account>, HttpError> {
         let params = TraderParams::get_accounts(params);
         self.client.fetch_sync(&params)
     }
 
     /// Fetch a specific account by `account_hash` (Schwab's encrypted account ID).
-    pub fn get_account(
-        &self,
-        params: &schwab_api_types::trader_params::GetAccountParams<'_>,
-    ) -> Result<Account, HttpError> {
+    pub fn get_account(&self, params: &GetAccountParams<'_>) -> Result<Account, HttpError> {
         let params = TraderParams::get_account(params);
         self.client.fetch_sync(&params)
     }
@@ -79,7 +73,7 @@ where
     /// Fetch all orders for a specific account.
     pub fn get_orders_by_path_param(
         &self,
-        params: &schwab_api_types::trader_params::GetOrdersByPathParams<'_>,
+        params: &GetOrdersByPathParams<'_>,
     ) -> Result<Vec<Order>, HttpError> {
         let params = TraderParams::get_orders_by_path_param(params);
         self.client.fetch_sync(&params)
@@ -88,44 +82,32 @@ where
     /// Fetch orders across all accounts.
     pub fn get_orders_by_query_param(
         &self,
-        params: &schwab_api_types::trader_params::GetOrdersByQueryParams<'_>,
+        params: &GetOrdersByQueryParams<'_>,
     ) -> Result<Vec<Order>, HttpError> {
         let params = TraderParams::get_orders_by_query_param(params);
         self.client.fetch_sync(&params)
     }
 
     /// Fetch a specific order by its `order_id` for a given account.
-    pub fn get_order(
-        &self,
-        params: &schwab_api_types::trader_params::GetOrderParams<'_>,
-    ) -> Result<Order, HttpError> {
+    pub fn get_order(&self, params: &GetOrderParams<'_>) -> Result<Order, HttpError> {
         let params = TraderParams::get_order(params);
         self.client.fetch_sync(&params)
     }
 
     /// Place an order for a specific account.
-    pub fn place_order(
-        &self,
-        params: &schwab_api_types::trader_params::PlaceOrderParams<'_>,
-    ) -> Result<(), HttpError> {
+    pub fn place_order(&self, params: &PlaceOrderParams<'_>) -> Result<(), HttpError> {
         let params = TraderParams::place_order(params);
         self.client.execute_sync(&params)
     }
 
     /// Replace an existing order.
-    pub fn replace_order(
-        &self,
-        params: &schwab_api_types::trader_params::ReplaceOrderParams<'_>,
-    ) -> Result<(), HttpError> {
+    pub fn replace_order(&self, params: &ReplaceOrderParams<'_>) -> Result<(), HttpError> {
         let params = TraderParams::replace_order(params);
         self.client.execute_sync(&params)
     }
 
     /// Cancel an order.
-    pub fn cancel_order(
-        &self,
-        params: &schwab_api_types::trader_params::CancelOrderParams<'_>,
-    ) -> Result<(), HttpError> {
+    pub fn cancel_order(&self, params: &CancelOrderParams<'_>) -> Result<(), HttpError> {
         let params = TraderParams::cancel_order(params);
         self.client.execute_sync(&params)
     }
@@ -133,7 +115,7 @@ where
     /// Preview an order (dry-run validation).
     pub fn preview_order(
         &self,
-        params: &schwab_api_types::trader_params::PreviewOrderParams<'_>,
+        params: &PreviewOrderParams<'_>,
     ) -> Result<PreviewOrder, HttpError> {
         let params = TraderParams::preview_order(params);
         self.client.fetch_sync(&params)
@@ -142,7 +124,7 @@ where
     /// Fetch transactions for a specific account.
     pub fn get_transactions_by_path_param(
         &self,
-        params: &schwab_api_types::trader_params::GetTransactionsByPathParams<'_>,
+        params: &GetTransactionsByPathParams<'_>,
     ) -> Result<Vec<Transaction>, HttpError> {
         let params = TraderParams::get_transactions_by_path_param(params);
         self.client.fetch_sync(&params)
@@ -151,7 +133,7 @@ where
     /// Fetch a specific transaction by its `transaction_id`.
     pub fn get_transactions_by_id(
         &self,
-        params: &schwab_api_types::trader_params::GetTransactionByIdParams<'_>,
+        params: &GetTransactionByIdParams<'_>,
     ) -> Result<Vec<Transaction>, HttpError> {
         let params = TraderParams::get_transactions_by_id(params);
         self.client.fetch_sync(&params)

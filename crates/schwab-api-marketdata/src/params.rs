@@ -7,7 +7,7 @@
 use http::Method;
 
 use schwab_api_core::RequestParams;
-use schwab_api_types::marketdata_params::*;
+use schwab_api_types::marketdata::*;
 
 /// Parameter builders for all Schwab Market Data API endpoints.
 ///

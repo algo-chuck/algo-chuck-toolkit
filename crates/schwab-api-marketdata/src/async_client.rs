@@ -4,10 +4,7 @@
 //! supporting operations like quotes, option chains, price history, and market hours.
 
 use schwab_api_core::{ApiClient, AsyncHttpClient, HttpError};
-use schwab_api_types::{
-    CandleList, ExpirationChain, GetMovers200Response, Hours, InstrumentResponse, OptionChain,
-    QuoteResponseObject,
-};
+use schwab_api_types::marketdata::*;
 use std::collections::HashMap;
 use std::ops::Deref;
 
@@ -71,7 +68,7 @@ where
     /// Get quotes for multiple symbols
     pub async fn get_quotes(
         &self,
-        params: &schwab_api_types::marketdata_params::GetQuotesParams<'_>,
+        params: &GetQuotesParams<'_>,
     ) -> Result<HashMap<String, QuoteResponseObject>, HttpError> {
         let params = MarketdataParams::get_quotes(params);
         self.client.fetch(&params).await
@@ -80,7 +77,7 @@ where
     /// Get quote for a single symbol
     pub async fn get_quote(
         &self,
-        params: &schwab_api_types::marketdata_params::GetQuoteParams<'_>,
+        params: &GetQuoteParams<'_>,
     ) -> Result<HashMap<String, QuoteResponseObject>, HttpError> {
         let params = MarketdataParams::get_quote(params);
         self.client.fetch(&params).await
@@ -108,10 +105,7 @@ where
     ///
     /// **Workaround**: Access the raw JSON from the error/warning output, or update the
     /// schwab-api-types crate with the corrected structure.
-    pub async fn get_chain(
-        &self,
-        params: &schwab_api_types::marketdata_params::GetChainParams<'_>,
-    ) -> Result<OptionChain, HttpError> {
+    pub async fn get_chain(&self, params: &GetChainParams<'_>) -> Result<OptionChain, HttpError> {
         let params = MarketdataParams::get_chain(params);
         self.client.fetch(&params).await
     }
@@ -119,7 +113,7 @@ where
     /// Get option expiration chain for an optionable symbol
     pub async fn get_expiration_chain(
         &self,
-        params: &schwab_api_types::marketdata_params::GetExpirationChainParams<'_>,
+        params: &GetExpirationChainParams<'_>,
     ) -> Result<ExpirationChain, HttpError> {
         let params = MarketdataParams::get_expiration_chain(params);
         self.client.fetch(&params).await
@@ -128,7 +122,7 @@ where
     /// Get price history for a symbol
     pub async fn get_price_history(
         &self,
-        params: &schwab_api_types::marketdata_params::GetPriceHistoryParams<'_>,
+        params: &GetPriceHistoryParams<'_>,
     ) -> Result<CandleList, HttpError> {
         let params = MarketdataParams::get_price_history(params);
         self.client.fetch(&params).await
@@ -137,7 +131,7 @@ where
     /// Get movers for a specific index
     pub async fn get_movers(
         &self,
-        params: &schwab_api_types::marketdata_params::GetMoversParams<'_>,
+        params: &GetMoversParams<'_>,
     ) -> Result<GetMovers200Response, HttpError> {
         let params = MarketdataParams::get_movers(params);
         self.client.fetch(&params).await
@@ -146,7 +140,7 @@ where
     /// Get market hours for multiple markets
     pub async fn get_market_hours(
         &self,
-        params: &schwab_api_types::marketdata_params::GetMarketHoursParams<'_>,
+        params: &GetMarketHoursParams<'_>,
     ) -> Result<HashMap<String, HashMap<String, Hours>>, HttpError> {
         let params = MarketdataParams::get_market_hours(params);
         self.client.fetch(&params).await
@@ -155,7 +149,7 @@ where
     /// Get market hours for a single market
     pub async fn get_market_hour(
         &self,
-        params: &schwab_api_types::marketdata_params::GetMarketHourParams<'_>,
+        params: &GetMarketHourParams<'_>,
     ) -> Result<HashMap<String, HashMap<String, Hours>>, HttpError> {
         let params = MarketdataParams::get_market_hour(params);
         self.client.fetch(&params).await
@@ -164,7 +158,7 @@ where
     /// Get instruments by symbol and projection
     pub async fn get_instruments(
         &self,
-        params: &schwab_api_types::marketdata_params::GetInstrumentsParams<'_>,
+        params: &GetInstrumentsParams<'_>,
     ) -> Result<HashMap<String, Vec<InstrumentResponse>>, HttpError> {
         let params = MarketdataParams::get_instruments(params);
         self.client.fetch(&params).await
@@ -173,7 +167,7 @@ where
     /// Get instrument by CUSIP
     pub async fn get_instruments_by_cusip(
         &self,
-        params: &schwab_api_types::marketdata_params::GetInstrumentByCusipParams<'_>,
+        params: &GetInstrumentByCusipParams<'_>,
     ) -> Result<HashMap<String, Vec<InstrumentResponse>>, HttpError> {
         let params = MarketdataParams::get_instruments_by_cusip(params);
         self.client.fetch(&params).await
