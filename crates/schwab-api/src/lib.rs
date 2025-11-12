@@ -105,9 +105,6 @@ pub mod prelude {
     // Core types and errors (always available)
     pub use crate::core::{ApiClient, HttpError, SchwabError};
 
-    // Types module - access as types::trader:: or types::marketdata::
-    pub use crate::types;
-
     // Re-export individual type modules for convenience
     #[cfg(feature = "trader")]
     pub use crate::types::trader;
