@@ -1,7 +1,7 @@
 use crate::marketdata;
 use serde::{Deserialize, Serialize};
 
-/// Market data information.
+/// Type from Schwab Market Data API.
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Error {
     /// Unique error id.

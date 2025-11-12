@@ -1,7 +1,7 @@
 use crate::marketdata;
 use serde::{Deserialize, Serialize};
 
-/// Market data information.
+/// Type from Schwab Market Data API.
 ///
 /// **API Operations (Response):**
 /// - `GET /chains` - Get option chain for an optionable Symbol

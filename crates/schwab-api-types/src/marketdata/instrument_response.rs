@@ -1,7 +1,7 @@
 use crate::marketdata;
 use serde::{Deserialize, Serialize};
 
-/// Market data information.
+/// Type from Schwab Market Data API.
 ///
 /// **API Operations (Response):**
 /// - `GET /instruments/{cusip_id}` - Get Instrument by specific cusip

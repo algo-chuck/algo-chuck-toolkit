@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-/// Market data information.
+/// Type from Schwab Market Data API.
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Bond {
     #[serde(rename = "cusip", skip_serializing_if = "Option::is_none")]

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-/// Market data information.
+/// Type from Schwab Market Data API.
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Candle {
     #[serde(rename = "close", skip_serializing_if = "Option::is_none")]
@@ -18,4 +18,3 @@ pub struct Candle {
     #[serde(rename = "volume", skip_serializing_if = "Option::is_none")]
     pub volume: Option<i64>,
 }
-

@@ -1,9 +1,9 @@
 use crate::marketdata;
 use serde::{Deserialize, Serialize};
 
+/// Type from Schwab Market Data API.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(untagged)]
-/// Market data information.
 pub enum QuoteResponseObject {
     EquityResponse(Box<marketdata::EquityResponse>),
     OptionResponse(Box<marketdata::OptionResponse>),

@@ -1,7 +1,7 @@
 use crate::marketdata;
 use serde::{Deserialize, Serialize};
 
-/// Market data information.
+/// Type from Schwab Market Data API.
 ///
 /// **API Operations (Response):**
 /// - `GET /pricehistory` - Get PriceHistory for a single symbol and date ranges.
