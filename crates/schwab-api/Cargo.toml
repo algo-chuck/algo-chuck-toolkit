@@ -10,20 +10,29 @@ categories = ["api-bindings", "web-programming::http-client"]
 repository = "https://github.com/algo-chuck/algo-chuck-toolkit"
 
 [features]
-default = ["marketdata", "trader", "oauth"]
-marketdata = ["schwab-api-marketdata"]
-trader = ["schwab-api-trader"]
+# API feature selection
+default = ["trader", "marketdata", "oauth", "reqwest-client", "ureq-client"]
+trader = ["schwab-api-trader", "schwab-api-types/trader", "schwab-api-core/trader"]
+marketdata = ["schwab-api-marketdata", "schwab-api-types/marketdata", "schwab-api-core/marketdata"]
 oauth = ["schwab-api-oauth"]
-full = ["marketdata", "trader", "oauth"]
+
+# HTTP client selection
+reqwest-client = ["schwab-api-core/reqwest-client", "schwab-api-oauth?/reqwest-client"]
+ureq-client = ["schwab-api-core/ureq-client", "schwab-api-oauth?/ureq-client"]
+
+# Convenience features
+full = ["trader", "marketdata", "oauth", "reqwest-client", "ureq-client"]
+async-only = ["trader", "marketdata", "oauth", "reqwest-client"]
+sync-only = ["trader", "marketdata", "oauth", "ureq-client"]
 
 [dependencies]
 # Core dependencies (always included)
-schwab-api-types = { path = "../schwab-api-types" }
-schwab-api-core = { path = "../schwab-api-core" }
+schwab-api-types = { path = "../schwab-api-types", default-features = false }
+schwab-api-core = { path = "../schwab-api-core", default-features = false }
 
 # Optional feature-gated dependencies
-schwab-api-oauth = { path = "../schwab-api-oauth", optional = true }
-schwab-api-marketdata = { path = "../schwab-api-marketdata", optional = true }
-schwab-api-trader = { path = "../schwab-api-trader", optional = true }
+schwab-api-oauth = { path = "../schwab-api-oauth", optional = true, default-features = false }
+schwab-api-marketdata = { path = "../schwab-api-marketdata", optional = true, default-features = false }
+schwab-api-trader = { path = "../schwab-api-trader", optional = true, default-features = false }
 
 
