@@ -9,7 +9,7 @@ description = "Trading API client for the Schwab API"
 [dependencies]
 schwab-api-types = { path = "../schwab-api-types", default-features = false, features = ["trader"] }
 schwab-api-core = { path = "../schwab-api-core", default-features = false, features = ["trader", "reqwest-client", "ureq-client"] }
-schwab-api-oauth = { path = "../schwab-api-oauth" }
+schwab-api-oauth = { path = "../schwab-api-oauth", default-features = false, features = ["reqwest-client", "ureq-client"] }
 serde = { workspace = true, features = ["derive"] }
 serde_urlencoded = { workspace = true }
 thiserror = { workspace = true }

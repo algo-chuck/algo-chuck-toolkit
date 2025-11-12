@@ -2,6 +2,12 @@
 //!
 //! This crate provides both async and sync OAuth2 clients for Schwab API authentication.
 //!
+//! ## Features
+//!
+//! - `reqwest-client` - Enable async OAuth client using reqwest (default)
+//! - `ureq-client` - Enable sync OAuth client using ureq (default)
+//! - `default` - Enables both `reqwest-client` and `ureq-client`
+//!
 //! ## Async Usage
 //!
 //! ```rust,no_run
@@ -42,7 +48,9 @@
 //! }
 //! ```
 
+#[cfg(feature = "reqwest-client")]
 mod async_client;
+#[cfg(feature = "ureq-client")]
 mod sync_client;
 
 pub mod config;
@@ -61,7 +69,11 @@ pub struct TokenResponse {
     pub id_token: String,
 }
 
-pub use async_client::AsyncOAuthClient;
 pub use config::OAuthConfig;
 pub use error::{OAuthError, Result};
+
+#[cfg(feature = "reqwest-client")]
+pub use async_client::AsyncOAuthClient;
+
+#[cfg(feature = "ureq-client")]
 pub use sync_client::SyncOAuthClient;
