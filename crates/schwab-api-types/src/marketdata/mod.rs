@@ -1,73 +1,37 @@
-pub mod asset_main_type;
-pub use self::asset_main_type::AssetMainType;
-pub mod bond;
-pub use self::bond::Bond;
-pub mod candle;
-pub use self::candle::Candle;
-pub mod candle_list;
-pub use self::candle_list::CandleList;
-pub mod contract_type;
-pub use self::contract_type::ContractType;
-pub mod div_freq;
-pub use self::div_freq::DivFreq;
-pub mod equity_asset_sub_type;
-pub use self::equity_asset_sub_type::EquityAssetSubType;
+//! Market data types for the Schwab API.
+//!
+//! This module contains all types for market data operations including quotes,
+//! option chains, price history, market hours, instruments, and movers.
+
+// ============================================================================
+// Response Types
+// ============================================================================
+
 pub mod equity_response;
 pub use self::equity_response::EquityResponse;
-pub mod error;
-pub use self::error::Error;
-pub mod error_response;
-pub use self::error_response::ErrorResponse;
-pub mod error_source;
-pub use self::error_source::ErrorSource;
-pub mod exercise_type;
-pub use self::exercise_type::ExerciseType;
-pub mod expiration;
-pub use self::expiration::Expiration;
-pub mod expiration_chain;
-pub use self::expiration_chain::ExpirationChain;
-pub mod expiration_type;
-pub use self::expiration_type::ExpirationType;
-pub mod extended_market;
-pub use self::extended_market::ExtendedMarket;
 pub mod forex_response;
 pub use self::forex_response::ForexResponse;
-pub mod fund_strategy;
-pub use self::fund_strategy::FundStrategy;
-pub mod fundamental;
-pub use self::fundamental::Fundamental;
-pub mod fundamental_inst;
-pub use self::fundamental_inst::FundamentalInst;
-pub mod future_option_response;
-pub use self::future_option_response::FutureOptionResponse;
 pub mod future_response;
 pub use self::future_response::FutureResponse;
+pub mod future_option_response;
+pub use self::future_option_response::FutureOptionResponse;
+pub mod index_response;
+pub use self::index_response::IndexResponse;
+pub mod mutual_fund_response;
+pub use self::mutual_fund_response::MutualFundResponse;
+pub mod option_response;
+pub use self::option_response::OptionResponse;
+pub mod error_response;
+pub use self::error_response::ErrorResponse;
 pub mod get_instruments_200_response;
 pub use self::get_instruments_200_response::GetInstruments200Response;
 pub mod get_movers_200_response;
 pub use self::get_movers_200_response::GetMovers200Response;
-pub mod hours;
-pub use self::hours::Hours;
-pub mod index_response;
-pub use self::index_response::IndexResponse;
-pub mod instrument;
-pub use self::instrument::Instrument;
-pub mod instrument_response;
-pub use self::instrument_response::InstrumentResponse;
-pub mod interval;
-pub use self::interval::Interval;
-pub mod mutual_fund_asset_sub_type;
-pub use self::mutual_fund_asset_sub_type::MutualFundAssetSubType;
-pub mod mutual_fund_response;
-pub use self::mutual_fund_response::MutualFundResponse;
-pub mod option_chain;
-pub use self::option_chain::OptionChain;
-pub mod option_contract;
-pub use self::option_contract::OptionContract;
-pub mod option_deliverables;
-pub use self::option_deliverables::OptionDeliverables;
-pub mod option_response;
-pub use self::option_response::OptionResponse;
+
+// ============================================================================
+// Quote Types
+// ============================================================================
+
 pub mod quote_equity;
 pub use self::quote_equity::QuoteEquity;
 pub mod quote_error;
@@ -88,8 +52,11 @@ pub mod quote_request;
 pub use self::quote_request::QuoteRequest;
 pub mod quote_response_object;
 pub use self::quote_response_object::QuoteResponseObject;
-pub mod quote_type;
-pub use self::quote_type::QuoteType;
+
+// ============================================================================
+// Reference Data Types
+// ============================================================================
+
 pub mod reference_equity;
 pub use self::reference_equity::ReferenceEquity;
 pub mod reference_forex;
@@ -104,14 +71,101 @@ pub mod reference_mutual_fund;
 pub use self::reference_mutual_fund::ReferenceMutualFund;
 pub mod reference_option;
 pub use self::reference_option::ReferenceOption;
+
+// ============================================================================
+// Option Chain Types
+// ============================================================================
+
+pub mod option_chain;
+pub use self::option_chain::OptionChain;
+pub mod option_contract;
+pub use self::option_contract::OptionContract;
+pub mod option_deliverables;
+pub use self::option_deliverables::OptionDeliverables;
+pub mod expiration;
+pub use self::expiration::Expiration;
+pub mod expiration_chain;
+pub use self::expiration_chain::ExpirationChain;
+pub mod underlying;
+pub use self::underlying::Underlying;
+
+// ============================================================================
+// Price History & Candles
+// ============================================================================
+
+pub mod candle;
+pub use self::candle::Candle;
+pub mod candle_list;
+pub use self::candle_list::CandleList;
+
+// ============================================================================
+// Market Information
+// ============================================================================
+
+pub mod hours;
+pub use self::hours::Hours;
+pub mod interval;
+pub use self::interval::Interval;
+pub mod extended_market;
+pub use self::extended_market::ExtendedMarket;
 pub mod regular_market;
 pub use self::regular_market::RegularMarket;
 pub mod screener;
 pub use self::screener::Screener;
+
+// ============================================================================
+// Instrument Types
+// ============================================================================
+
+pub mod instrument;
+pub use self::instrument::Instrument;
+pub mod instrument_response;
+pub use self::instrument_response::InstrumentResponse;
+pub mod fundamental;
+pub use self::fundamental::Fundamental;
+pub mod fundamental_inst;
+pub use self::fundamental_inst::FundamentalInst;
+pub mod bond;
+pub use self::bond::Bond;
+
+// ============================================================================
+// Enumeration Types
+// ============================================================================
+
+pub mod asset_main_type;
+pub use self::asset_main_type::AssetMainType;
+pub mod contract_type;
+pub use self::contract_type::ContractType;
+pub mod div_freq;
+pub use self::div_freq::DivFreq;
+pub mod equity_asset_sub_type;
+pub use self::equity_asset_sub_type::EquityAssetSubType;
+pub mod exercise_type;
+pub use self::exercise_type::ExerciseType;
+pub mod expiration_type;
+pub use self::expiration_type::ExpirationType;
+pub mod fund_strategy;
+pub use self::fund_strategy::FundStrategy;
+pub mod mutual_fund_asset_sub_type;
+pub use self::mutual_fund_asset_sub_type::MutualFundAssetSubType;
+pub mod quote_type;
+pub use self::quote_type::QuoteType;
 pub mod settlement_type;
 pub use self::settlement_type::SettlementType;
-pub mod underlying;
-pub use self::underlying::Underlying;
+
+// ============================================================================
+// Error Types
+// ============================================================================
+
+pub mod error;
+pub use self::error::Error;
+pub mod error_source;
+pub use self::error_source::ErrorSource;
+
+// ============================================================================
+// Parameter Structs
+// ============================================================================
+
 pub mod get_chain_params;
 pub use self::get_chain_params::GetChainParams;
 pub mod get_expiration_chain_params;
