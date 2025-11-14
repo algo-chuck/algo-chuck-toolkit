@@ -9,7 +9,7 @@ description = "Command-line interface for the Schwab API toolkit"
 [dependencies]
 # Use only the facade crate with sync-only features (CLI doesn't need async)
 schwab-api = { path = "../../crates/schwab-api", default-features = false, features = ["trader", "marketdata", "oauth", "ureq-client"] }
-anyhow = { workspace = true }
+anyhow = { version = "1.0", default-features = false }
 base64 = { workspace = true }
 chrono = { workspace = true, features = ["serde", "clock"] }
 clap = { version = "4.4", features = ["derive"] }
