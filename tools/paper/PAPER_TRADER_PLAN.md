@@ -12,173 +12,229 @@ Your paper trader will be a drop-in replacement mock server that implements all 
 
 ## Phase 1: Database Schema Design
 
-### Core Tables
+### Design Philosophy
+
+After analyzing the OpenAPI spec (`api-spec-trader.json`), the schema follows these principles:
+
+1. **Store API objects as JSON** - Match what the API returns exactly
+2. **Minimal normalization** - Only extract fields needed for querying/filtering
+3. **4 core tables** - Accounts, Orders, Transactions, UserPreferences
+4. **No over-engineering** - Positions and balances are part of account data (as per spec)
+
+### Core Tables (Based on OpenAPI Spec)
 
 ```sql
--- Accounts table
+-- Table 1: Accounts
+-- Stores full SecuritiesAccount JSON (MarginAccount or CashAccount)
+-- SecuritiesAccount contains positions array inline, plus initialBalances, currentBalances, projectedBalances
 CREATE TABLE accounts (
-    id INTEGER PRIMARY KEY,
-    account_number TEXT UNIQUE NOT NULL,
-    account_hash TEXT UNIQUE NOT NULL,  -- encrypted value
-    account_type TEXT NOT NULL,  -- CASH, MARGIN
-    is_day_trader BOOLEAN DEFAULT 0,
-    is_closing_only_restricted BOOLEAN DEFAULT 0,
-    round_trips INTEGER DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Balances table (current state)
-CREATE TABLE account_balances (
-    account_id INTEGER PRIMARY KEY REFERENCES accounts(id),
-    cash_balance REAL DEFAULT 0,
-    cash_available_for_trading REAL DEFAULT 0,
-    cash_available_for_withdrawal REAL DEFAULT 0,
-    liquidation_value REAL DEFAULT 0,
-    long_market_value REAL DEFAULT 0,
-    short_market_value REAL DEFAULT 0,
-    -- ... other balance fields from spec
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Positions table
-CREATE TABLE positions (
-    id INTEGER PRIMARY KEY,
-    account_id INTEGER REFERENCES accounts(id),
-    symbol TEXT NOT NULL,
-    asset_type TEXT NOT NULL,  -- EQUITY, OPTION, MUTUAL_FUND, etc.
-    quantity REAL NOT NULL,
-    average_price REAL NOT NULL,
-    market_value REAL,
-    day_pl REAL DEFAULT 0,
-    day_pl_percent REAL DEFAULT 0,
-    -- instrument details as JSON
-    instrument_data TEXT,  -- JSON blob
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    account_number TEXT UNIQUE NOT NULL,      -- plaintext account number
+    hash_value TEXT UNIQUE NOT NULL,          -- encrypted value (for API URLs)
+    account_type TEXT NOT NULL,               -- 'CASH' or 'MARGIN' (from SecuritiesAccount.type)
+    account_data TEXT NOT NULL,               -- Full SecuritiesAccount JSON (includes positions, balances)
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Orders table
+-- Table 2: Orders
+-- Stores full Order/OrderRequest JSON
+-- Order contains orderLegCollection, orderActivityCollection, childOrderStrategies inline
 CREATE TABLE orders (
-    id INTEGER PRIMARY KEY,
-    order_id TEXT UNIQUE NOT NULL,  -- external facing ID
-    account_id INTEGER REFERENCES accounts(id),
-    status TEXT NOT NULL,  -- WORKING, FILLED, CANCELED, etc.
-    order_type TEXT NOT NULL,  -- MARKET, LIMIT, STOP, etc.
-    session TEXT NOT NULL,  -- NORMAL, AM, PM
-    duration TEXT NOT NULL,  -- DAY, GTC, etc.
-    price REAL,
-    stop_price REAL,
-    quantity REAL NOT NULL,
-    filled_quantity REAL DEFAULT 0,
-    remaining_quantity REAL,
-    strategy_type TEXT,  -- SINGLE, OCO, TRIGGER, etc.
-    -- full order JSON for complex orders
-    order_data TEXT,  -- JSON blob of full OrderRequest
-    entered_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    close_time TIMESTAMP,
-    cancelable BOOLEAN DEFAULT 1,
-    editable BOOLEAN DEFAULT 1
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    order_id INTEGER NOT NULL,                -- from Order.orderId (int64 in spec)
+    account_number TEXT NOT NULL,             -- from Order.accountNumber (int64 in spec, but we use TEXT for FK)
+    status TEXT NOT NULL,                     -- from Order.status enum (WORKING, FILLED, CANCELED, etc.)
+    entered_time TIMESTAMP,                   -- from Order.enteredTime (ISO-8601)
+    close_time TIMESTAMP,                     -- from Order.closeTime (ISO-8601)
+    order_data TEXT NOT NULL,                 -- Full Order/OrderRequest JSON
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (account_number) REFERENCES accounts(account_number)
 );
 
--- Order legs (for multi-leg orders)
-CREATE TABLE order_legs (
-    id INTEGER PRIMARY KEY,
-    order_id INTEGER REFERENCES orders(id),
-    instruction TEXT NOT NULL,  -- BUY, SELL, etc.
-    symbol TEXT NOT NULL,
-    asset_type TEXT NOT NULL,
-    quantity REAL NOT NULL,
-    position_effect TEXT,  -- OPENING, CLOSING
-    instrument_data TEXT  -- JSON blob
-);
-
--- Executions (fills)
-CREATE TABLE executions (
-    id INTEGER PRIMARY KEY,
-    order_id INTEGER REFERENCES orders(id),
-    execution_type TEXT NOT NULL,  -- FILL
-    quantity REAL NOT NULL,
-    price REAL NOT NULL,
-    execution_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Transactions
+-- Table 3: Transactions
+-- Stores full Transaction JSON
+-- Transaction contains transferItems array, user object inline
 CREATE TABLE transactions (
-    id INTEGER PRIMARY KEY,
-    transaction_id TEXT UNIQUE NOT NULL,
-    account_id INTEGER REFERENCES accounts(id),
-    transaction_type TEXT NOT NULL,
-    description TEXT,
-    amount REAL NOT NULL,
-    net_amount REAL,
-    -- related order if applicable
-    order_id INTEGER REFERENCES orders(id),
-    -- full transaction JSON
-    transaction_data TEXT,  -- JSON blob
-    transaction_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    activity_id INTEGER NOT NULL,            -- from Transaction.activityId (int64 in spec)
+    account_number TEXT NOT NULL,            -- from Transaction.accountNumber (string in spec)
+    type TEXT NOT NULL,                      -- from Transaction.type enum (TransactionType)
+    time TIMESTAMP,                          -- from Transaction.time (ISO-8601)
+    transaction_data TEXT NOT NULL,          -- Full Transaction JSON
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (account_number) REFERENCES accounts(account_number)
 );
 
--- User preferences
+-- Table 4: User Preferences
+-- Stores full UserPreference JSON
+-- UserPreference contains accounts array, streamerInfo array, offers array inline
 CREATE TABLE user_preferences (
     id INTEGER PRIMARY KEY,
-    express_trading BOOLEAN DEFAULT 0,
-    direct_options_routing BOOLEAN DEFAULT 0,
-    direct_equity_routing BOOLEAN DEFAULT 0,
-    default_equity_order_leg_instruction TEXT,
-    default_equity_order_type TEXT,
-    default_equity_order_price_link_type TEXT,
-    default_equity_order_duration TEXT,
-    default_equity_order_market_session TEXT,
-    -- ... other preference fields
-    preferences_data TEXT  -- JSON blob for full UserPreference object
+    preference_data TEXT NOT NULL,           -- Full UserPreference JSON
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Indexes for common queries
+CREATE INDEX idx_orders_account_number ON orders(account_number);
+CREATE INDEX idx_orders_status ON orders(status);
+CREATE INDEX idx_orders_entered_time ON orders(entered_time);
+CREATE INDEX idx_transactions_account_number ON transactions(account_number);
+CREATE INDEX idx_transactions_type ON transactions(type);
+CREATE INDEX idx_transactions_time ON transactions(time);
 ```
+
+### Phase 1 Planning Questions
+
+**Status: ⏳ AWAITING DECISIONS**
+
+#### 1. Database Library Choice
+
+- **Option A: sqlx** - Async-first, compile-time checked SQL, works with raw SQL
+  - Pros: Modern async/await, flexible, no ORM overhead
+  - Cons: Need to write SQL by hand
+- **Option B: diesel** - Type-safe ORM, can be sync or async
+  - Pros: Strong typing, migrations built-in, less SQL writing
+  - Cons: Steeper learning curve, more boilerplate
+
+**Decision:** [ ]
+
+#### 2. Order ID Generation
+
+Real Schwab API uses `int64` for `orderId`. Options:
+
+- **Option A:** Use SQLite AUTOINCREMENT as the order ID
+- **Option B:** Generate random int64s (e.g., timestamp-based or UUID as int)
+- **Option C:** Use sequential counter starting from 1000000
+
+**Decision:** [ ]
+
+#### 3. Initial Account Setup
+
+- **Option A:** Seed database with 2-3 sample accounts on first run
+  - Example: 1 CASH account, 1 MARGIN account with positions
+- **Option B:** Start with empty database, require manual account creation
+- **Option C:** Add admin endpoint to create accounts (e.g., POST /admin/accounts)
+
+**Decision:** [ ]
+
+#### 4. Account Number/Hash Relationship
+
+The `/accounts/accountNumbers` endpoint returns `{ accountNumber, hashValue }[]`
+
+- **Option A:** Generate account numbers and hashes on startup/first run
+- **Option B:** Let users create accounts via separate admin endpoint
+- **Option C:** Use fixed account numbers for testing (e.g., "12345678", "87654321")
+
+**Decision:** [ ]
+
+#### 5. Timestamp Format
+
+- **Option A:** Use SQLite's `CURRENT_TIMESTAMP` (UTC, ISO-8601 format)
+- **Option B:** Store as Unix epoch integers (easier for calculations)
+- **Option C:** Store as TEXT in ISO-8601 format for human readability
+
+**Decision:** [ ]
+
+#### 6. Transaction ID Generation
+
+Similar to Order IDs, Transaction.activityId is int64:
+
+- **Option A:** Use SQLite AUTOINCREMENT
+- **Option B:** Generate timestamp-based int64s
+- **Option C:** Use sequential counter
+
+**Decision:** [ ]
+
+---
+
+### Schema Rationale
+
+**Why JSON storage instead of normalized tables?**
+
+1. ✅ **API Fidelity**: The OpenAPI spec defines complex nested structures:
+   - `SecuritiesAccount` → `positions[]` (inline, not separate table)
+   - `MarginBalance`/`CashBalance` → nested objects (30+ fields each)
+   - `Order` → `orderLegCollection[]`, `childOrderStrategies[]` (inline)
+2. ✅ **Simplicity**: 4 tables vs 8+ normalized tables
+
+3. ✅ **Flexibility**: API changes don't require schema migrations
+
+4. ✅ **Query Performance**: We index only what we filter/sort by (status, time, account)
+
+5. ✅ **Type Safety**: Rust structs (from generated types) serialize/deserialize directly
+
+**What we extract for indexing:**
+
+- `orders.status` - Filter by order status (WORKING, FILLED, etc.)
+- `orders.entered_time` - Date range filtering per spec
+- `transactions.type` - Filter by transaction type per spec
+- `transactions.time` - Date range filtering per spec
 
 ---
 
 ## Phase 2: Database Layer (Repository Pattern)
 
+**Status: ⏸️ PENDING (Blocked by Phase 1 decisions)**
+
 ### File Structure
 
 ```
-tools/trader/src/
+tools/paper/src/
 ├── db/
 │   ├── mod.rs           # Database connection manager
-│   ├── schema.sql       # SQLite schema
-│   ├── migrations.rs    # Migration runner
+│   ├── schema.sql       # SQLite schema (from Phase 1)
+│   ├── migrations/      # SQL migration files
+│   │   └── 001_initial_schema.sql
 │   └── repositories/
 │       ├── mod.rs
 │       ├── accounts.rs
 │       ├── orders.rs
-│       ├── positions.rs
 │       ├── transactions.rs
 │       └── preferences.rs
 ```
 
 ### Dependencies to Add
 
+**DECISION NEEDED: Choose between sqlx OR diesel**
+
+**Option A: sqlx**
+
 ```toml
 [dependencies]
 sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite", "macros", "chrono"] }
-# OR for easier PostgreSQL migration later:
-diesel = { version = "2.2", features = ["sqlite", "chrono", "r2d2"] }
-diesel_migrations = "2.2"
+serde_json = "1.0"  # For JSON serialization
 ```
 
-### Repository Pattern Example
+**Option B: diesel**
+
+```toml
+[dependencies]
+diesel = { version = "2.2", features = ["sqlite", "chrono", "r2d2"] }
+diesel_migrations = "2.2"
+serde_json = "1.0"  # For JSON serialization
+```
+
+### Repository Pattern Examples
+
+**NOTE: These examples will be updated once database library choice is made**
 
 ```rust
 // db/repositories/accounts.rs
+use sqlx::SqlitePool;  // OR: use diesel::SqliteConnection;
+use serde_json;
+
 pub struct AccountRepository {
-    pool: SqlitePool,  // or PgPool later
+    pool: SqlitePool,  // OR: PgPool for PostgreSQL later
 }
 
 impl AccountRepository {
-    pub async fn create(&self, account: NewAccount) -> Result<Account>;
-    pub async fn find_by_hash(&self, hash: &str) -> Result<Option<Account>>;
-    pub async fn list_all(&self) -> Result<Vec<Account>>;
-    pub async fn get_with_positions(&self, hash: &str) -> Result<AccountWithPositions>;
-    pub async fn update_balance(&self, id: i64, balance: Balance) -> Result<()>;
+    pub async fn create(&self, account_number: &str, hash_value: &str, account_type: &str, account_data: &SecuritiesAccount) -> Result<i64>;
+    pub async fn find_by_hash(&self, hash: &str) -> Result<Option<SecuritiesAccount>>;
+    pub async fn find_by_account_number(&self, account_number: &str) -> Result<Option<SecuritiesAccount>>;
+    pub async fn list_all(&self, include_positions: bool) -> Result<Vec<SecuritiesAccount>>;
+    pub async fn update(&self, account_number: &str, account_data: &SecuritiesAccount) -> Result<()>;
 }
 
 // db/repositories/orders.rs
@@ -187,12 +243,33 @@ pub struct OrderRepository {
 }
 
 impl OrderRepository {
-    pub async fn create(&self, order: NewOrder) -> Result<Order>;
-    pub async fn find_by_id(&self, order_id: &str) -> Result<Option<Order>>;
-    pub async fn list_by_account(&self, account_id: i64, params: OrderQueryParams) -> Result<Vec<Order>>;
-    pub async fn update_status(&self, order_id: &str, status: OrderStatus) -> Result<()>;
-    pub async fn cancel(&self, order_id: &str) -> Result<()>;
-    pub async fn add_execution(&self, order_id: &str, execution: Execution) -> Result<()>;
+    pub async fn create(&self, account_number: &str, order_data: &OrderRequest) -> Result<i64>;  // Returns order_id
+    pub async fn find_by_id(&self, order_id: i64) -> Result<Option<Order>>;
+    pub async fn list_by_account(&self, account_number: &str, from_date: Option<DateTime>, to_date: Option<DateTime>, status: Option<String>) -> Result<Vec<Order>>;
+    pub async fn update_status(&self, order_id: i64, status: &str) -> Result<()>;
+    pub async fn update(&self, order_id: i64, order_data: &Order) -> Result<()>;
+    pub async fn delete(&self, order_id: i64) -> Result<()>;  // For cancel
+}
+
+// db/repositories/transactions.rs
+pub struct TransactionRepository {
+    pool: SqlitePool,
+}
+
+impl TransactionRepository {
+    pub async fn create(&self, account_number: &str, transaction_type: &str, transaction_data: &Transaction) -> Result<i64>;  // Returns activity_id
+    pub async fn find_by_id(&self, activity_id: i64) -> Result<Option<Transaction>>;
+    pub async fn list_by_account(&self, account_number: &str, start_date: &str, end_date: &str, transaction_type: Option<&str>) -> Result<Vec<Transaction>>;
+}
+
+// db/repositories/preferences.rs
+pub struct PreferencesRepository {
+    pool: SqlitePool,
+}
+
+impl PreferencesRepository {
+    pub async fn get(&self) -> Result<Option<UserPreference>>;
+    pub async fn upsert(&self, preference_data: &UserPreference) -> Result<()>;
 }
 ```
 
@@ -509,57 +586,153 @@ pub struct PostgresDatabase {
 
 ## Implementation Phases
 
-### Phase 1: Foundation (Week 1)
+### Phase 1: Foundation (Week 1) ⏳ IN PLANNING
 
-- [ ] Database schema
-- [ ] Repository pattern implementation
-- [ ] Basic account CRUD
-- [ ] Test with `/accounts` endpoints
+**Planning Decisions (see Phase 1 Planning Questions above):**
 
-### Phase 2: Orders (Week 2)
+- [ ] 1. Choose database library (sqlx vs diesel)
+- [ ] 2. Decide order ID generation strategy
+- [ ] 3. Decide initial account setup approach
+- [ ] 4. Decide account number/hash generation
+- [ ] 5. Choose timestamp format
+- [ ] 6. Decide transaction ID generation strategy
 
-- [ ] Order repository
-- [ ] Order service with validation
-- [ ] Place/cancel/get order handlers
-- [ ] Basic MARKET order execution
+**Implementation Tasks:**
 
-### Phase 3: Positions & Balances (Week 3)
+- [ ] Create database schema SQL file
+- [ ] Set up database connection and migrations
+- [ ] Implement AccountRepository with basic CRUD
+- [ ] Test with `/accounts/accountNumbers` endpoint
+- [ ] Test with `/accounts` endpoint (without positions)
+- [ ] Test with `/accounts/{accountNumber}` endpoint
 
-- [ ] Position tracking
-- [ ] Balance calculations
-- [ ] Order execution updates positions
-- [ ] P&L calculations
+**Success Criteria:**
 
-### Phase 4: Advanced Orders (Week 4)
+- [ ] Can retrieve list of account numbers with hashes
+- [ ] Can retrieve all accounts
+- [ ] Can retrieve specific account by hash
+- [ ] Database persists data between restarts
 
-- [ ] LIMIT, STOP, STOP_LIMIT orders
-- [ ] Multi-leg orders (spreads)
-- [ ] OCO, Bracket orders
-- [ ] Order preview with commission calculation
+---
 
-### Phase 5: Transactions (Week 5)
+### Phase 2: Orders (Week 2) ⏸️ NOT STARTED
 
-- [ ] Transaction generation from fills
-- [ ] Transaction history
-- [ ] Corporate actions (dividends, splits)
+**Tasks:**
 
-### Phase 6: Polish (Week 6)
+- [ ] Implement OrderRepository with full CRUD
+- [ ] Implement OrderService with validation logic
+- [ ] Update handlers for place/cancel/get/replace order
+- [ ] Implement basic MARKET order execution (immediate fill)
+- [ ] Test all order endpoints
 
-- [ ] User preferences
-- [ ] Error handling refinement
-- [ ] Integration tests
-- [ ] Documentation
+**Success Criteria:**
+
+- [ ] Can place market orders
+- [ ] Can retrieve orders by account
+- [ ] Can retrieve specific order by ID
+- [ ] Can cancel orders
+- [ ] Orders persist correctly
+
+---
+
+### Phase 3: Positions & Balances (Week 3) ⏸️ NOT STARTED
+
+**Tasks:**
+
+- [ ] Implement position tracking logic in AccountService
+- [ ] Update account balances after order fills
+- [ ] Calculate P&L for positions
+- [ ] Test `/accounts?fields=positions` endpoint
+- [ ] Test balance recalculation after trades
+
+**Success Criteria:**
+
+- [ ] Positions update correctly after fills
+- [ ] Balances reflect order executions
+- [ ] P&L calculations are accurate
+- [ ] Can retrieve accounts with positions
+
+---
+
+### Phase 4: Advanced Orders (Week 4) ⏸️ NOT STARTED
+
+**Tasks:**
+
+- [ ] Implement LIMIT order execution
+- [ ] Implement STOP and STOP_LIMIT orders
+- [ ] Implement multi-leg orders (spreads)
+- [ ] Implement complex order strategies (OCO, Bracket)
+- [ ] Implement order preview with commission calculation
+- [ ] Test `/accounts/{accountNumber}/previewOrder` endpoint
+
+**Success Criteria:**
+
+- [ ] All order types execute correctly
+- [ ] Multi-leg orders work
+- [ ] Order preview returns accurate estimates
+- [ ] Complex strategies function properly
+
+---
+
+### Phase 5: Transactions (Week 5) ⏸️ NOT STARTED
+
+**Tasks:**
+
+- [ ] Implement TransactionRepository
+- [ ] Generate transactions from order fills
+- [ ] Implement transaction history endpoints
+- [ ] Add support for corporate actions (dividends, splits)
+- [ ] Test `/accounts/{accountNumber}/transactions` endpoint
+- [ ] Test `/accounts/{accountNumber}/transactions/{transactionId}` endpoint
+
+**Success Criteria:**
+
+- [ ] Transactions generated for all order fills
+- [ ] Can retrieve transaction history with filtering
+- [ ] Can retrieve specific transaction by ID
+- [ ] Date range filtering works correctly
+
+---
+
+### Phase 6: Polish & User Preferences (Week 6) ⏸️ NOT STARTED
+
+**Tasks:**
+
+- [ ] Implement PreferencesRepository
+- [ ] Implement `/userPreference` endpoint
+- [ ] Add comprehensive error handling
+- [ ] Write integration tests for all endpoints
+- [ ] Add logging and observability
+- [ ] Write documentation
+
+**Success Criteria:**
+
+- [ ] User preferences can be retrieved/updated
+- [ ] All 13 API endpoints working
+- [ ] Integration test suite passing
+- [ ] Documentation complete
 
 ---
 
 ## Key Design Decisions
 
-1. **JSON Blobs for Complex Types**: Store full `OrderRequest`, `Account`, etc. as JSON to avoid over-normalization
-2. **Repository Pattern**: Easy to swap SQLite → PostgreSQL
-3. **Service Layer**: Business logic separate from handlers and database
-4. **Background Order Executor**: Separate tokio task simulates fills
-5. **Mock Market Data**: Start simple, can integrate real feeds later
+### ✅ Confirmed Decisions
+
+1. **JSON Blobs for Complex Types**: Store full `OrderRequest`, `SecuritiesAccount`, `Transaction`, `UserPreference` as JSON to match API spec exactly
+2. **4 Core Tables**: accounts, orders, transactions, user_preferences (not 8+ normalized tables)
+3. **Repository Pattern**: Easy to swap SQLite → PostgreSQL by changing connection string
+4. **Service Layer**: Business logic separate from handlers and database
+5. **Background Order Executor**: Separate tokio task simulates fills
 6. **No Auth Initially**: Focus on CRUD and business logic first
+
+### ⏳ Pending Decisions (Phase 1)
+
+- Database library choice (sqlx vs diesel)
+- Order ID generation strategy
+- Transaction ID generation strategy
+- Initial account setup approach
+- Account number/hash generation
+- Timestamp format
 
 ---
 
