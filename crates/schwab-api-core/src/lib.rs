@@ -67,5 +67,5 @@ mod ureq_client;
 // Re-export public API
 pub use client::{ApiClient, AsyncHttpClient, HttpClient, RequestParams, SyncHttpClient};
 pub use config::ApiConfig;
-pub use error::{HttpError, SchwabError, parse_api_error};
+pub use error::{HttpError, Result, SchwabError, parse_api_error};
 pub use response::{HttpResponse, SchwabSuccess};

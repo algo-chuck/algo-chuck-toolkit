@@ -11,6 +11,9 @@ use schwab_api_types::marketdata::ErrorResponse;
 #[cfg(feature = "trader")]
 use schwab_api_types::trader::ServiceError;
 
+/// Convenient Result type alias using HttpError
+pub type Result<T> = std::result::Result<T, HttpError>;
+
 /// Errors returned by the Schwab API (parsed from non-success HTTP responses).
 #[derive(Error, Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
