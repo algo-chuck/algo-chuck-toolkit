@@ -203,21 +203,38 @@ _Already included in schema: orders.account_number, orders.status, orders.entere
 
 **Status: 🔄 READY TO START (Phase 1 decisions complete)**
 
+### Design Decisions
+
+**Naming Conventions (Aligned with OpenAPI Spec):**
+
+1. **"Repository" Pattern** - Standard naming for data access layer (not "tables" or "models")
+2. **File Names** - Based on OpenAPI `tags`, converted to Rust snake_case:
+   - `Accounts` → `accounts.rs`
+   - `Orders` → `orders.rs`
+   - `Transactions` → `transactions.rs`
+   - `User Preference` → `user_preference.rs`
+3. **Method Names** - Based on OpenAPI `operationId`, converted to Rust snake_case:
+   - `getAccountNumbers` → `get_account_numbers()`
+   - `placeOrder` → `place_order()`
+   - `cancelOrder` → `cancel_order()`
+   - `getTransactionsByPathParam` → `get_transactions_by_path_param()`
+   - `getUserPreference` → `get_user_preference()`
+
 ### File Structure
 
 ```
 tools/paper/src/
 ├── db/
-│   ├── mod.rs           # Database connection manager
-│   ├── schema.sql       # SQLite schema (from Phase 1)
-│   ├── migrations/      # SQL migration files
+│   ├── mod.rs                # Database connection manager
+│   ├── schema.sql            # SQLite schema (from Phase 1)
+│   ├── migrations/           # SQL migration files
 │   │   └── 001_initial_schema.sql
 │   └── repositories/
-│       ├── mod.rs
-│       ├── accounts.rs
-│       ├── orders.rs
-│       ├── transactions.rs
-│       └── preferences.rs
+│       ├── mod.rs            # Re-exports all repositories
+│       ├── accounts.rs       # AccountRepository (tag: Accounts)
+│       ├── orders.rs         # OrderRepository (tag: Orders)
+│       ├── transactions.rs   # TransactionRepository (tag: Transactions)
+│       └── user_preference.rs # UserPreferenceRepository (tag: User Preference)
 ```
 
 ### Dependencies to Add
@@ -235,8 +252,11 @@ chrono = { version = "0.4", features = ["serde"] }  # For timestamp handling
 
 **Using sqlx with async/await:**
 
+**Note:** Method names follow OpenAPI `operationId` converted to snake_case
+
 ```rust
 // db/repositories/accounts.rs
+// Implements operations from OpenAPI tag: "Accounts"
 use sqlx::SqlitePool;
 use serde_json;
 use schwab_api_types::trader::SecuritiesAccount;  // From your existing types
@@ -249,6 +269,54 @@ impl AccountRepository {
     pub fn new(pool: SqlitePool) -> Self {
         Self { pool }
     }
+
+    // operationId: getAccountNumbers
+    pub async fn get_account_numbers(&self) -> Result<Vec<(String, String)>, sqlx::Error> {
+        let rows = sqlx::query!(
+            r#"
+            SELECT account_number, hash_value FROM accounts ORDER BY created_at DESC
+            "#
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rows.into_iter().map(|r| (r.account_number, r.hash_value)).collect())
+    }
+
+    // operationId: getAccounts (list all accounts)
+    pub async fn get_accounts(&self) -> Result<Vec<SecuritiesAccount>, sqlx::Error> {
+        let rows = sqlx::query!(
+            r#"
+            SELECT account_data FROM accounts ORDER BY created_at DESC
+            "#
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        rows.into_iter()
+            .map(|r| serde_json::from_str(&r.account_data))
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| sqlx::Error::Decode(Box::new(e)))
+    }
+
+    // operationId: getAccount (get specific account by hash)
+    pub async fn get_account(&self, hash: &str) -> Result<Option<SecuritiesAccount>, sqlx::Error> {
+        let row = sqlx::query!(
+            r#"
+            SELECT account_data FROM accounts WHERE hash_value = ?
+            "#,
+            hash
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        match row {
+            Some(r) => Ok(Some(serde_json::from_str(&r.account_data)?)),
+            None => Ok(None),
+        }
+    }
+
+    // Additional helper methods (not directly from operationIds)
 
     pub async fn create(&self, account_number: &str, hash_value: &str, account_type: &str, account_data: &SecuritiesAccount) -> Result<i64, sqlx::Error> {
         let account_data_json = serde_json::to_string(account_data)?;
@@ -269,22 +337,6 @@ impl AccountRepository {
         Ok(result.last_insert_rowid())
     }
 
-    pub async fn find_by_hash(&self, hash: &str) -> Result<Option<SecuritiesAccount>, sqlx::Error> {
-        let row = sqlx::query!(
-            r#"
-            SELECT account_data FROM accounts WHERE hash_value = ?
-            "#,
-            hash
-        )
-        .fetch_optional(&self.pool)
-        .await?;
-
-        match row {
-            Some(r) => Ok(Some(serde_json::from_str(&r.account_data)?)),
-            None => Ok(None),
-        }
-    }
-
     pub async fn find_by_account_number(&self, account_number: &str) -> Result<Option<SecuritiesAccount>, sqlx::Error> {
         let row = sqlx::query!(
             r#"
@@ -299,21 +351,6 @@ impl AccountRepository {
             Some(r) => Ok(Some(serde_json::from_str(&r.account_data)?)),
             None => Ok(None),
         }
-    }
-
-    pub async fn list_all(&self) -> Result<Vec<SecuritiesAccount>, sqlx::Error> {
-        let rows = sqlx::query!(
-            r#"
-            SELECT account_data FROM accounts ORDER BY created_at DESC
-            "#
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        rows.into_iter()
-            .map(|r| serde_json::from_str(&r.account_data))
-            .collect::<Result<Vec<_>, _>>()
-            .map_err(|e| sqlx::Error::Decode(Box::new(e)))
     }
 
     pub async fn update(&self, account_number: &str, account_data: &SecuritiesAccount) -> Result<(), sqlx::Error> {
@@ -333,21 +370,10 @@ impl AccountRepository {
 
         Ok(())
     }
-
-    pub async fn get_account_numbers(&self) -> Result<Vec<(String, String)>, sqlx::Error> {
-        let rows = sqlx::query!(
-            r#"
-            SELECT account_number, hash_value FROM accounts ORDER BY created_at DESC
-            "#
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        Ok(rows.into_iter().map(|r| (r.account_number, r.hash_value)).collect())
-    }
 }
 
 // db/repositories/orders.rs
+// Implements operations from OpenAPI tag: "Orders"
 use sqlx::SqlitePool;
 use schwab_api_types::trader::{Order, OrderRequest};
 
@@ -360,7 +386,8 @@ impl OrderRepository {
         Self { pool }
     }
 
-    pub async fn create(&self, account_number: &str, order_data: &OrderRequest) -> Result<i64, sqlx::Error> {
+    // operationId: placeOrder
+    pub async fn place_order(&self, account_number: &str, order_data: &OrderRequest) -> Result<i64, sqlx::Error> {
         let order_data_json = serde_json::to_string(order_data)?;
         let status = "WORKING";  // Initial status
 
@@ -387,7 +414,8 @@ impl OrderRepository {
         Ok(order_id)
     }
 
-    pub async fn find_by_id(&self, order_id: i64) -> Result<Option<Order>, sqlx::Error> {
+    // operationId: getOrder
+    pub async fn get_order(&self, order_id: i64) -> Result<Option<Order>, sqlx::Error> {
         let row = sqlx::query!(
             r#"SELECT order_data FROM orders WHERE order_id = ?"#,
             order_id
@@ -401,11 +429,12 @@ impl OrderRepository {
         }
     }
 
-    pub async fn list_by_account(
+    // operationId: getOrdersByPathParam
+    pub async fn get_orders_by_path_param(
         &self,
         account_number: &str,
-        from_date: Option<String>,
-        to_date: Option<String>,
+        from_entered_time: Option<String>,
+        to_entered_time: Option<String>,
         status_filter: Option<String>,
     ) -> Result<Vec<Order>, sqlx::Error> {
         // TODO: Implement date and status filtering
@@ -425,6 +454,70 @@ impl OrderRepository {
             .collect::<Result<Vec<_>, _>>()
             .map_err(|e| sqlx::Error::Decode(Box::new(e)))
     }
+
+    // operationId: getOrdersByQueryParam
+    pub async fn get_orders_by_query_param(
+        &self,
+        from_entered_time: Option<String>,
+        to_entered_time: Option<String>,
+        status_filter: Option<String>,
+    ) -> Result<Vec<Order>, sqlx::Error> {
+        // TODO: Implement date and status filtering for all accounts
+        let rows = sqlx::query!(
+            r#"
+            SELECT order_data FROM orders
+            ORDER BY entered_time DESC
+            "#
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        rows.into_iter()
+            .map(|r| serde_json::from_str(&r.order_data))
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| sqlx::Error::Decode(Box::new(e)))
+    }
+
+    // operationId: cancelOrder
+    pub async fn cancel_order(&self, order_id: i64) -> Result<(), sqlx::Error> {
+        let status = "CANCELED";
+
+        sqlx::query!(
+            r#"
+            UPDATE orders
+            SET status = ?, close_time = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+            WHERE order_id = ?
+            "#,
+            status,
+            order_id
+        )
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    // operationId: replaceOrder
+    pub async fn replace_order(&self, order_id: i64, new_order_data: &OrderRequest) -> Result<i64, sqlx::Error> {
+        // Cancel old order
+        self.cancel_order(order_id).await?;
+
+        // Get account_number from old order
+        let old_order = self.get_order(order_id).await?
+            .ok_or_else(|| sqlx::Error::RowNotFound)?;
+
+        let account_number = old_order.account_number
+            .ok_or_else(|| sqlx::Error::RowNotFound)?
+            .to_string();
+
+        // Place new order
+        self.place_order(&account_number, new_order_data).await
+    }
+
+    // operationId: previewOrder
+    // Note: Preview doesn't persist to database, handled in service layer
+
+    // Additional helper methods
 
     pub async fn update_status(&self, order_id: i64, status: &str) -> Result<(), sqlx::Error> {
         sqlx::query!(
@@ -461,11 +554,134 @@ impl OrderRepository {
 
         Ok(())
     }
+}
 
-    pub async fn delete(&self, order_id: i64) -> Result<(), sqlx::Error> {
+// db/repositories/transactions.rs
+// Implements operations from OpenAPI tag: "Transactions"
+use sqlx::SqlitePool;
+use schwab_api_types::trader::Transaction;
+
+pub struct TransactionRepository {
+    pool: SqlitePool,
+}
+
+impl TransactionRepository {
+    pub fn new(pool: SqlitePool) -> Self {
+        Self { pool }
+    }
+
+    // operationId: getTransactionsByPathParam
+    pub async fn get_transactions_by_path_param(
+        &self,
+        account_number: &str,
+        start_date: &str,
+        end_date: &str,
+        transaction_type: Option<&str>,
+    ) -> Result<Vec<Transaction>, sqlx::Error> {
+        // TODO: Implement date and type filtering
+        let rows = sqlx::query!(
+            r#"
+            SELECT transaction_data FROM transactions
+            WHERE account_number = ?
+            ORDER BY time DESC
+            "#,
+            account_number
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        rows.into_iter()
+            .map(|r| serde_json::from_str(&r.transaction_data))
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| sqlx::Error::Decode(Box::new(e)))
+    }
+
+    // operationId: getTransactionsById
+    pub async fn get_transactions_by_id(&self, activity_id: i64) -> Result<Option<Transaction>, sqlx::Error> {
+        let row = sqlx::query!(
+            r#"SELECT transaction_data FROM transactions WHERE activity_id = ?"#,
+            activity_id
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        match row {
+            Some(r) => Ok(Some(serde_json::from_str(&r.transaction_data)?)),
+            None => Ok(None),
+        }
+    }
+
+    // Additional helper method
+
+    pub async fn create(&self, account_number: &str, transaction_type: &str, transaction_data: &Transaction) -> Result<i64, sqlx::Error> {
+        let transaction_data_json = serde_json::to_string(transaction_data)?;
+
+        // Get next activity_id (starting from 1001)
+        let activity_id: i64 = sqlx::query_scalar!(
+            r#"SELECT COALESCE(MAX(activity_id), 1000) + 1 as "id!" FROM transactions"#
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
         sqlx::query!(
-            r#"DELETE FROM orders WHERE order_id = ?"#,
-            order_id
+            r#"
+            INSERT INTO transactions (activity_id, account_number, type, transaction_data)
+            VALUES (?, ?, ?, ?)
+            "#,
+            activity_id,
+            account_number,
+            transaction_type,
+            transaction_data_json
+        )
+        .execute(&self.pool)
+        .await?;
+
+        Ok(activity_id)
+    }
+}
+
+// db/repositories/user_preference.rs
+// Implements operations from OpenAPI tag: "User Preference"
+use sqlx::SqlitePool;
+use schwab_api_types::trader::UserPreference;
+
+pub struct UserPreferenceRepository {
+    pool: SqlitePool,
+}
+
+impl UserPreferenceRepository {
+    pub fn new(pool: SqlitePool) -> Self {
+        Self { pool }
+    }
+
+    // operationId: getUserPreference
+    pub async fn get_user_preference(&self) -> Result<Option<UserPreference>, sqlx::Error> {
+        let row = sqlx::query!(
+            r#"SELECT preference_data FROM user_preferences WHERE id = 1"#
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        match row {
+            Some(r) => Ok(Some(serde_json::from_str(&r.preference_data)?)),
+            None => Ok(None),
+        }
+    }
+
+    // Additional helper method
+
+    pub async fn upsert(&self, preference_data: &UserPreference) -> Result<(), sqlx::Error> {
+        let preference_data_json = serde_json::to_string(preference_data)?;
+
+        sqlx::query!(
+            r#"
+            INSERT INTO user_preferences (id, preference_data)
+            VALUES (1, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                preference_data = excluded.preference_data,
+                updated_at = CURRENT_TIMESTAMP
+            "#,
+            preference_data_json
         )
         .execute(&self.pool)
         .await?;
@@ -473,28 +689,27 @@ impl OrderRepository {
         Ok(())
     }
 }
-
-// db/repositories/transactions.rs
-pub struct TransactionRepository {
-    pool: SqlitePool,
-}
-
-impl TransactionRepository {
-    pub async fn create(&self, account_number: &str, transaction_type: &str, transaction_data: &Transaction) -> Result<i64>;  // Returns activity_id
-    pub async fn find_by_id(&self, activity_id: i64) -> Result<Option<Transaction>>;
-    pub async fn list_by_account(&self, account_number: &str, start_date: &str, end_date: &str, transaction_type: Option<&str>) -> Result<Vec<Transaction>>;
-}
-
-// db/repositories/preferences.rs
-pub struct PreferencesRepository {
-    pool: SqlitePool,
-}
-
-impl PreferencesRepository {
-    pub async fn get(&self) -> Result<Option<UserPreference>>;
-    pub async fn upsert(&self, preference_data: &UserPreference) -> Result<()>;
-}
 ```
+
+### OpenAPI Spec Mapping Reference
+
+**Complete mapping of tags and operationIds:**
+
+| Tag                 | OpenAPI operationId          | Repository Method                           |
+| ------------------- | ---------------------------- | ------------------------------------------- |
+| **Accounts**        | `getAccountNumbers`          | `get_account_numbers()`                     |
+|                     | `getAccounts`                | `get_accounts()`                            |
+|                     | `getAccount`                 | `get_account()`                             |
+| **Orders**          | `getOrdersByPathParam`       | `get_orders_by_path_param()`                |
+|                     | `placeOrder`                 | `place_order()`                             |
+|                     | `getOrder`                   | `get_order()`                               |
+|                     | `cancelOrder`                | `cancel_order()`                            |
+|                     | `replaceOrder`               | `replace_order()`                           |
+|                     | `getOrdersByQueryParam`      | `get_orders_by_query_param()`               |
+|                     | `previewOrder`               | _(handled in service layer, not persisted)_ |
+| **Transactions**    | `getTransactionsByPathParam` | `get_transactions_by_path_param()`          |
+|                     | `getTransactionsById`        | `get_transactions_by_id()`                  |
+| **User Preference** | `getUserPreference`          | `get_user_preference()`                     |
 
 ---
 
