@@ -4,6 +4,7 @@ use serde::Serialize;
 #[derive(Debug, Clone, Serialize)]
 pub struct GetQuoteParams<'a> {
     /// The symbol to get a quote for
+    #[serde(skip)] // skip path parameter from inclusion in query parameter
     pub symbol: &'a str,
     /// Fields to include in the response
     #[serde(skip_serializing_if = "Option::is_none")]
