@@ -6,10 +6,10 @@ use super::OrderRequest;
 #[derive(Debug, Clone, Serialize)]
 pub struct ReplaceOrderParams<'a> {
     /// The encrypted account ID
-    #[serde(skip)] // (skip path parameter from inclusion in query parameter)
+    #[serde(skip)] // skip path parameter from inclusion in query parameter
     pub account_hash: &'a str,
     /// The order ID to replace
-    #[serde(skip)] // (skip path parameter from inclusion in query parameter)
+    #[serde(skip)] // skip path parameter from inclusion in query parameter
     pub order_id: i64,
     /// The new order details
     #[serde(skip)]

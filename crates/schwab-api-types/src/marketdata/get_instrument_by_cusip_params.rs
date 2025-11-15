@@ -4,7 +4,7 @@ use serde::Serialize;
 #[derive(Debug, Clone, Serialize)]
 pub struct GetInstrumentByCusipParams<'a> {
     /// The CUSIP identifier
-    #[serde(skip)] // (skip path parameter from inclusion in query parameter)
+    #[serde(skip)] // skip path parameter from inclusion in query parameter
     pub cusip: &'a str,
 }
 

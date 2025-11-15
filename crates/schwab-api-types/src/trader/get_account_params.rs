@@ -4,7 +4,7 @@ use serde::Serialize;
 #[derive(Debug, Clone, Serialize)]
 pub struct GetAccountParams<'a> {
     /// The encrypted account ID
-    #[serde(skip)] // (skip path parameter from inclusion in query parameter)
+    #[serde(skip)] // skip path parameter from inclusion in query parameter
     pub account_hash: &'a str,
     /// Fields to include in the response (e.g., "positions")
     #[serde(skip_serializing_if = "Option::is_none")]

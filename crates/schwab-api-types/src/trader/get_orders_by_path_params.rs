@@ -4,7 +4,7 @@ use serde::Serialize;
 #[derive(Debug, Clone, Serialize)]
 pub struct GetOrdersByPathParams<'a> {
     /// The encrypted account ID
-    #[serde(skip)] // (skip path parameter from inclusion in query parameter)
+    #[serde(skip)] // skip path parameter from inclusion in query parameter
     pub account_hash: &'a str,
     /// Start date for order search (ISO-8601 format)
     #[serde(rename = "fromEnteredTime")]
