@@ -33,8 +33,8 @@ CREATE TABLE accounts (
     hash_value TEXT UNIQUE NOT NULL,          -- encrypted value (for API URLs)
     account_type TEXT NOT NULL,               -- 'CASH' or 'MARGIN' (from SecuritiesAccount.type)
     account_data TEXT NOT NULL,               -- Full SecuritiesAccount JSON (includes positions, balances)
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,  -- UTC ISO-8601
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP   -- UTC ISO-8601
 );
 
 -- Table 2: Orders
@@ -42,30 +42,37 @@ CREATE TABLE accounts (
 -- Order contains orderLegCollection, orderActivityCollection, childOrderStrategies inline
 CREATE TABLE orders (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    order_id INTEGER NOT NULL,                -- from Order.orderId (int64 in spec)
+    order_id INTEGER NOT NULL,                -- from Order.orderId (int64 in spec), starts at 1001
     account_number TEXT NOT NULL,             -- from Order.accountNumber (int64 in spec, but we use TEXT for FK)
     status TEXT NOT NULL,                     -- from Order.status enum (WORKING, FILLED, CANCELED, etc.)
-    entered_time TIMESTAMP,                   -- from Order.enteredTime (ISO-8601)
-    close_time TIMESTAMP,                     -- from Order.closeTime (ISO-8601)
+    entered_time TIMESTAMP,                   -- from Order.enteredTime (ISO-8601 string)
+    close_time TIMESTAMP,                     -- from Order.closeTime (ISO-8601 string)
     order_data TEXT NOT NULL,                 -- Full Order/OrderRequest JSON
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,  -- UTC ISO-8601
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,  -- UTC ISO-8601
     FOREIGN KEY (account_number) REFERENCES accounts(account_number)
 );
+
+-- Initialize order_id sequence to start at 1001
+-- Note: In implementation, use: INSERT INTO orders (order_id, ...) VALUES ((SELECT COALESCE(MAX(order_id), 1000) + 1 FROM orders), ...)
+-- Or set sqlite_sequence: INSERT INTO sqlite_sequence (name, seq) VALUES ('orders', 1000) ON CONFLICT(name) DO UPDATE SET seq = 1000;
 
 -- Table 3: Transactions
 -- Stores full Transaction JSON
 -- Transaction contains transferItems array, user object inline
 CREATE TABLE transactions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    activity_id INTEGER NOT NULL,            -- from Transaction.activityId (int64 in spec)
+    activity_id INTEGER NOT NULL,            -- from Transaction.activityId (int64 in spec), starts at 1001
     account_number TEXT NOT NULL,            -- from Transaction.accountNumber (string in spec)
     type TEXT NOT NULL,                      -- from Transaction.type enum (TransactionType)
-    time TIMESTAMP,                          -- from Transaction.time (ISO-8601)
+    time TIMESTAMP,                          -- from Transaction.time (ISO-8601 string)
     transaction_data TEXT NOT NULL,          -- Full Transaction JSON
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,  -- UTC ISO-8601
     FOREIGN KEY (account_number) REFERENCES accounts(account_number)
 );
+
+-- Initialize activity_id sequence to start at 1001
+-- Note: Similar to orders, initialize sqlite_sequence for transactions table
 
 -- Table 4: User Preferences
 -- Stores full UserPreference JSON
@@ -73,7 +80,7 @@ CREATE TABLE transactions (
 CREATE TABLE user_preferences (
     id INTEGER PRIMARY KEY,
     preference_data TEXT NOT NULL,           -- Full UserPreference JSON
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP  -- UTC ISO-8601
 );
 
 -- Indexes for common queries
@@ -87,65 +94,83 @@ CREATE INDEX idx_transactions_time ON transactions(time);
 
 ### Phase 1 Planning Questions
 
-**Status: ⏳ AWAITING DECISIONS**
+**Status: ✅ DECISIONS COMPLETE**
 
-#### 1. Database Library Choice
+#### 1. Database Library Choice ✅
 
 - **Option A: sqlx** - Async-first, compile-time checked SQL, works with raw SQL
   - Pros: Modern async/await, flexible, no ORM overhead
   - Cons: Need to write SQL by hand
-- **Option B: diesel** - Type-safe ORM, can be sync or async
-  - Pros: Strong typing, migrations built-in, less SQL writing
-  - Cons: Steeper learning curve, more boilerplate
+- ~~**Option B: diesel** - Type-safe ORM, can be sync or async~~
+  - ~~Pros: Strong typing, migrations built-in, less SQL writing~~
+  - ~~Cons: Steeper learning curve, more boilerplate~~
 
-**Decision:** [ ]
+**Decision: [✅] sqlx**
 
-#### 2. Order ID Generation
+#### 2. Order ID Generation ✅
 
 Real Schwab API uses `int64` for `orderId`. Options:
 
-- **Option A:** Use SQLite AUTOINCREMENT as the order ID
-- **Option B:** Generate random int64s (e.g., timestamp-based or UUID as int)
-- **Option C:** Use sequential counter starting from 1000000
+- ~~**Option A:** Use SQLite AUTOINCREMENT as the order ID~~
+- ~~**Option B:** Generate random int64s (e.g., timestamp-based or UUID as int)~~
+- **Option C:** Use sequential counter starting from 1001
 
-**Decision:** [ ]
+**Decision: [✅] AUTOINCREMENT starting at 1001**  
+_Implementation: Set initial sequence value or start ID counter at 1001_
 
-#### 3. Initial Account Setup
+#### 3. Initial Account Setup ✅
 
-- **Option A:** Seed database with 2-3 sample accounts on first run
-  - Example: 1 CASH account, 1 MARGIN account with positions
-- **Option B:** Start with empty database, require manual account creation
-- **Option C:** Add admin endpoint to create accounts (e.g., POST /admin/accounts)
+- ~~**Option A:** Seed database with 2-3 sample accounts on first run~~
+- **Option B:** Start with empty database, no seeding for now
+- ~~**Option C:** Add admin endpoint to create accounts (e.g., POST /admin/accounts)~~
 
-**Decision:** [ ]
+**Decision: [✅] No seeding initially**  
+**TODO: Create Phase 0 (Account Management) to address:**
 
-#### 4. Account Number/Hash Relationship
+- How new accounts are created (admin endpoints?)
+- Initial account balance and type configuration
+- Account reset/deletion functionality
+- Test data fixture generation
+
+#### 4. Account Number/Hash Relationship ✅
 
 The `/accounts/accountNumbers` endpoint returns `{ accountNumber, hashValue }[]`
 
-- **Option A:** Generate account numbers and hashes on startup/first run
-- **Option B:** Let users create accounts via separate admin endpoint
-- **Option C:** Use fixed account numbers for testing (e.g., "12345678", "87654321")
+- ~~**Option A:** Generate account numbers and hashes on startup/first run~~
+- **Option B:** Let users create accounts via separate admin endpoint series
+- ~~**Option C:** Use fixed account numbers for testing (e.g., "12345678", "87654321")~~
 
-**Decision:** [ ]
+**Decision: [✅] Admin endpoints for account creation**  
+_Part of Phase 0 (Account Management) - to be designed_
 
-#### 5. Timestamp Format
+#### 5. Timestamp Format ✅
+
+Per OpenAPI spec: `"type": "string", "format": "date-time"` with ISO-8601 format `yyyy-MM-dd'T'HH:mm:ss.SSSZ`
 
 - **Option A:** Use SQLite's `CURRENT_TIMESTAMP` (UTC, ISO-8601 format)
-- **Option B:** Store as Unix epoch integers (easier for calculations)
-- **Option C:** Store as TEXT in ISO-8601 format for human readability
+- ~~**Option B:** Store as Unix epoch integers (easier for calculations)~~
+- ~~**Option C:** Store as TEXT in ISO-8601 format for human readability~~
 
-**Decision:** [ ]
+**Decision: [✅] CURRENT_TIMESTAMP (UTC)**  
+_SQLite's CURRENT_TIMESTAMP returns ISO-8601 format in UTC, matching API spec requirement_
 
-#### 6. Transaction ID Generation
+#### 6. Transaction ID Generation ✅
 
 Similar to Order IDs, Transaction.activityId is int64:
 
-- **Option A:** Use SQLite AUTOINCREMENT
-- **Option B:** Generate timestamp-based int64s
-- **Option C:** Use sequential counter
+- **Option A:** Use SQLite AUTOINCREMENT (starting at 1001, same as orders)
+- ~~**Option B:** Generate timestamp-based int64s~~
+- ~~**Option C:** Use sequential counter~~
 
-**Decision:** [ ]
+**Decision: [✅] AUTOINCREMENT starting at 1001**  
+_Consistent with order ID generation strategy_
+
+#### 7. Database Indexes ✅
+
+**Decision: [✅] Add indexes on frequently queried fields**  
+_Already included in schema: orders.account_number, orders.status, orders.entered_time, transactions.account_number, transactions.type, transactions.time_
+
+**TODO: Review and optimize indexes after development/load testing**
 
 ---
 
@@ -176,7 +201,7 @@ Similar to Order IDs, Transaction.activityId is int64:
 
 ## Phase 2: Database Layer (Repository Pattern)
 
-**Status: ⏸️ PENDING (Blocked by Phase 1 decisions)**
+**Status: 🔄 READY TO START (Phase 1 decisions complete)**
 
 ### File Structure
 
@@ -197,58 +222,256 @@ tools/paper/src/
 
 ### Dependencies to Add
 
-**DECISION NEEDED: Choose between sqlx OR diesel**
-
-**Option A: sqlx**
+**Using sqlx (Decision from Phase 1):**
 
 ```toml
 [dependencies]
 sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite", "macros", "chrono"] }
-serde_json = "1.0"  # For JSON serialization
-```
-
-**Option B: diesel**
-
-```toml
-[dependencies]
-diesel = { version = "2.2", features = ["sqlite", "chrono", "r2d2"] }
-diesel_migrations = "2.2"
-serde_json = "1.0"  # For JSON serialization
+serde_json = "1.0"  # For JSON serialization of account_data, order_data, etc.
+chrono = { version = "0.4", features = ["serde"] }  # For timestamp handling
 ```
 
 ### Repository Pattern Examples
 
-**NOTE: These examples will be updated once database library choice is made**
+**Using sqlx with async/await:**
 
 ```rust
 // db/repositories/accounts.rs
-use sqlx::SqlitePool;  // OR: use diesel::SqliteConnection;
+use sqlx::SqlitePool;
 use serde_json;
+use schwab_api_types::trader::SecuritiesAccount;  // From your existing types
 
 pub struct AccountRepository {
-    pool: SqlitePool,  // OR: PgPool for PostgreSQL later
+    pool: SqlitePool,
 }
 
 impl AccountRepository {
-    pub async fn create(&self, account_number: &str, hash_value: &str, account_type: &str, account_data: &SecuritiesAccount) -> Result<i64>;
-    pub async fn find_by_hash(&self, hash: &str) -> Result<Option<SecuritiesAccount>>;
-    pub async fn find_by_account_number(&self, account_number: &str) -> Result<Option<SecuritiesAccount>>;
-    pub async fn list_all(&self, include_positions: bool) -> Result<Vec<SecuritiesAccount>>;
-    pub async fn update(&self, account_number: &str, account_data: &SecuritiesAccount) -> Result<()>;
+    pub fn new(pool: SqlitePool) -> Self {
+        Self { pool }
+    }
+
+    pub async fn create(&self, account_number: &str, hash_value: &str, account_type: &str, account_data: &SecuritiesAccount) -> Result<i64, sqlx::Error> {
+        let account_data_json = serde_json::to_string(account_data)?;
+
+        let result = sqlx::query!(
+            r#"
+            INSERT INTO accounts (account_number, hash_value, account_type, account_data)
+            VALUES (?, ?, ?, ?)
+            "#,
+            account_number,
+            hash_value,
+            account_type,
+            account_data_json
+        )
+        .execute(&self.pool)
+        .await?;
+
+        Ok(result.last_insert_rowid())
+    }
+
+    pub async fn find_by_hash(&self, hash: &str) -> Result<Option<SecuritiesAccount>, sqlx::Error> {
+        let row = sqlx::query!(
+            r#"
+            SELECT account_data FROM accounts WHERE hash_value = ?
+            "#,
+            hash
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        match row {
+            Some(r) => Ok(Some(serde_json::from_str(&r.account_data)?)),
+            None => Ok(None),
+        }
+    }
+
+    pub async fn find_by_account_number(&self, account_number: &str) -> Result<Option<SecuritiesAccount>, sqlx::Error> {
+        let row = sqlx::query!(
+            r#"
+            SELECT account_data FROM accounts WHERE account_number = ?
+            "#,
+            account_number
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        match row {
+            Some(r) => Ok(Some(serde_json::from_str(&r.account_data)?)),
+            None => Ok(None),
+        }
+    }
+
+    pub async fn list_all(&self) -> Result<Vec<SecuritiesAccount>, sqlx::Error> {
+        let rows = sqlx::query!(
+            r#"
+            SELECT account_data FROM accounts ORDER BY created_at DESC
+            "#
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        rows.into_iter()
+            .map(|r| serde_json::from_str(&r.account_data))
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| sqlx::Error::Decode(Box::new(e)))
+    }
+
+    pub async fn update(&self, account_number: &str, account_data: &SecuritiesAccount) -> Result<(), sqlx::Error> {
+        let account_data_json = serde_json::to_string(account_data)?;
+
+        sqlx::query!(
+            r#"
+            UPDATE accounts
+            SET account_data = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE account_number = ?
+            "#,
+            account_data_json,
+            account_number
+        )
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    pub async fn get_account_numbers(&self) -> Result<Vec<(String, String)>, sqlx::Error> {
+        let rows = sqlx::query!(
+            r#"
+            SELECT account_number, hash_value FROM accounts ORDER BY created_at DESC
+            "#
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rows.into_iter().map(|r| (r.account_number, r.hash_value)).collect())
+    }
 }
 
 // db/repositories/orders.rs
+use sqlx::SqlitePool;
+use schwab_api_types::trader::{Order, OrderRequest};
+
 pub struct OrderRepository {
     pool: SqlitePool,
 }
 
 impl OrderRepository {
-    pub async fn create(&self, account_number: &str, order_data: &OrderRequest) -> Result<i64>;  // Returns order_id
-    pub async fn find_by_id(&self, order_id: i64) -> Result<Option<Order>>;
-    pub async fn list_by_account(&self, account_number: &str, from_date: Option<DateTime>, to_date: Option<DateTime>, status: Option<String>) -> Result<Vec<Order>>;
-    pub async fn update_status(&self, order_id: i64, status: &str) -> Result<()>;
-    pub async fn update(&self, order_id: i64, order_data: &Order) -> Result<()>;
-    pub async fn delete(&self, order_id: i64) -> Result<()>;  // For cancel
+    pub fn new(pool: SqlitePool) -> Self {
+        Self { pool }
+    }
+
+    pub async fn create(&self, account_number: &str, order_data: &OrderRequest) -> Result<i64, sqlx::Error> {
+        let order_data_json = serde_json::to_string(order_data)?;
+        let status = "WORKING";  // Initial status
+
+        // Get next order_id (starting from 1001)
+        let order_id: i64 = sqlx::query_scalar!(
+            r#"SELECT COALESCE(MAX(order_id), 1000) + 1 as "id!" FROM orders"#
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        sqlx::query!(
+            r#"
+            INSERT INTO orders (order_id, account_number, status, order_data)
+            VALUES (?, ?, ?, ?)
+            "#,
+            order_id,
+            account_number,
+            status,
+            order_data_json
+        )
+        .execute(&self.pool)
+        .await?;
+
+        Ok(order_id)
+    }
+
+    pub async fn find_by_id(&self, order_id: i64) -> Result<Option<Order>, sqlx::Error> {
+        let row = sqlx::query!(
+            r#"SELECT order_data FROM orders WHERE order_id = ?"#,
+            order_id
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        match row {
+            Some(r) => Ok(Some(serde_json::from_str(&r.order_data)?)),
+            None => Ok(None),
+        }
+    }
+
+    pub async fn list_by_account(
+        &self,
+        account_number: &str,
+        from_date: Option<String>,
+        to_date: Option<String>,
+        status_filter: Option<String>,
+    ) -> Result<Vec<Order>, sqlx::Error> {
+        // TODO: Implement date and status filtering
+        let rows = sqlx::query!(
+            r#"
+            SELECT order_data FROM orders
+            WHERE account_number = ?
+            ORDER BY entered_time DESC
+            "#,
+            account_number
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        rows.into_iter()
+            .map(|r| serde_json::from_str(&r.order_data))
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| sqlx::Error::Decode(Box::new(e)))
+    }
+
+    pub async fn update_status(&self, order_id: i64, status: &str) -> Result<(), sqlx::Error> {
+        sqlx::query!(
+            r#"
+            UPDATE orders
+            SET status = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE order_id = ?
+            "#,
+            status,
+            order_id
+        )
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    pub async fn update(&self, order_id: i64, order_data: &Order) -> Result<(), sqlx::Error> {
+        let order_data_json = serde_json::to_string(order_data)?;
+        let status = &order_data.status.as_ref().map(|s| s.to_string()).unwrap_or_else(|| "UNKNOWN".to_string());
+
+        sqlx::query!(
+            r#"
+            UPDATE orders
+            SET order_data = ?, status = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE order_id = ?
+            "#,
+            order_data_json,
+            status,
+            order_id
+        )
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    pub async fn delete(&self, order_id: i64) -> Result<(), sqlx::Error> {
+        sqlx::query!(
+            r#"DELETE FROM orders WHERE order_id = ?"#,
+            order_id
+        )
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
 }
 
 // db/repositories/transactions.rs
@@ -586,7 +809,55 @@ pub struct PostgresDatabase {
 
 ## Implementation Phases
 
-### Phase 1: Foundation (Week 1) ⏳ IN PLANNING
+### Phase 0: Account Management (Future) ⏸️ DEFERRED
+
+**Status: Planning deferred until after Phase 1-2 are working**
+
+This phase addresses how accounts are created, initialized, reset, and managed outside of the standard Schwab API endpoints.
+
+**Questions to Answer:**
+
+- [ ] How are new paper trading accounts created?
+  - Admin REST endpoints (e.g., `POST /admin/accounts`)?
+  - CLI commands (e.g., `paper-trader create-account --type CASH --balance 100000`)?
+  - Configuration file on startup?
+- [ ] What are the initial account settings?
+  - Starting cash balance (default $100,000? $1,000,000?)
+  - Account type (CASH vs MARGIN)
+  - Initial positions (start empty? seed with positions?)
+- [ ] How are account numbers generated?
+  - Sequential (100001, 100002, ...)?
+  - Random 8-digit numbers?
+  - User-provided?
+- [ ] How are hash values generated?
+  - SHA256 of account number?
+  - Random UUID converted to hex?
+  - Simple base64 encoding?
+- [ ] Account lifecycle management:
+  - Can accounts be deleted?
+  - Can accounts be reset to initial state?
+  - Can positions be manually added/removed?
+  - Can balances be manually adjusted?
+- [ ] Test fixtures and data:
+  - Seed script for development/testing?
+  - JSON fixture files?
+  - SQL seed files?
+
+**Proposed Admin Endpoints (To Be Designed):**
+
+```
+POST   /admin/accounts              # Create new account
+DELETE /admin/accounts/{accountNumber}  # Delete account
+POST   /admin/accounts/{accountNumber}/reset  # Reset to initial state
+PUT    /admin/accounts/{accountNumber}/balance  # Manually adjust balance
+POST   /admin/accounts/{accountNumber}/positions  # Manually add position
+```
+
+**This phase will be fully designed after Phase 1-2 are complete and we understand the account data structure better.**
+
+---
+
+### Phase 1: Foundation (Week 1) ✅ PLANNING COMPLETE → 🔄 READY TO IMPLEMENT
 
 **Planning Decisions (see Phase 1 Planning Questions above):**
 
@@ -716,23 +987,32 @@ pub struct PostgresDatabase {
 
 ## Key Design Decisions
 
-### ✅ Confirmed Decisions
+### ✅ Confirmed Decisions (Phase 1 Complete)
 
 1. **JSON Blobs for Complex Types**: Store full `OrderRequest`, `SecuritiesAccount`, `Transaction`, `UserPreference` as JSON to match API spec exactly
 2. **4 Core Tables**: accounts, orders, transactions, user_preferences (not 8+ normalized tables)
-3. **Repository Pattern**: Easy to swap SQLite → PostgreSQL by changing connection string
-4. **Service Layer**: Business logic separate from handlers and database
-5. **Background Order Executor**: Separate tokio task simulates fills
-6. **No Auth Initially**: Focus on CRUD and business logic first
+3. **Database Library**: sqlx for async/await, compile-time SQL checking, flexibility
+4. **Order/Transaction IDs**: AUTOINCREMENT starting at 1001 for both order_id and activity_id
+5. **Timestamps**: SQLite CURRENT_TIMESTAMP (UTC, ISO-8601) matching OpenAPI spec format
+6. **Indexes**: Added on account_number, status, type, time fields for query filtering
+7. **Repository Pattern**: Easy to swap SQLite → PostgreSQL by changing connection string
+8. **Service Layer**: Business logic separate from handlers and database
+9. **Background Order Executor**: Separate tokio task simulates fills
+10. **No Auth Initially**: Focus on CRUD and business logic first
+11. **No Account Seeding**: Start with empty database, accounts created via admin endpoints
 
-### ⏳ Pending Decisions (Phase 1)
+### 📋 TODO Items
 
-- Database library choice (sqlx vs diesel)
-- Order ID generation strategy
-- Transaction ID generation strategy
-- Initial account setup approach
-- Account number/hash generation
-- Timestamp format
+- [ ] **Phase 0: Account Management** - Design account creation, initialization, reset, test fixtures (see Phase 0 section)
+- [ ] **Index Review**: Optimize indexes after development/load testing
+- [ ] **Sequence Initialization**: Implement sqlite_sequence setup for order_id/activity_id starting at 1001
+
+### ⏳ Deferred to Phase 0 (Account Management)
+
+- Account creation workflow (admin endpoints design)
+- Initial account balances and positions
+- Account reset/deletion strategy
+- Test data fixture generation
 
 ---
 
