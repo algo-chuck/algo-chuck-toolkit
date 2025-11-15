@@ -12,3 +12,12 @@ pub struct UserPreference {
     pub offers: Option<Vec<trader::Offer>>,
 }
 
+impl UserPreference {
+    pub fn new() -> UserPreference {
+        UserPreference {
+            accounts: None,
+            streamer_info: None,
+            offers: None,
+        }
+    }
+}

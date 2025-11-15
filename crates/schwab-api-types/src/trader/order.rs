@@ -108,3 +108,46 @@ pub struct Order {
     #[serde(rename = "statusDescription", skip_serializing_if = "Option::is_none")]
     pub status_description: Option<String>,
 }
+
+impl Order {
+    pub fn new() -> Order {
+        Order {
+            session: None,
+            duration: None,
+            order_type: None,
+            cancel_time: None,
+            complex_order_strategy_type: None,
+            quantity: None,
+            filled_quantity: None,
+            remaining_quantity: None,
+            requested_destination: None,
+            destination_link_name: None,
+            release_time: None,
+            stop_price: None,
+            stop_price_link_basis: None,
+            stop_price_link_type: None,
+            stop_price_offset: None,
+            stop_type: None,
+            price_link_basis: None,
+            price_link_type: None,
+            price: None,
+            tax_lot_method: None,
+            order_leg_collection: None,
+            activation_price: None,
+            special_instruction: None,
+            order_strategy_type: None,
+            order_id: None,
+            cancelable: None,
+            editable: None,
+            status: None,
+            entered_time: None,
+            close_time: None,
+            tag: None,
+            account_number: None,
+            order_activity_collection: None,
+            replacing_order_collection: None,
+            child_order_strategies: None,
+            status_description: None,
+        }
+    }
+}

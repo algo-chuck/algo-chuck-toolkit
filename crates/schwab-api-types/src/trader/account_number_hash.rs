@@ -12,3 +12,11 @@ pub struct AccountNumberHash {
     pub hash_value: Option<String>,
 }
 
+impl AccountNumberHash {
+    pub fn new() -> AccountNumberHash {
+        AccountNumberHash {
+            account_number: None,
+            hash_value: None,
+        }
+    }
+}
