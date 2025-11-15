@@ -221,9 +221,8 @@ Successfully implemented all 4 repositories with:
 tools/paper/src/
 ├── db/
 │   ├── mod.rs                          # ✅ Database pool initialization with migrations
-│   ├── schema.sql                      # ✅ Complete schema documentation
 │   ├── migrations/
-│   │   └── 001_initial_schema.sql      # ✅ Initial migration
+│   │   └── 001_initial_schema.sql      # ✅ Initial migration (single source of truth)
 │   └── repositories/
 │       ├── mod.rs                      # ✅ Re-exports all repositories
 │       ├── accounts.rs                 # ✅ AccountRepository (3 API methods + 3 helpers)
@@ -263,9 +262,13 @@ chrono = { version = "0.4", features = ["serde"] }  # For timestamp handling
 
 1. **Runtime vs Compile-time Queries**: Used `sqlx::query()` instead of `query!()` macro to avoid requiring DATABASE_URL at compile time
 2. **Error Handling**: Each repository has its own error enum with From implementations for sqlx::Error and serde_json::Error
+   - **Note**: These are internal errors, NOT the OpenAPI `ServiceError` type
+   - Phase 5 will convert these to `ServiceError` for API responses
 3. **Type Path**: Types are imported from `schwab_api::types::trader` (not `schwab_api::trader`)
 4. **ID Generation**: Using `SELECT COALESCE(MAX(id), 1000) + 1` pattern to start IDs at 1001
 5. **Tests Included**: Each repository has basic test setup (not yet implemented)
+6. **Migration Safety**: `sqlx::migrate!()` is idempotent - it tracks applied migrations in `_sqlx_migrations` table and only runs new ones
+7. **Schema Management**: Single source of truth in `src/db/migrations/001_initial_schema.sql` (executed on startup)
 
 ### Repository Pattern Examples
 
@@ -1161,6 +1164,36 @@ mod tests {
 - [ ] Unit tests pass with in-memory database
 - [ ] No order execution logic included (deferred to Phase 4)
 
+### Important Note on Error Handling
+
+**Phase 3 uses internal error types** (`AccountServiceError`, `OrderServiceError`, etc.) for business logic only. These are NOT exposed to the API.
+
+**Phase 5 will convert to OpenAPI spec errors:**
+
+- All API error responses use `ServiceError` type (from `schwab_api::types::trader::ServiceError`)
+- HTTP status codes: 400 (BadRequest), 401 (NotAuthorized), 403 (Forbidden), 404 (NotFound), 500 (InternalServerError), 503 (ServiceUnavailable)
+- Handler layer maps internal errors → `ServiceError` + appropriate HTTP status code
+- Example: `AccountServiceError::NotFound("123")` → `ServiceError { message: "Account not found", errors: [...] }` + HTTP 404
+
+**Error Conversion Architecture:**
+
+```
+Repository Layer: AccountError, OrderError (internal)
+    ↓
+Service Layer: AccountServiceError, OrderServiceError (business logic)
+    ↓
+Handler Layer: Converts to ServiceError + HTTP status (Phase 5)
+    ↓
+API Response: ServiceError JSON matching OpenAPI spec
+```
+
+**TODO for Phase 5:**
+
+- [ ] Implement error conversion from service errors to `ServiceError`
+- [ ] Map error types to correct HTTP status codes per OpenAPI spec
+- [ ] Ensure all error responses match `ServiceError` schema format
+- [ ] Add error details with `ServiceErrorItem` for validation errors
+
 ---
 
 ## Phase 4: Order Execution & Business Logic (Future)
@@ -1234,27 +1267,94 @@ impl MarketDataService {
 
 **Status: ⏸️ NOT STARTED (Waiting for Phase 4)**
 
-### Handler Implementation
+Phase 5 connects services to HTTP handlers and implements proper error response formatting per OpenAPI spec.
 
-Update existing handlers to use services:
+### Key Responsibilities
+
+1. **HTTP Request/Response Handling** - Extract parameters, call services, format responses
+2. **Error Conversion** - Convert internal errors to `ServiceError` per OpenAPI spec
+3. **HTTP Status Codes** - Map errors to correct status codes (400, 401, 403, 404, 500, 503)
+4. **Response Formatting** - Ensure all responses match OpenAPI schema
+
+### Error Response Implementation
+
+**CRITICAL:** All error responses MUST use `ServiceError` from `schwab_api::types::trader::ServiceError`
+
+```rust
+// Error conversion helper
+use schwab_api::types::trader::{ServiceError, ServiceErrorItem};
+
+fn map_service_error(err: AccountServiceError) -> (StatusCode, Json<ServiceError>) {
+    match err {
+        AccountServiceError::NotFound(id) => (
+            StatusCode::NOT_FOUND,
+            Json(ServiceError {
+                message: Some(format!("Account not found: {}", id)),
+                errors: Some(vec![ServiceErrorItem {
+                    id: Some(id),
+                    status: Some(404),
+                    title: Some("Not Found".to_string()),
+                    detail: Some("The requested account does not exist".to_string()),
+                }]),
+            })
+        ),
+        AccountServiceError::InvalidInput(msg) => (
+            StatusCode::BAD_REQUEST,
+            Json(ServiceError {
+                message: Some("Invalid request".to_string()),
+                errors: Some(vec![ServiceErrorItem {
+                    id: None,
+                    status: Some(400),
+                    title: Some("Bad Request".to_string()),
+                    detail: Some(msg),
+                }]),
+            })
+        ),
+        AccountServiceError::Repository(_) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ServiceError {
+                message: Some("Internal server error".to_string()),
+                errors: Some(vec![ServiceErrorItem {
+                    id: None,
+                    status: Some(500),
+                    title: Some("Internal Server Error".to_string()),
+                    detail: Some("An unexpected error occurred".to_string()),
+                }]),
+            })
+        ),
+    }
+}
+```
+
+### Handler Implementation Examples
+
+Update existing handlers to use services and proper error responses:
 
 ```rust
 // handlers/accounts.rs
-use crate::services::AccountService;
+use crate::services::{AccountService, AccountServiceError};
+use schwab_api::types::trader::{SecuritiesAccount, ServiceError};
+use axum::{extract::{Path, State}, http::StatusCode, response::Json};
 
 pub async fn get_account_numbers(
     State(account_service): State<Arc<AccountService>>
-) -> Result<Json<Vec<(String, String)>>> {
-    let accounts = account_service.get_account_numbers().await?;
-    Ok(Json(accounts))
+) -> Result<Json<Vec<(String, String)>>, (StatusCode, Json<ServiceError>)> {
+    account_service
+        .get_account_numbers()
+        .await
+        .map(Json)
+        .map_err(map_service_error)
 }
 
 pub async fn get_account(
     Path(account_hash): Path<String>,
     State(account_service): State<Arc<AccountService>>
-) -> Result<Json<SecuritiesAccount>> {
-    let account = account_service.get_account(&account_hash).await?;
-    Ok(Json(account))
+) -> Result<Json<SecuritiesAccount>, (StatusCode, Json<ServiceError>)> {
+    account_service
+        .get_account(&account_hash)
+        .await
+        .map(Json)
+        .map_err(map_service_error)
 }
 
 // handlers/orders.rs
@@ -1262,17 +1362,64 @@ pub async fn place_order(
     Path(account_number): Path<String>,
     State(order_service): State<Arc<OrderService>>,
     Json(order): Json<OrderRequest>
-) -> Result<Json<i64>> {
-    let order_id = order_service.place_order(&account_number, &order).await?;
-    Ok(Json(order_id))
+) -> Result<Json<i64>, (StatusCode, Json<ServiceError>)> {
+    order_service
+        .place_order(&account_number, &order)
+        .await
+        .map(Json)
+        .map_err(map_order_service_error)
 }
 
 pub async fn cancel_order(
     Path((account_number, order_id)): Path<(String, i64)>,
     State(order_service): State<Arc<OrderService>>
-) -> Result<StatusCode> {
-    order_service.cancel_order(order_id).await?;
-    Ok(StatusCode::OK)
+) -> Result<StatusCode, (StatusCode, Json<ServiceError>)> {
+    order_service
+        .cancel_order(order_id)
+        .await
+        .map(|_| StatusCode::OK)
+        .map_err(map_order_service_error)
+}
+```
+
+### Phase 5 Implementation Tasks
+
+- [ ] Create error conversion functions for all service error types
+- [ ] Map each error variant to correct HTTP status code per OpenAPI spec:
+  - `NotFound` → 404
+  - `InvalidInput` → 400
+  - `Repository/Database` → 500
+- [ ] Update all handlers to return `Result<T, (StatusCode, Json<ServiceError>)>`
+- [ ] Ensure `ServiceError` format matches OpenAPI spec exactly
+- [ ] Add integration tests verifying error response format
+- [ ] Test all error paths return correct status codes and `ServiceError` JSON
+
+### OpenAPI Error Response Mapping
+
+Per the OpenAPI spec, all endpoints can return these error responses:
+
+| HTTP Status | OpenAPI Response      | Use Case                                |
+| ----------- | --------------------- | --------------------------------------- |
+| 400         | `BadRequest`          | Invalid input, validation errors        |
+| 401         | `NotAuthorized`       | Invalid/missing auth token (future)     |
+| 403         | `Forbidden`           | Not allowed to access resource (future) |
+| 404         | `NotFound`            | Resource doesn't exist                  |
+| 500         | `InternalServerError` | Unexpected server error                 |
+| 503         | `ServiceUnavailable`  | Temporary server problem (future)       |
+
+All responses use `ServiceError` schema:
+
+```json
+{
+  "message": "Human-readable error message",
+  "errors": [
+    {
+      "id": "optional-resource-id",
+      "status": 404,
+      "title": "Not Found",
+      "detail": "Detailed error description"
+    }
+  ]
 }
 ```
 
@@ -1412,28 +1559,30 @@ POST   /admin/accounts/{accountNumber}/positions  # Manually add position
 
 **Planning Decisions (see Phase 1 Planning Questions above):**
 
-- [ ] 1. Choose database library (sqlx vs diesel)
-- [ ] 2. Decide order ID generation strategy
-- [ ] 3. Decide initial account setup approach
-- [ ] 4. Decide account number/hash generation
-- [ ] 5. Choose timestamp format
-- [ ] 6. Decide transaction ID generation strategy
+- [x] 1. Choose database library (sqlx vs diesel) ✅ **sqlx**
+- [x] 2. Decide order ID generation strategy ✅ **AUTOINCREMENT starting at 1001**
+- [x] 3. Decide initial account setup approach ✅ **No seeding initially**
+- [x] 4. Decide account number/hash generation ✅ **Admin endpoints (Phase 0 - deferred)**
+- [x] 5. Choose timestamp format ✅ **CURRENT_TIMESTAMP (UTC)**
+- [x] 6. Decide transaction ID generation strategy ✅ **AUTOINCREMENT starting at 1001**
 
 **Implementation Tasks:**
 
-- [ ] Create database schema SQL file
-- [ ] Set up database connection and migrations
-- [ ] Implement AccountRepository with basic CRUD
-- [ ] Test with `/accounts/accountNumbers` endpoint
-- [ ] Test with `/accounts` endpoint (without positions)
-- [ ] Test with `/accounts/{accountNumber}` endpoint
+- [x] Create database migration file (001_initial_schema.sql) ✅
+- [x] Set up database connection and migrations ✅
+- [x] Implement AccountRepository with basic CRUD ✅
+- [ ] Test with `/accounts/accountNumbers` endpoint (Phase 5)
+- [ ] Test with `/accounts` endpoint (without positions) (Phase 5)
+- [ ] Test with `/accounts/{accountNumber}` endpoint (Phase 5)
 
 **Success Criteria:**
 
-- [ ] Can retrieve list of account numbers with hashes
-- [ ] Can retrieve all accounts
-- [ ] Can retrieve specific account by hash
-- [ ] Database persists data between restarts
+- [x] Database schema defined in migration ✅
+- [x] Repository layer implemented ✅
+- [ ] Can retrieve list of account numbers with hashes (Phase 5)
+- [ ] Can retrieve all accounts (Phase 5)
+- [ ] Can retrieve specific account by hash (Phase 5)
+- [ ] Database persists data between restarts (Phase 5)
 
 ---
 
