@@ -7,7 +7,7 @@ members = [
   "crates/schwab-api-trader", 
   "crates/schwab-api-types",
   "tools/cli",
-  "tools/trader",
+  "tools/paper",
 ]
 
 resolver = "3"

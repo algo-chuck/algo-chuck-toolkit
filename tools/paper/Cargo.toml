@@ -1,0 +1,23 @@
+[package]
+name = "algo-chuck-paper-trader"
+edition.workspace = true
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "A web service mirroring the Schwab Trader API OpenAPI specification for paper trading."
+
+[dependencies]
+schwab-api = { path = "../../crates/schwab-api", default-features = false, features = ["trader"] }
+# -- Async
+tokio = { workspace = true, features = ["full"] }
+# -- Serde
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+# -- Web
+axum = "0.8"
+# -- Others
+derive_more = {version = "2", features = ["from", "display"] }
+
+[dev-dependencies]
+anyhow = "1"
+httpc-test = { version = "0.1.1", default-features = false }
