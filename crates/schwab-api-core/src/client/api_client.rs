@@ -94,6 +94,20 @@ impl<C, Cfg: ApiConfig> ApiClient<C, Cfg> {
         self.access_token.read().unwrap().clone()
     }
 
+    /// Parse HTTP errors with proper API context.
+    ///
+    /// Converts `UnparsedApiError` to properly classified `Api` errors using
+    /// the API name from the configuration.
+    fn parse_http_error(&self, error: HttpError) -> HttpError {
+        match error {
+            HttpError::UnparsedApiError { status, body } => {
+                let parsed = crate::parse_api_error(status, &body, Cfg::api_name());
+                HttpError::Api(parsed)
+            }
+            other => other,
+        }
+    }
+
     /// Build a complete URL from a path and optional query string.
     ///
     /// This method combines the API's base URL with the provided path and
@@ -234,7 +248,7 @@ where
             .client
             .execute(request)
             .await
-            .map_err(HttpError::from)?;
+            .map_err(|e| self.parse_http_error(HttpError::from(e)))?;
 
         let typed = self.parse_ok_response(&response)?;
         Ok(typed)
@@ -264,7 +278,7 @@ where
         self.client
             .execute(request)
             .await
-            .map_err(HttpError::from)?;
+            .map_err(|e| self.parse_http_error(HttpError::from(e)))?;
 
         Ok(())
     }
@@ -303,7 +317,10 @@ where
     {
         let request = self.build_request(params)?;
 
-        let response = self.client.execute_sync(request).map_err(HttpError::from)?;
+        let response = self
+            .client
+            .execute_sync(request)
+            .map_err(|e| self.parse_http_error(HttpError::from(e)))?;
 
         let typed = self.parse_ok_response(&response)?;
         Ok(typed)
@@ -330,7 +347,9 @@ where
     {
         let request = self.build_request(params)?;
 
-        self.client.execute_sync(request).map_err(HttpError::from)?;
+        self.client
+            .execute_sync(request)
+            .map_err(|e| self.parse_http_error(HttpError::from(e)))?;
 
         Ok(())
     }

@@ -4,8 +4,10 @@ use serde::Serialize;
 #[derive(Debug, Clone, Serialize)]
 pub struct CancelOrderParams<'a> {
     /// The encrypted account ID
+    #[serde(skip)] // (skip path parameter from inclusion in query parameter)
     pub account_hash: &'a str,
     /// The order ID to cancel
+    #[serde(skip)] // (skip path parameter from inclusion in query parameter)
     pub order_id: i64,
 }
 

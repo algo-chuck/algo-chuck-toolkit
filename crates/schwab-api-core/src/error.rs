@@ -49,27 +49,68 @@ pub enum HttpError {
 
     #[error("Schwab API Error: {0}")]
     Api(SchwabError),
+
+    /// Unparsed API error that needs context from ApiClient to properly classify
+    #[error("Unparsed API error (status {status})")]
+    UnparsedApiError {
+        status: http::StatusCode,
+        body: String,
+    },
 }
 
 /// Parse Schwab API errors from HTTP response body.
 ///
 /// This function attempts to parse error responses from both the Trader API
-/// and Market Data API, falling back to a generic error representation if
-/// the structure doesn't match either format.
+/// and Market Data API based on the provided API name context.
 ///
 /// # Arguments
 ///
 /// * `status` - The HTTP status code from the response
 /// * `body_text` - The response body as a string
+/// * `api_name` - The name of the API being called ("trader" or "marketdata")
 ///
 /// # Returns
 ///
 /// A `SchwabError` representing the parsed error, or an unknown error if
 /// parsing fails.
-pub fn parse_api_error(status: http::StatusCode, body_text: &str) -> SchwabError {
+pub fn parse_api_error(status: http::StatusCode, body_text: &str, api_name: &str) -> SchwabError {
     let status_code = status.as_u16();
 
-    // Attempt 1: Try to parse the body as the Marketdata API structured ErrorResponse.
+    // Use the API name to determine which error structure to parse first
+    match api_name {
+        #[cfg(feature = "trader")]
+        "trader" => {
+            // Try Trader API error first
+            if let Ok(se) = serde_json::from_str::<ServiceError>(body_text) {
+                return SchwabError::Trader {
+                    status: status_code,
+                    detail: se,
+                };
+            }
+        }
+        #[cfg(feature = "marketdata")]
+        "marketdata" => {
+            // Try Marketdata API error first
+            if let Ok(me) = serde_json::from_str::<ErrorResponse>(body_text) {
+                return SchwabError::Marketdata {
+                    status: status_code,
+                    detail: me,
+                };
+            }
+        }
+        _ => {}
+    }
+
+    // Fallback: Try the other API type in case of misconfiguration
+    #[cfg(feature = "trader")]
+    if let Ok(se) = serde_json::from_str::<ServiceError>(body_text) {
+        return SchwabError::Trader {
+            status: status_code,
+            detail: se,
+        };
+    }
+
+    #[cfg(feature = "marketdata")]
     if let Ok(me) = serde_json::from_str::<ErrorResponse>(body_text) {
         return SchwabError::Marketdata {
             status: status_code,
@@ -77,27 +118,15 @@ pub fn parse_api_error(status: http::StatusCode, body_text: &str) -> SchwabError
         };
     }
 
-    // Attempt 2: Try to parse the body as the Trader API structured ServiceError.
-    match serde_json::from_str::<ServiceError>(body_text) {
-        Ok(se) => {
-            // If parsing is successful, wrap the error and the status code
-            SchwabError::Trader {
-                status: status_code,
-                detail: se,
-            }
-        }
-        // Attempt 3: If structured parsing fails, assume it's an unknown/unstructured error.
-        Err(_) => {
-            // Try to parse it as generic JSON value for better debugging output.
-            match serde_json::from_str::<serde_json::Value>(body_text) {
-                Ok(v) => SchwabError::UnknownValue(v),
+    // If structured parsing fails, assume it's an unknown/unstructured error.
+    // Try to parse it as generic JSON value for better debugging output.
+    match serde_json::from_str::<serde_json::Value>(body_text) {
+        Ok(v) => SchwabError::UnknownValue(v),
 
-                // Fallback: If it's not even valid JSON, just store the raw text.
-                Err(_) => SchwabError::UnknownValue(serde_json::Value::String(format!(
-                    "Raw text (status {status_code}): {}",
-                    body_text
-                ))),
-            }
-        }
+        // Fallback: If it's not even valid JSON, just store the raw text.
+        Err(_) => SchwabError::UnknownValue(serde_json::Value::String(format!(
+            "Raw text (status {status_code}): {}",
+            body_text
+        ))),
     }
 }

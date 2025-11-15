@@ -40,7 +40,7 @@
 //! let api_client = ApiClient::<_, MyApiConfig>::new(http_client);
 //! ```
 
-use http::{Request, Response};
+use http::{Request, Response, StatusCode};
 
 use crate::{HttpError, SyncHttpClient};
 
@@ -101,11 +101,12 @@ fn execute_with_ureq(
                 HttpError::NetworkError(format!("Failed to read error response body: {}", e))
             })?;
 
-            // Parse the API error using the centralized error parser
-            let status =
-                http::StatusCode::from_u16(code).unwrap_or(http::StatusCode::INTERNAL_SERVER_ERROR);
-            let parsed = crate::parse_api_error(status, &body_text);
-            return Err(HttpError::Api(parsed));
+            // Return unparsed error - ApiClient will parse it with proper API context
+            let status = StatusCode::from_u16(code).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+            return Err(HttpError::UnparsedApiError {
+                status,
+                body: body_text,
+            });
         }
         Err(ureq::Error::Transport(e)) => {
             // Network/transport error
@@ -115,7 +116,7 @@ fn execute_with_ureq(
 
     // Extract status and headers
     let status = resp.status();
-    let mut builder = http::Response::builder().status(status);
+    let mut builder = Response::builder().status(status);
 
     // Copy headers
     for header_name in resp.headers_names() {

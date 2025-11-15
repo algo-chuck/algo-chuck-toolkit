@@ -6,6 +6,7 @@ use super::PreviewOrder;
 #[derive(Debug, Clone, Serialize)]
 pub struct PreviewOrderParams<'a> {
     /// The encrypted account ID
+    #[serde(skip)] // (skip path parameter from inclusion in query parameter)
     pub account_hash: &'a str,
     /// The order to preview
     #[serde(skip)]

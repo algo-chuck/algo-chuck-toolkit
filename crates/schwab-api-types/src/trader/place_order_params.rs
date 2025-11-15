@@ -6,6 +6,7 @@ use super::OrderRequest;
 #[derive(Debug, Clone, Serialize)]
 pub struct PlaceOrderParams<'a> {
     /// The encrypted account ID
+    #[serde(skip)] // (skip path parameter from inclusion in query parameter)
     pub account_hash: &'a str,
     /// The order details
     #[serde(skip)]

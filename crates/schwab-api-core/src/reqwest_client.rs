@@ -41,7 +41,7 @@
 //! ```
 
 use async_trait::async_trait;
-use http::{Request, Response};
+use http::{Request, Response, method};
 
 use crate::{AsyncHttpClient, HttpError};
 
@@ -77,7 +77,7 @@ async fn execute_with_reqwest(
         .method
         .as_str()
         .parse()
-        .map_err(|e: http::method::InvalidMethod| {
+        .map_err(|e: method::InvalidMethod| {
             HttpError::RequestFailed(format!("Invalid HTTP method: {}", e))
         })?;
 
@@ -108,12 +108,14 @@ async fn execute_with_reqwest(
 
     // Handle API failure using the helper function
     if !status.is_success() {
-        let parsed = crate::parse_api_error(status, &body_text);
-        return Err(HttpError::Api(parsed));
+        return Err(HttpError::UnparsedApiError {
+            status,
+            body: body_text,
+        });
     }
 
     // Build http::Response
-    let mut builder = http::Response::builder().status(status);
+    let mut builder = Response::builder().status(status);
 
     for (name, value) in headers.iter() {
         builder = builder.header(name, value);

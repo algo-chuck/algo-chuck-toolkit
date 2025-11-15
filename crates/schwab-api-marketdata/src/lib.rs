@@ -45,6 +45,10 @@ impl ApiConfig for MarketdataConfig {
     fn base_url() -> &'static str {
         "https://api.schwabapi.com/marketdata/v1"
     }
+
+    fn api_name() -> &'static str {
+        "marketdata"
+    }
 }
 
 /// Re-export async and sync client types

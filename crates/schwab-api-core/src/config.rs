@@ -29,4 +29,14 @@ pub trait ApiConfig {
     /// - `"https://api.schwabapi.com/trader/v1"`
     /// - `"https://api.schwabapi.com/marketdata/v1"`
     fn base_url() -> &'static str;
+
+    /// Returns the API name for error context.
+    ///
+    /// Used to properly classify API errors as belonging to Trader or Marketdata APIs.
+    ///
+    /// # Example return values
+    ///
+    /// - `"trader"`
+    /// - `"marketdata"`
+    fn api_name() -> &'static str;
 }

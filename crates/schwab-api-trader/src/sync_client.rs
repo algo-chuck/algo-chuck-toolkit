@@ -76,6 +76,9 @@ where
     }
 
     /// Fetch a specific account by `account_hash` (Schwab's encrypted account ID).
+    ///  
+    /// **KNOWN ISSUE**: The generated `Account` type from schwab-api-types has structural
+    /// mismatches with the actual Schwab API response:
     pub fn get_account(&self, params: &GetAccountParams<'_>) -> Result<Account> {
         let params = TraderParams::get_account(params);
         self.client.fetch_sync(&params)

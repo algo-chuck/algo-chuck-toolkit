@@ -4,6 +4,7 @@ use serde::Serialize;
 #[derive(Debug, Clone, Serialize)]
 pub struct GetMarketHourParams<'a> {
     /// The market (equity, option, bond, future, forex)
+    #[serde(skip)] // (skip path parameter from inclusion in query parameter)
     pub market: &'a str,
     /// Date in yyyy-MM-dd format
     #[serde(skip_serializing_if = "Option::is_none")]

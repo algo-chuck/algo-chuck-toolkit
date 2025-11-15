@@ -4,6 +4,7 @@ use serde::Serialize;
 #[derive(Debug, Clone, Serialize)]
 pub struct GetMoversParams<'a> {
     /// The index symbol ($DJI, $COMPX, $SPX, etc.)
+    #[serde(skip)] // (skip path parameter from inclusion in query parameter)
     pub symbol: &'a str,
     /// Sort order (VOLUME, TRADES, PERCENT_CHANGE_UP, PERCENT_CHANGE_DOWN)
     #[serde(skip_serializing_if = "Option::is_none")]

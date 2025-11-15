@@ -45,6 +45,10 @@ impl ApiConfig for TraderConfig {
     fn base_url() -> &'static str {
         "https://api.schwabapi.com/trader/v1"
     }
+
+    fn api_name() -> &'static str {
+        "trader"
+    }
 }
 
 /// Re-export async and sync client types
