@@ -732,70 +732,511 @@ impl UserPreferenceRepository {
 
 ---
 
-## Phase 3: Business Logic Layer (Services)
+## Phase 3: Service Layer (Thin CRUD Wrapper)
+
+**Status: 🔄 READY TO START (Phase 2 complete)**
+
+### Scope
+
+Phase 3 implements a thin service layer that wraps repositories with basic validation. No order execution or market data yet - just CRUD operations with business logic validation.
+
+**What's Included:**
+
+- ✅ Service structs wrapping repositories
+- ✅ Custom service error types
+- ✅ Basic validation logic
+- ✅ Unit tests with in-memory database
+- ❌ No order execution (deferred to Phase 4)
+- ❌ No market data service (deferred to Phase 4)
+- ❌ No background tasks (deferred to Phase 4)
+
+### Design Decisions (Based on Phase 1-2)
+
+**Decision 1: Positions Storage**
+
+- ✅ Positions remain in `account_data` JSON (as per OpenAPI spec)
+- ❌ No separate `PositionRepository`
+- **Rationale:** Matches API structure, simpler implementation
+
+**Decision 2: Database Configuration**
+
+- ✅ Use in-memory SQLite (`:memory:`) for unit/integration tests
+- ✅ Use file-based SQLite for running server
+- **Configuration:** Via `init_db()` parameter in `db/mod.rs`
+
+**Decision 3: Service Scope**
+
+- ✅ Thin wrapper around repositories
+- ✅ Input validation only
+- ❌ No order execution logic yet
+- **Rationale:** Incremental development, test each layer
+
+**Decision 4: Market Data**
+
+- ❌ Not included in Phase 3
+- **Rationale:** Not needed until order execution in Phase 4
 
 ### File Structure
 
 ```
-tools/trader/src/
+tools/paper/src/
 ├── services/
-│   ├── mod.rs
-│   ├── account_service.rs
-│   ├── order_service.rs
-│   ├── transaction_service.rs
-│   └── market_data_service.rs  # Mock price feeds
+│   ├── mod.rs                  # Re-exports all services
+│   ├── accounts.rs             # AccountService
+│   ├── orders.rs               # OrderService
+│   ├── transactions.rs         # TransactionService
+│   └── user_preference.rs      # UserPreferenceService
 ```
 
-### Key Services
+### Service Layer Architecture
+
+**Services wrap repositories and add:**
+
+1. Input validation
+2. Business rule enforcement
+3. Error mapping (repository errors → service errors)
+4. Coordination between multiple repositories (if needed)
+
+### Implementation Examples
 
 ```rust
-// services/order_service.rs
+// services/accounts.rs
+use crate::db::repositories::{AccountRepository, AccountError};
+use schwab_api::types::trader::SecuritiesAccount;
+
+#[derive(Debug)]
+pub enum AccountServiceError {
+    Repository(AccountError),
+    NotFound(String),
+    InvalidInput(String),
+}
+
+impl From<AccountError> for AccountServiceError {
+    fn from(e: AccountError) -> Self {
+        match e {
+            AccountError::NotFound(id) => AccountServiceError::NotFound(id),
+            e => AccountServiceError::Repository(e),
+        }
+    }
+}
+
+pub struct AccountService {
+    account_repo: AccountRepository,
+}
+
+impl AccountService {
+    pub fn new(account_repo: AccountRepository) -> Self {
+        Self { account_repo }
+    }
+
+    // operationId: getAccountNumbers
+    pub async fn get_account_numbers(&self) -> Result<Vec<(String, String)>, AccountServiceError> {
+        self.account_repo
+            .get_account_numbers()
+            .await
+            .map_err(AccountServiceError::from)
+    }
+
+    // operationId: getAccounts
+    pub async fn get_accounts(&self) -> Result<Vec<SecuritiesAccount>, AccountServiceError> {
+        self.account_repo
+            .get_accounts()
+            .await
+            .map_err(AccountServiceError::from)
+    }
+
+    // operationId: getAccount
+    pub async fn get_account(&self, hash: &str) -> Result<SecuritiesAccount, AccountServiceError> {
+        if hash.is_empty() {
+            return Err(AccountServiceError::InvalidInput(
+                "Account hash cannot be empty".to_string(),
+            ));
+        }
+
+        self.account_repo
+            .get_account(hash)
+            .await
+            .map_err(AccountServiceError::from)
+    }
+}
+
+// services/orders.rs
+use crate::db::repositories::{OrderRepository, OrderError};
+use schwab_api::types::trader::{Order, OrderRequest};
+
+#[derive(Debug)]
+pub enum OrderServiceError {
+    Repository(OrderError),
+    NotFound(i64),
+    InvalidInput(String),
+}
+
+impl From<OrderError> for OrderServiceError {
+    fn from(e: OrderError) -> Self {
+        match e {
+            OrderError::NotFound(id) => OrderServiceError::NotFound(id),
+            e => OrderServiceError::Repository(e),
+        }
+    }
+}
+
 pub struct OrderService {
     order_repo: OrderRepository,
+}
+
+impl OrderService {
+    pub fn new(order_repo: OrderRepository) -> Self {
+        Self { order_repo }
+    }
+
+    // operationId: placeOrder
+    pub async fn place_order(
+        &self,
+        account_number: &str,
+        order_data: &OrderRequest,
+    ) -> Result<i64, OrderServiceError> {
+        // Basic validation
+        if account_number.is_empty() {
+            return Err(OrderServiceError::InvalidInput(
+                "Account number cannot be empty".to_string(),
+            ));
+        }
+
+        // Note: Order execution happens in Phase 4
+        // For now, just persist the order with WORKING status
+        self.order_repo
+            .place_order(account_number, order_data)
+            .await
+            .map_err(OrderServiceError::from)
+    }
+
+    // operationId: getOrder
+    pub async fn get_order(&self, order_id: i64) -> Result<Order, OrderServiceError> {
+        self.order_repo
+            .get_order(order_id)
+            .await
+            .map_err(OrderServiceError::from)
+    }
+
+    // operationId: cancelOrder
+    pub async fn cancel_order(&self, order_id: i64) -> Result<(), OrderServiceError> {
+        // Basic validation: check if order exists and is cancelable
+        let order = self.get_order(order_id).await?;
+
+        // Check if order can be canceled (not already filled/canceled)
+        if let Some(status) = &order.status {
+            match status.as_str() {
+                "FILLED" | "CANCELED" | "EXPIRED" | "REJECTED" => {
+                    return Err(OrderServiceError::InvalidInput(format!(
+                        "Cannot cancel order with status: {}",
+                        status
+                    )));
+                }
+                _ => {}
+            }
+        }
+
+        self.order_repo
+            .cancel_order(order_id)
+            .await
+            .map_err(OrderServiceError::from)
+    }
+
+    // operationId: replaceOrder
+    pub async fn replace_order(
+        &self,
+        order_id: i64,
+        new_order_data: &OrderRequest,
+    ) -> Result<i64, OrderServiceError> {
+        // Validate old order is replaceable (same as cancel logic)
+        let old_order = self.get_order(order_id).await?;
+
+        if let Some(status) = &old_order.status {
+            match status.as_str() {
+                "FILLED" | "CANCELED" | "EXPIRED" | "REJECTED" => {
+                    return Err(OrderServiceError::InvalidInput(format!(
+                        "Cannot replace order with status: {}",
+                        status
+                    )));
+                }
+                _ => {}
+            }
+        }
+
+        self.order_repo
+            .replace_order(order_id, new_order_data)
+            .await
+            .map_err(OrderServiceError::from)
+    }
+
+    // operationId: getOrdersByPathParam
+    pub async fn get_orders_by_path_param(
+        &self,
+        account_number: &str,
+        from_entered_time: Option<String>,
+        to_entered_time: Option<String>,
+        status_filter: Option<String>,
+    ) -> Result<Vec<Order>, OrderServiceError> {
+        if account_number.is_empty() {
+            return Err(OrderServiceError::InvalidInput(
+                "Account number cannot be empty".to_string(),
+            ));
+        }
+
+        self.order_repo
+            .get_orders_by_path_param(account_number, from_entered_time, to_entered_time, status_filter)
+            .await
+            .map_err(OrderServiceError::from)
+    }
+
+    // operationId: getOrdersByQueryParam
+    pub async fn get_orders_by_query_param(
+        &self,
+        from_entered_time: Option<String>,
+        to_entered_time: Option<String>,
+        status_filter: Option<String>,
+    ) -> Result<Vec<Order>, OrderServiceError> {
+        self.order_repo
+            .get_orders_by_query_param(from_entered_time, to_entered_time, status_filter)
+            .await
+            .map_err(OrderServiceError::from)
+    }
+}
+
+// services/transactions.rs
+use crate::db::repositories::{TransactionRepository, TransactionError};
+use schwab_api::types::trader::Transaction;
+
+#[derive(Debug)]
+pub enum TransactionServiceError {
+    Repository(TransactionError),
+    NotFound(i64),
+    InvalidInput(String),
+}
+
+impl From<TransactionError> for TransactionServiceError {
+    fn from(e: TransactionError) -> Self {
+        match e {
+            TransactionError::NotFound(id) => TransactionServiceError::NotFound(id),
+            e => TransactionServiceError::Repository(e),
+        }
+    }
+}
+
+pub struct TransactionService {
+    transaction_repo: TransactionRepository,
+}
+
+impl TransactionService {
+    pub fn new(transaction_repo: TransactionRepository) -> Self {
+        Self { transaction_repo }
+    }
+
+    // operationId: getTransactionsByPathParam
+    pub async fn get_transactions_by_path_param(
+        &self,
+        account_number: &str,
+        start_date: &str,
+        end_date: &str,
+        transaction_type: Option<&str>,
+    ) -> Result<Vec<Transaction>, TransactionServiceError> {
+        if account_number.is_empty() {
+            return Err(TransactionServiceError::InvalidInput(
+                "Account number cannot be empty".to_string(),
+            ));
+        }
+
+        self.transaction_repo
+            .get_transactions_by_path_param(account_number, start_date, end_date, transaction_type)
+            .await
+            .map_err(TransactionServiceError::from)
+    }
+
+    // operationId: getTransactionsById
+    pub async fn get_transactions_by_id(
+        &self,
+        activity_id: i64,
+    ) -> Result<Transaction, TransactionServiceError> {
+        self.transaction_repo
+            .get_transactions_by_id(activity_id)
+            .await
+            .map_err(TransactionServiceError::from)
+    }
+}
+
+// services/user_preference.rs
+use crate::db::repositories::{UserPreferenceRepository, UserPreferenceError};
+use schwab_api::types::trader::UserPreference;
+
+#[derive(Debug)]
+pub enum UserPreferenceServiceError {
+    Repository(UserPreferenceError),
+    NotFound,
+}
+
+impl From<UserPreferenceError> for UserPreferenceServiceError {
+    fn from(e: UserPreferenceError) -> Self {
+        match e {
+            UserPreferenceError::NotFound => UserPreferenceServiceError::NotFound,
+            e => UserPreferenceServiceError::Repository(e),
+        }
+    }
+}
+
+pub struct UserPreferenceService {
+    preference_repo: UserPreferenceRepository,
+}
+
+impl UserPreferenceService {
+    pub fn new(preference_repo: UserPreferenceRepository) -> Self {
+        Self { preference_repo }
+    }
+
+    // operationId: getUserPreference
+    pub async fn get_user_preference(&self) -> Result<UserPreference, UserPreferenceServiceError> {
+        self.preference_repo
+            .get_user_preference()
+            .await
+            .map_err(UserPreferenceServiceError::from)
+    }
+}
+```
+
+### Testing Strategy
+
+**Unit Tests with In-Memory Database:**
+
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use sqlx::SqlitePool;
+
+    async fn setup_test_service() -> AccountService {
+        // Use in-memory database for tests
+        let pool = SqlitePool::connect(":memory:").await.unwrap();
+
+        // Run migrations
+        sqlx::migrate!("./src/db/migrations")
+            .run(&pool)
+            .await
+            .unwrap();
+
+        let account_repo = AccountRepository::new(pool);
+        AccountService::new(account_repo)
+    }
+
+    #[tokio::test]
+    async fn test_get_account_numbers_empty() {
+        let service = setup_test_service().await;
+        let result = service.get_account_numbers().await.unwrap();
+        assert_eq!(result.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_get_account_invalid_hash() {
+        let service = setup_test_service().await;
+        let result = service.get_account("").await;
+        assert!(matches!(result, Err(AccountServiceError::InvalidInput(_))));
+    }
+}
+```
+
+### Phase 3 Implementation Tasks
+
+- [ ] Create `src/services/mod.rs` with module exports
+- [ ] Implement `AccountService` with 3 methods + error type
+- [ ] Implement `OrderService` with 6 methods + error type + validation
+- [ ] Implement `TransactionService` with 2 methods + error type
+- [ ] Implement `UserPreferenceService` with 1 method + error type
+- [ ] Add unit tests for each service using in-memory database
+- [ ] Update `main.rs` to include services module
+
+### Success Criteria
+
+- [ ] All 4 services compile successfully
+- [ ] Services properly wrap repository methods
+- [ ] Error types convert correctly
+- [ ] Basic validation logic works (non-empty checks, status checks)
+- [ ] Unit tests pass with in-memory database
+- [ ] No order execution logic included (deferred to Phase 4)
+
+---
+
+## Phase 4: Order Execution & Business Logic (Future)
+
+**Status: ⏸️ NOT STARTED (Waiting for Phase 3)**
+
+Phase 4 will add:
+
+- `OrderExecutor` - Background task for simulating order fills
+- `MarketDataService` - Mock price feeds for order execution
+- Order fill logic (MARKET, LIMIT, STOP orders)
+- Position updates after fills
+- Balance recalculation after fills
+- Transaction generation from fills
+- Background tokio task for processing pending orders
+
+### Planned Structure
+
+```
+tools/paper/src/
+├── services/
+│   ├── market_data.rs          # Mock price feeds
+│   └── order_executor.rs       # Background order execution
+```
+
+### Key Components (To Be Implemented)
+
+```rust
+// services/order_executor.rs
+pub struct OrderExecutor {
+    order_repo: OrderRepository,
     account_repo: AccountRepository,
-    position_repo: PositionRepository,
     transaction_repo: TransactionRepository,
     market_data: MarketDataService,
 }
 
-impl OrderService {
-    // Place order: validate, persist, simulate fill
-    pub async fn place_order(&self, account_hash: &str, order: OrderRequest) -> Result<String>;
+impl OrderExecutor {
+    // Background task that runs every N seconds
+    pub async fn run_execution_loop(&self) {
+        let mut interval = tokio::time::interval(Duration::from_secs(1));
+        loop {
+            interval.tick().await;
+            if let Err(e) = self.process_pending_orders().await {
+                eprintln!("Order execution error: {}", e);
+            }
+        }
+    }
 
-    // Cancel order: validate cancelable, update status
-    pub async fn cancel_order(&self, account_hash: &str, order_id: &str) -> Result<()>;
-
-    // Replace order: cancel old, place new
-    pub async fn replace_order(&self, account_hash: &str, order_id: &str, new_order: OrderRequest) -> Result<String>;
-
-    // Preview order: validate, calculate commissions/fees
-    pub async fn preview_order(&self, account_hash: &str, order: PreviewOrderRequest) -> Result<PreviewOrder>;
-
-    // Order execution simulator (background task)
-    pub async fn process_pending_orders(&self) -> Result<()>;
+    async fn process_pending_orders(&self) -> Result<()> {
+        // Get all WORKING orders
+        // Check if they should fill based on market price
+        // Execute fills, update positions, generate transactions
+    }
 }
 
-// services/account_service.rs
-pub struct AccountService {
-    account_repo: AccountRepository,
-    position_repo: PositionRepository,
+// services/market_data.rs
+pub struct MarketDataService {
+    // Mock price feeds
 }
 
-impl AccountService {
-    pub async fn get_account_numbers(&self) -> Result<Vec<AccountNumberHash>>;
-    pub async fn get_accounts(&self, include_positions: bool) -> Result<Vec<Account>>;
-    pub async fn get_account(&self, hash: &str, include_positions: bool) -> Result<Account>;
-
-    // Update account balances based on positions
-    pub async fn recalculate_balances(&self, account_id: i64) -> Result<()>;
+impl MarketDataService {
+    pub async fn get_current_price(&self, symbol: &str) -> Result<f64> {
+        // Return mock prices for testing
+    }
 }
 ```
 
 ---
 
-## Phase 4: Handler Implementation
+## Phase 5: Handler Layer & API Integration (Future)
 
-Update your handlers to use services:
+**Status: ⏸️ NOT STARTED (Waiting for Phase 4)**
+
+### Handler Implementation
+
+Update existing handlers to use services:
 
 ```rust
 // handlers/accounts.rs
@@ -803,84 +1244,91 @@ use crate::services::AccountService;
 
 pub async fn get_account_numbers(
     State(account_service): State<Arc<AccountService>>
-) -> Result<Json<Vec<AccountNumberHash>>> {
+) -> Result<Json<Vec<(String, String)>>> {
     let accounts = account_service.get_account_numbers().await?;
-    Ok(Json(accounts))
-}
-
-pub async fn get_accounts(
-    Query(params): Query<GetAccountsQuery>,
-    State(account_service): State<Arc<AccountService>>
-) -> Result<Json<Vec<Account>>> {
-    let include_positions = params.fields.as_deref() == Some("positions");
-    let accounts = account_service.get_accounts(include_positions).await?;
     Ok(Json(accounts))
 }
 
 pub async fn get_account(
     Path(account_hash): Path<String>,
-    Query(params): Query<GetAccountQuery>,
     State(account_service): State<Arc<AccountService>>
-) -> Result<Json<Account>> {
-    let include_positions = params.fields.as_deref() == Some("positions");
-    let account = account_service.get_account(&account_hash, include_positions).await?;
+) -> Result<Json<SecuritiesAccount>> {
+    let account = account_service.get_account(&account_hash).await?;
     Ok(Json(account))
 }
 
 // handlers/orders.rs
 pub async fn place_order(
-    Path(account_hash): Path<String>,
+    Path(account_number): Path<String>,
     State(order_service): State<Arc<OrderService>>,
     Json(order): Json<OrderRequest>
-) -> Result<Created> {
-    let order_id = order_service.place_order(&account_hash, order).await?;
-    Ok(Created { order_id })  // Could add Location header
+) -> Result<Json<i64>> {
+    let order_id = order_service.place_order(&account_number, &order).await?;
+    Ok(Json(order_id))
 }
 
 pub async fn cancel_order(
-    Path((account_hash, order_id)): Path<(String, String)>,
+    Path((account_number, order_id)): Path<(String, i64)>,
     State(order_service): State<Arc<OrderService>>
-) -> Result<EmptyOK> {
-    order_service.cancel_order(&account_hash, &order_id).await?;
-    Ok(EmptyOK {})
+) -> Result<StatusCode> {
+    order_service.cancel_order(order_id).await?;
+    Ok(StatusCode::OK)
 }
 ```
 
 ---
 
-## Phase 5: Application State & Dependency Injection
+## Phase 6: Application State & Dependency Injection (Future)
+
+**Status: ⏸️ NOT STARTED (Waiting for Phase 5)**
 
 ```rust
 // main.rs
 pub struct AppState {
-    db_pool: SqlitePool,
     account_service: Arc<AccountService>,
     order_service: Arc<OrderService>,
     transaction_service: Arc<TransactionService>,
+    user_preference_service: Arc<UserPreferenceService>,
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Initialize database
-    let db_pool = SqlitePool::connect("sqlite:paper_trader.db").await?;
-    sqlx::migrate!("./migrations").run(&db_pool).await?;
+    // Initialize database (file-based for server)
+    let db_pool = crate::db::init_db("sqlite:paper_trader.db").await?;
 
     // Initialize repositories
     let account_repo = AccountRepository::new(db_pool.clone());
     let order_repo = OrderRepository::new(db_pool.clone());
-    let position_repo = PositionRepository::new(db_pool.clone());
     let transaction_repo = TransactionRepository::new(db_pool.clone());
+    let preference_repo = UserPreferenceRepository::new(db_pool.clone());
 
     // Initialize services
-    let market_data = MarketDataService::new();
-    let account_service = Arc::new(AccountService::new(account_repo, position_repo));
-    let order_service = Arc::new(OrderService::new(
-        order_repo,
-        account_repo,
-        position_repo,
-        transaction_repo,
-        market_data,
-    ));
+    let account_service = Arc::new(AccountService::new(account_repo));
+    let order_service = Arc::new(OrderService::new(order_repo));
+    let transaction_service = Arc::new(TransactionService::new(transaction_repo));
+    let preference_service = Arc::new(UserPreferenceService::new(preference_repo));
+
+    let state = Arc::new(AppState {
+        account_service,
+        order_service,
+        transaction_service,
+        user_preference_service: preference_service,
+    });
+
+    // Start order executor background task (Phase 4)
+    // tokio::spawn(async move { order_executor.run_execution_loop().await });
+
+    let app = Router::new()
+        .nest("/trader/v1", api::router())
+        .with_state(state);
+
+    // ... rest of setup
+}
+```
+
+---
+
+## Phase 7: SQLite → PostgreSQL Migration Path (Future) ));
 
     let state = Arc::new(AppState {
         db_pool,
@@ -895,157 +1343,26 @@ async fn main() -> Result<()> {
         .with_state(state);
 
     // ... rest of setup
+
 }
 
 // api/mod.rs
 pub fn router() -> Router<Arc<AppState>> {
-    Router::new()
-        .route("/accounts/accountNumbers", get(handlers::get_account_numbers))
-        .route("/accounts", get(handlers::get_accounts))
-        .route("/accounts/:accountNumber", get(handlers::get_account))
-        .route("/accounts/:accountNumber/orders",
-            get(handlers::get_orders_by_path_param)
-            .post(handlers::place_order))
-        // ... other routes
-}
-```
+Router::new()
+.route("/accounts/accountNumbers", get(handlers::get_account_numbers))
+.route("/accounts", get(handlers::get_accounts))
+.route("/accounts/:accountNumber", get(handlers::get_account))
+.route("/accounts/:accountNumber/orders",
+get(handlers::get_orders_by_path_param)
+.post(handlers::place_order))
 
 ---
 
-## Phase 6: Order Execution Simulator
-
-```rust
-// services/order_executor.rs
-pub struct OrderExecutor {
-    order_service: Arc<OrderService>,
-    market_data: MarketDataService,
-}
-
-impl OrderExecutor {
-    // Background task that runs every N seconds
-    pub async fn run_execution_loop(&self) {
-        let mut interval = tokio::time::interval(Duration::from_secs(1));
-
-        loop {
-            interval.tick().await;
-
-            if let Err(e) = self.process_pending_orders().await {
-                eprintln!("Order execution error: {}", e);
-            }
-        }
-    }
-
-    async fn process_pending_orders(&self) -> Result<()> {
-        // Get all WORKING orders
-        let pending = self.order_service.get_pending_orders().await?;
-
-        for order in pending {
-            // Get current market price
-            let price = self.market_data.get_current_price(&order.symbol).await?;
-
-            // Check if order should fill
-            if self.should_fill(&order, price) {
-                self.execute_order(order, price).await?;
-            }
-        }
-
-        Ok(())
-    }
-
-    fn should_fill(&self, order: &Order, current_price: f64) -> bool {
-        match order.order_type.as_str() {
-            "MARKET" => true,  // Market orders fill immediately
-            "LIMIT" if order.instruction == "BUY" => {
-                current_price <= order.price.unwrap_or(f64::MAX)
-            },
-            "LIMIT" if order.instruction == "SELL" => {
-                current_price >= order.price.unwrap_or(0.0)
-            },
-            "STOP" if order.instruction == "BUY" => {
-                current_price >= order.stop_price.unwrap_or(f64::MAX)
-            },
-            "STOP" if order.instruction == "SELL" => {
-                current_price <= order.stop_price.unwrap_or(0.0)
-            },
-            _ => false,
-        }
-    }
-}
-```
-
----
-
-## Phase 7: Mock Market Data Service
-
-```rust
-// services/market_data_service.rs
-pub struct MarketDataService {
-    // Could use external API or generate random prices
-}
-
-impl MarketDataService {
-    pub async fn get_current_price(&self, symbol: &str) -> Result<f64> {
-        // Option 1: Use a real API (Alpha Vantage, IEX, etc.)
-        // Option 2: Generate realistic random walks
-        // Option 3: Use static prices for testing
-
-        // For now, simple mock:
-        Ok(match symbol {
-            "AAPL" => 175.50,
-            "TSLA" => 245.30,
-            "SPY" => 450.25,
-            _ => 100.0,  // default
-        })
-    }
-}
-```
-
----
-
-## Phase 8: SQLite → PostgreSQL Migration Path
-
-### Using SQLx (Easier Migration)
-
-```rust
-// Abstract database behind trait
-#[async_trait]
-pub trait Database: Send + Sync {
-    async fn get_account(&self, id: i64) -> Result<Account>;
-    // ... other methods
-}
-
-// SQLite implementation
-pub struct SqliteDatabase {
-    pool: SqlitePool,
-}
-
-// PostgreSQL implementation (later)
-pub struct PostgresDatabase {
-    pool: PgPool,
-}
-
-// Both implement the same trait
-// Just swap the implementation in main.rs
-```
-
-### Using Diesel (Type-Safe Migration)
-
-```rust
-// Diesel supports both with same schema
-// Just change connection string:
-// SQLite: "file:paper_trader.db"
-// PostgreSQL: "postgres://user:pass@localhost/paper_trader"
-
-// Schema is database-agnostic with minor tweaks
-```
-
----
-
-## Implementation Phases
+## Implementation Progress Summary
 
 ### Phase 0: Account Management (Future) ⏸️ DEFERRED
 
-**Status: Planning deferred until after Phase 1-2 are working**
+**Status: Planning deferred until after core phases complete**
 
 This phase addresses how accounts are created, initialized, reset, and managed outside of the standard Schwab API endpoints.
 
@@ -1221,32 +1538,63 @@ POST   /admin/accounts/{accountNumber}/positions  # Manually add position
 
 ## Key Design Decisions
 
-### ✅ Confirmed Decisions (Phase 1 Complete)
+### ✅ Confirmed Decisions (Phases 1-2 Complete)
 
 1. **JSON Blobs for Complex Types**: Store full `OrderRequest`, `SecuritiesAccount`, `Transaction`, `UserPreference` as JSON to match API spec exactly
 2. **4 Core Tables**: accounts, orders, transactions, user_preferences (not 8+ normalized tables)
-3. **Database Library**: sqlx for async/await, compile-time SQL checking, flexibility
+3. **Database Library**: sqlx with runtime queries (no compile-time DATABASE_URL requirement)
 4. **Order/Transaction IDs**: AUTOINCREMENT starting at 1001 for both order_id and activity_id
 5. **Timestamps**: SQLite CURRENT_TIMESTAMP (UTC, ISO-8601) matching OpenAPI spec format
 6. **Indexes**: Added on account_number, status, type, time fields for query filtering
-7. **Repository Pattern**: Easy to swap SQLite → PostgreSQL by changing connection string
-8. **Service Layer**: Business logic separate from handlers and database
-9. **Background Order Executor**: Separate tokio task simulates fills
-10. **No Auth Initially**: Focus on CRUD and business logic first
-11. **No Account Seeding**: Start with empty database, accounts created via admin endpoints
+7. **Repository Pattern**: Data access layer with custom error types per repository
+8. **No Separate Position Table**: Positions stored in account_data JSON (matches API spec)
+9. **In-Memory Testing**: Use `:memory:` SQLite for tests, file-based for server
+10. **Service Layer Scope**: Phase 3 = thin CRUD wrapper, Phase 4 = order execution
+11. **No Auth Initially**: Focus on CRUD and business logic first
+12. **No Account Seeding**: Start with empty database, accounts created via admin endpoints
+
+### 📋 Phase 3 Decisions
+
+- **No PositionRepository**: Positions are part of account JSON (Question 1: Option A)
+- **In-Memory for Tests**: File-based for server (Question 2: Option C)
+- **Simple Services**: Just CRUD wrappers, no execution (Question 3: Option A)
+- **No Market Data Yet**: Deferred to Phase 4 (Question 4: Option A)
+- **Fixed Path**: Updated to `tools/paper/src/` (Question 5: Yes)
 
 ### 📋 TODO Items
 
 - [ ] **Phase 0: Account Management** - Design account creation, initialization, reset, test fixtures (see Phase 0 section)
 - [ ] **Index Review**: Optimize indexes after development/load testing
-- [ ] **Sequence Initialization**: Implement sqlite_sequence setup for order_id/activity_id starting at 1001
+- [ ] **Phase 4: Order Execution** - Background task, market data service, fill logic
+- [ ] **Phase 5: Handler Integration** - Connect services to Axum handlers
+- [ ] **Phase 6: App State** - Dependency injection and main.rs setup
 
-### ⏳ Deferred to Phase 0 (Account Management)
+### ⏳ Deferred to Future Phases
 
-- Account creation workflow (admin endpoints design)
-- Initial account balances and positions
-- Account reset/deletion strategy
-- Test data fixture generation
+- **Phase 0**: Account creation workflow, initial balances, reset/deletion, test fixtures
+- **Phase 4**: Order execution simulator, market data service, order fills
+- **Phase 7**: SQLite → PostgreSQL migration
+- **Future**: WebSocket updates, market replay, analytics, multi-account portfolios
+
+---
+
+## Progress Tracking
+
+### Completed ✅
+
+- **Phase 1**: Database schema design and planning decisions
+- **Phase 2**: Repository layer with all 4 repositories (accounts, orders, transactions, user_preference)
+
+### Current 🔄
+
+- **Phase 3**: Service layer (ready to start)
+
+### Upcoming ⏸️
+
+- **Phase 4**: Order execution and business logic
+- **Phase 5**: Handler layer and API integration
+- **Phase 6**: Application state and dependency injection
+- **Phase 0**: Account management (deferred)
 
 ---
 
@@ -1254,17 +1602,18 @@ POST   /admin/accounts/{accountNumber}/positions  # Manually add position
 
 ### Testing Strategy
 
-- Unit tests for repositories
-- Integration tests for services
-- E2E tests using the `dev_client.rs` test suite
-- Mock market data for deterministic testing
+- Unit tests for repositories ✅ (setup complete in Phase 2)
+- Unit tests for services with in-memory database (Phase 3)
+- Integration tests for services (Phase 3)
+- E2E tests using existing handler tests (Phase 5)
+- Mock market data for deterministic testing (Phase 4)
 
 ### Performance Considerations
 
-- Connection pooling for database
-- Background task for order execution (separate from request handlers)
-- Indexing on frequently queried fields (account_hash, order_id, symbol)
-- Consider caching for frequently accessed data
+- Connection pooling for database ✅ (implemented in Phase 2)
+- Background task for order execution (Phase 4)
+- Indexing on frequently queried fields ✅ (implemented in Phase 1)
+- Consider caching for frequently accessed data (future optimization)
 
 ### Future Enhancements
 
@@ -1273,6 +1622,7 @@ POST   /admin/accounts/{accountNumber}/positions  # Manually add position
 - Advanced charting and analytics
 - Multi-account portfolios
 - Risk management features
+- Admin dashboard for account management
 
 ---
 
