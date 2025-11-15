@@ -3,7 +3,7 @@
 //! This module provides a blocking/sync client for interacting with the Schwab Trader API,
 //! supporting operations like account management, order placement, and transaction history.
 
-use schwab_api_core::{ApiClient, HttpError, SyncHttpClient};
+use schwab_api_core::{ApiClient, HttpError, Result, SyncHttpClient};
 use schwab_api_types::trader::*;
 use std::ops::Deref;
 
@@ -53,19 +53,30 @@ where
     HttpError: From<C::Error>,
 {
     /// Fetch all account numbers linked to the user.
-    pub fn get_account_numbers(&self) -> Result<Vec<AccountNumberHash>, HttpError> {
+    pub fn get_account_numbers(&self) -> Result<Vec<AccountNumberHash>> {
         let params = TraderParams::get_account_numbers();
         self.client.fetch_sync(&params)
     }
 
     /// Fetch all accounts for the user.
-    pub fn get_accounts(&self, params: &GetAccountsParams<'_>) -> Result<Vec<Account>, HttpError> {
+    ///
+    /// **KNOWN ISSUE**: The generated `Account` type from schwab-api-types has structural
+    /// mismatches with the actual Schwab API response:
+    ///
+    /// **Result**: This method will trigger a deserialization warning and return an error.
+    /// The warning system will show the raw JSON response for debugging, but the data cannot
+    /// be used in a type-safe manner until the Account type is corrected to match the
+    /// actual API structure.
+    ///
+    /// **Workaround**: Access the raw JSON from the error/warning output, or update the
+    /// schwab-api-types crate with the corrected structure.
+    pub fn get_accounts(&self, params: &GetAccountsParams<'_>) -> Result<Vec<Account>> {
         let params = TraderParams::get_accounts(params);
         self.client.fetch_sync(&params)
     }
 
     /// Fetch a specific account by `account_hash` (Schwab's encrypted account ID).
-    pub fn get_account(&self, params: &GetAccountParams<'_>) -> Result<Account, HttpError> {
+    pub fn get_account(&self, params: &GetAccountParams<'_>) -> Result<Account> {
         let params = TraderParams::get_account(params);
         self.client.fetch_sync(&params)
     }
@@ -74,7 +85,7 @@ where
     pub fn get_orders_by_path_param(
         &self,
         params: &GetOrdersByPathParams<'_>,
-    ) -> Result<Vec<Order>, HttpError> {
+    ) -> Result<Vec<Order>> {
         let params = TraderParams::get_orders_by_path_param(params);
         self.client.fetch_sync(&params)
     }
@@ -83,40 +94,37 @@ where
     pub fn get_orders_by_query_param(
         &self,
         params: &GetOrdersByQueryParams<'_>,
-    ) -> Result<Vec<Order>, HttpError> {
+    ) -> Result<Vec<Order>> {
         let params = TraderParams::get_orders_by_query_param(params);
         self.client.fetch_sync(&params)
     }
 
     /// Fetch a specific order by its `order_id` for a given account.
-    pub fn get_order(&self, params: &GetOrderParams<'_>) -> Result<Order, HttpError> {
+    pub fn get_order(&self, params: &GetOrderParams<'_>) -> Result<Order> {
         let params = TraderParams::get_order(params);
         self.client.fetch_sync(&params)
     }
 
     /// Place an order for a specific account.
-    pub fn place_order(&self, params: &PlaceOrderParams<'_>) -> Result<(), HttpError> {
+    pub fn place_order(&self, params: &PlaceOrderParams<'_>) -> Result<()> {
         let params = TraderParams::place_order(params);
         self.client.execute_sync(&params)
     }
 
     /// Replace an existing order.
-    pub fn replace_order(&self, params: &ReplaceOrderParams<'_>) -> Result<(), HttpError> {
+    pub fn replace_order(&self, params: &ReplaceOrderParams<'_>) -> Result<()> {
         let params = TraderParams::replace_order(params);
         self.client.execute_sync(&params)
     }
 
     /// Cancel an order.
-    pub fn cancel_order(&self, params: &CancelOrderParams<'_>) -> Result<(), HttpError> {
+    pub fn cancel_order(&self, params: &CancelOrderParams<'_>) -> Result<()> {
         let params = TraderParams::cancel_order(params);
         self.client.execute_sync(&params)
     }
 
     /// Preview an order (dry-run validation).
-    pub fn preview_order(
-        &self,
-        params: &PreviewOrderParams<'_>,
-    ) -> Result<PreviewOrder, HttpError> {
+    pub fn preview_order(&self, params: &PreviewOrderParams<'_>) -> Result<PreviewOrder> {
         let params = TraderParams::preview_order(params);
         self.client.fetch_sync(&params)
     }
@@ -125,7 +133,7 @@ where
     pub fn get_transactions_by_path_param(
         &self,
         params: &GetTransactionsByPathParams<'_>,
-    ) -> Result<Vec<Transaction>, HttpError> {
+    ) -> Result<Vec<Transaction>> {
         let params = TraderParams::get_transactions_by_path_param(params);
         self.client.fetch_sync(&params)
     }
@@ -134,13 +142,13 @@ where
     pub fn get_transactions_by_id(
         &self,
         params: &GetTransactionByIdParams<'_>,
-    ) -> Result<Vec<Transaction>, HttpError> {
+    ) -> Result<Vec<Transaction>> {
         let params = TraderParams::get_transactions_by_id(params);
         self.client.fetch_sync(&params)
     }
 
     /// Fetch user preferences for the logged-in user.
-    pub fn get_user_preference(&self) -> Result<UserPreference, HttpError> {
+    pub fn get_user_preference(&self) -> Result<UserPreference> {
         let params = TraderParams::get_user_preference();
         self.client.fetch_sync(&params)
     }

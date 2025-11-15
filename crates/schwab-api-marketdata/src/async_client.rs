@@ -3,7 +3,7 @@
 //! This module provides an async client for interacting with the Schwab Market Data API,
 //! supporting operations like quotes, option chains, price history, and market hours.
 
-use schwab_api_core::{ApiClient, AsyncHttpClient, HttpError};
+use schwab_api_core::{ApiClient, AsyncHttpClient, HttpError, Result};
 use schwab_api_types::marketdata::*;
 use std::collections::HashMap;
 use std::ops::Deref;
@@ -69,7 +69,7 @@ where
     pub async fn get_quotes(
         &self,
         params: &GetQuotesParams<'_>,
-    ) -> Result<HashMap<String, QuoteResponseObject>, HttpError> {
+    ) -> Result<HashMap<String, QuoteResponseObject>> {
         let params = MarketdataParams::get_quotes(params);
         self.client.fetch(&params).await
     }
@@ -78,7 +78,7 @@ where
     pub async fn get_quote(
         &self,
         params: &GetQuoteParams<'_>,
-    ) -> Result<HashMap<String, QuoteResponseObject>, HttpError> {
+    ) -> Result<HashMap<String, QuoteResponseObject>> {
         let params = MarketdataParams::get_quote(params);
         self.client.fetch(&params).await
     }
@@ -105,7 +105,7 @@ where
     ///
     /// **Workaround**: Access the raw JSON from the error/warning output, or update the
     /// schwab-api-types crate with the corrected structure.
-    pub async fn get_chain(&self, params: &GetChainParams<'_>) -> Result<OptionChain, HttpError> {
+    pub async fn get_chain(&self, params: &GetChainParams<'_>) -> Result<OptionChain> {
         let params = MarketdataParams::get_chain(params);
         self.client.fetch(&params).await
     }
@@ -114,7 +114,7 @@ where
     pub async fn get_expiration_chain(
         &self,
         params: &GetExpirationChainParams<'_>,
-    ) -> Result<ExpirationChain, HttpError> {
+    ) -> Result<ExpirationChain> {
         let params = MarketdataParams::get_expiration_chain(params);
         self.client.fetch(&params).await
     }
@@ -123,16 +123,13 @@ where
     pub async fn get_price_history(
         &self,
         params: &GetPriceHistoryParams<'_>,
-    ) -> Result<CandleList, HttpError> {
+    ) -> Result<CandleList> {
         let params = MarketdataParams::get_price_history(params);
         self.client.fetch(&params).await
     }
 
     /// Get movers for a specific index
-    pub async fn get_movers(
-        &self,
-        params: &GetMoversParams<'_>,
-    ) -> Result<GetMovers200Response, HttpError> {
+    pub async fn get_movers(&self, params: &GetMoversParams<'_>) -> Result<GetMovers200Response> {
         let params = MarketdataParams::get_movers(params);
         self.client.fetch(&params).await
     }
@@ -141,7 +138,7 @@ where
     pub async fn get_market_hours(
         &self,
         params: &GetMarketHoursParams<'_>,
-    ) -> Result<HashMap<String, HashMap<String, Hours>>, HttpError> {
+    ) -> Result<HashMap<String, HashMap<String, Hours>>> {
         let params = MarketdataParams::get_market_hours(params);
         self.client.fetch(&params).await
     }
@@ -150,7 +147,7 @@ where
     pub async fn get_market_hour(
         &self,
         params: &GetMarketHourParams<'_>,
-    ) -> Result<HashMap<String, HashMap<String, Hours>>, HttpError> {
+    ) -> Result<HashMap<String, HashMap<String, Hours>>> {
         let params = MarketdataParams::get_market_hour(params);
         self.client.fetch(&params).await
     }
@@ -159,7 +156,7 @@ where
     pub async fn get_instruments(
         &self,
         params: &GetInstrumentsParams<'_>,
-    ) -> Result<HashMap<String, Vec<InstrumentResponse>>, HttpError> {
+    ) -> Result<HashMap<String, Vec<InstrumentResponse>>> {
         let params = MarketdataParams::get_instruments(params);
         self.client.fetch(&params).await
     }
@@ -168,7 +165,7 @@ where
     pub async fn get_instruments_by_cusip(
         &self,
         params: &GetInstrumentByCusipParams<'_>,
-    ) -> Result<HashMap<String, Vec<InstrumentResponse>>, HttpError> {
+    ) -> Result<HashMap<String, Vec<InstrumentResponse>>> {
         let params = MarketdataParams::get_instruments_by_cusip(params);
         self.client.fetch(&params).await
     }
