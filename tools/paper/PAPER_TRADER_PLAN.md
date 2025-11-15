@@ -269,6 +269,11 @@ chrono = { version = "0.4", features = ["serde"] }  # For timestamp handling
 5. **Tests Included**: Each repository has basic test setup (not yet implemented)
 6. **Migration Safety**: `sqlx::migrate!()` is idempotent - it tracks applied migrations in `_sqlx_migrations` table and only runs new ones
 7. **Schema Management**: Single source of truth in `src/db/migrations/001_initial_schema.sql` (executed on startup)
+8. **Early Development Schema Changes**:
+   - Until deployed to production, directly edit `001_initial_schema.sql` for schema changes
+   - Delete the database file (`rm -f paper-trader.db paper-trader.db-shm paper-trader.db-wal`) after schema edits
+   - No need for multiple migration files during early development
+   - Once deployed or shared with others, start creating new migration files (`002_*.sql`, etc.)
 
 ### Repository Pattern Examples
 
