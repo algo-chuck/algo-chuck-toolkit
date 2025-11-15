@@ -10,6 +10,10 @@ description = "A web service mirroring the Schwab Trader API OpenAPI specificati
 schwab-api = { path = "../../crates/schwab-api", default-features = false, features = ["trader"] }
 # -- Async
 tokio = { workspace = true, features = ["full"] }
+# -- Database
+sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite", "macros", "chrono"] }
+# -- Date and Time
+chrono = { version = "0.4", features = ["serde"] }
 # -- Serde
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }

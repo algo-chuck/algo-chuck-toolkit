@@ -1,0 +1,242 @@
+// db/repositories/orders.rs
+// Implements operations from OpenAPI tag: "Orders"
+
+use schwab_api::types::trader::{Order, OrderRequest};
+use serde_json;
+use sqlx::SqlitePool;
+
+#[derive(Debug)]
+pub enum OrderError {
+    Database(sqlx::Error),
+    Serialization(serde_json::Error),
+    NotFound(i64),
+}
+
+impl From<sqlx::Error> for OrderError {
+    fn from(e: sqlx::Error) -> Self {
+        match e {
+            sqlx::Error::RowNotFound => OrderError::NotFound(0),
+            e => OrderError::Database(e),
+        }
+    }
+}
+
+impl From<serde_json::Error> for OrderError {
+    fn from(e: serde_json::Error) -> Self {
+        OrderError::Serialization(e)
+    }
+}
+
+impl std::fmt::Display for OrderError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            OrderError::Database(e) => write!(f, "Database error: {}", e),
+            OrderError::Serialization(e) => write!(f, "Serialization error: {}", e),
+            OrderError::NotFound(id) => write!(f, "Order not found: {}", id),
+        }
+    }
+}
+
+impl std::error::Error for OrderError {}
+
+pub struct OrderRepository {
+    pool: SqlitePool,
+}
+
+impl OrderRepository {
+    pub fn new(pool: SqlitePool) -> Self {
+        Self { pool }
+    }
+
+    // operationId: placeOrder
+    pub async fn place_order(
+        &self,
+        account_number: &str,
+        order_data: &OrderRequest,
+    ) -> Result<i64, OrderError> {
+        let order_data_json = serde_json::to_string(order_data)?;
+        let status = "WORKING"; // Initial status
+
+        // Get next order_id (starting from 1001)
+        let order_id: i64 =
+            sqlx::query_scalar("SELECT COALESCE(MAX(order_id), 1000) + 1 FROM orders")
+                .fetch_one(&self.pool)
+                .await?;
+
+        sqlx::query(
+            "INSERT INTO orders (order_id, account_number, status, order_data, entered_time)
+             VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)",
+        )
+        .bind(order_id)
+        .bind(account_number)
+        .bind(status)
+        .bind(order_data_json)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(order_id)
+    }
+
+    // operationId: getOrder
+    pub async fn get_order(&self, order_id: i64) -> Result<Order, OrderError> {
+        let order_data =
+            sqlx::query_scalar::<_, String>("SELECT order_data FROM orders WHERE order_id = ?")
+                .bind(order_id)
+                .fetch_optional(&self.pool)
+                .await?
+                .ok_or(OrderError::NotFound(order_id))?;
+
+        serde_json::from_str(&order_data).map_err(OrderError::from)
+    }
+
+    // operationId: getOrdersByPathParam
+    pub async fn get_orders_by_path_param(
+        &self,
+        account_number: &str,
+        from_entered_time: Option<String>,
+        to_entered_time: Option<String>,
+        status_filter: Option<String>,
+    ) -> Result<Vec<Order>, OrderError> {
+        // TODO: Implement date and status filtering
+        let _ = (from_entered_time, to_entered_time, status_filter);
+
+        let rows = sqlx::query_scalar::<_, String>(
+            "SELECT order_data FROM orders 
+             WHERE account_number = ?
+             ORDER BY entered_time DESC",
+        )
+        .bind(account_number)
+        .fetch_all(&self.pool)
+        .await?;
+
+        rows.into_iter()
+            .map(|r| serde_json::from_str(&r).map_err(OrderError::from))
+            .collect()
+    }
+
+    // operationId: getOrdersByQueryParam
+    pub async fn get_orders_by_query_param(
+        &self,
+        from_entered_time: Option<String>,
+        to_entered_time: Option<String>,
+        status_filter: Option<String>,
+    ) -> Result<Vec<Order>, OrderError> {
+        // TODO: Implement date and status filtering for all accounts
+        let _ = (from_entered_time, to_entered_time, status_filter);
+
+        let rows = sqlx::query_scalar::<_, String>(
+            "SELECT order_data FROM orders 
+             ORDER BY entered_time DESC",
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        rows.into_iter()
+            .map(|r| serde_json::from_str(&r).map_err(OrderError::from))
+            .collect()
+    }
+
+    // operationId: cancelOrder
+    pub async fn cancel_order(&self, order_id: i64) -> Result<(), OrderError> {
+        let status = "CANCELED";
+
+        sqlx::query(
+            "UPDATE orders 
+             SET status = ?, close_time = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+             WHERE order_id = ?",
+        )
+        .bind(status)
+        .bind(order_id)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    // operationId: replaceOrder
+    pub async fn replace_order(
+        &self,
+        order_id: i64,
+        new_order_data: &OrderRequest,
+    ) -> Result<i64, OrderError> {
+        // Cancel old order
+        self.cancel_order(order_id).await?;
+
+        // Get account_number from old order
+        let old_order = self.get_order(order_id).await?;
+
+        let account_number = old_order
+            .account_number
+            .ok_or_else(|| OrderError::NotFound(order_id))?
+            .to_string();
+
+        // Place new order
+        self.place_order(&account_number, new_order_data).await
+    }
+
+    // operationId: previewOrder
+    // Note: Preview doesn't persist to database, handled in service layer
+
+    // Additional helper methods
+
+    pub async fn update_status(&self, order_id: i64, status: &str) -> Result<(), OrderError> {
+        sqlx::query(
+            "UPDATE orders 
+             SET status = ?, updated_at = CURRENT_TIMESTAMP
+             WHERE order_id = ?",
+        )
+        .bind(status)
+        .bind(order_id)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    pub async fn update(&self, order_id: i64, order_data: &Order) -> Result<(), OrderError> {
+        let order_data_json = serde_json::to_string(order_data)?;
+        let status = &order_data
+            .status
+            .as_ref()
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| "UNKNOWN".to_string());
+
+        sqlx::query(
+            "UPDATE orders 
+             SET order_data = ?, status = ?, updated_at = CURRENT_TIMESTAMP
+             WHERE order_id = ?",
+        )
+        .bind(order_data_json)
+        .bind(status)
+        .bind(order_id)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    async fn setup_test_db() -> SqlitePool {
+        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        sqlx::migrate!("./src/db/migrations")
+            .run(&pool)
+            .await
+            .unwrap();
+        pool
+    }
+
+    #[tokio::test]
+    async fn test_order_id_starts_at_1001() {
+        let pool = setup_test_db().await;
+        let repo = OrderRepository::new(pool);
+
+        // First order should have ID 1001
+        let order_req = OrderRequest::default();
+        let order_id = repo.place_order("12345", &order_req).await.unwrap();
+        assert_eq!(order_id, 1001);
+    }
+}

@@ -1,6 +1,7 @@
 use axum::{Router, middleware::map_response, response::Response};
 
 mod api;
+mod db;
 mod error;
 mod handlers;
 mod response;
