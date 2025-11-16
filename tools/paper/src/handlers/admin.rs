@@ -7,13 +7,25 @@
 use axum::{
     extract::{Path, State},
     http::StatusCode,
-    response::Json,
+    response::{IntoResponse, Json},
 };
+use rand::Rng;
 use schwab_api::prelude::trader::service_error::{ServiceError, ServiceErrorItem};
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use std::sync::Arc;
 
 use crate::AppState;
+
+/// Response after creating an account
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateAccountResponse {
+    pub account_number: String,
+    pub hash_value: String,
+    pub account_type: String,
+    pub initial_balance: f64,
+}
 
 /// Request payload for creating a new account
 #[derive(Debug, Deserialize)]
@@ -50,49 +62,24 @@ fn default_balance() -> f64 {
     100_000.0
 }
 
-/// Response after creating an account
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CreateAccountResponse {
-    pub account_number: String,
-    pub hash_value: String,
-    pub account_type: String,
-    pub initial_balance: f64,
-}
-
 /// Create a new paper trading account
 ///
 /// POST /admin/accounts
+#[axum::debug_handler]
 pub async fn create_account(
     State(app_state): State<Arc<AppState>>,
-    Json(request): Json<CreateAccountRequest>,
+    Json(_request): Json<CreateAccountRequest>,
 ) -> Result<(StatusCode, Json<CreateAccountResponse>), (StatusCode, Json<ServiceError>)> {
-    // Validate initial balance
-    if request.initial_balance <= 0.0 {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(ServiceError {
-                message: Some("Invalid initial balance".to_string()),
-                errors: Some(vec![ServiceErrorItem {
-                    id: None,
-                    status: Some(400),
-                    title: Some("Bad Request".to_string()),
-                    detail: Some("Initial balance must be greater than 0".to_string()),
-                }]),
-            }),
-        ));
-    }
+    // Note: Request body is accepted but ignored - all accounts are CASH with $200k fixed balance
 
-    // Generate account number (8-digit number starting from 10000000)
-    let account_numbers = app_state
-        .account_service
-        .get_account_numbers()
-        .await
-        .map_err(|e| {
-            (
+    // Fetch existing accounts first (before creating RNG)
+    let existing_accounts = match app_state.account_service.get_account_numbers().await {
+        Ok(accounts) => accounts,
+        Err(e) => {
+            return Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(ServiceError {
-                    message: Some("Failed to generate account number".to_string()),
+                    message: Some("Failed to check existing accounts".to_string()),
                     errors: Some(vec![ServiceErrorItem {
                         id: None,
                         status: Some(500),
@@ -100,58 +87,75 @@ pub async fn create_account(
                         detail: Some(e.to_string()),
                     }]),
                 }),
-            )
-        })?;
-
-    let next_number = if account_numbers.is_empty() {
-        10000000
-    } else {
-        // Find the highest account number and add 1
-        account_numbers
-            .iter()
-            .filter_map(|anh| anh.account_number.as_ref())
-            .filter_map(|n| n.parse::<i64>().ok())
-            .max()
-            .unwrap_or(10000000)
-            + 1
+            ));
+        }
     };
 
-    let account_number = next_number.to_string();
+    // Generate unique random account number (after await, so no Send issue)
+    let account_number = {
+        let mut rng = rand::thread_rng();
+        loop {
+            let num = rng.gen_range(10000000..100000000);
+            let num_str = num.to_string();
 
-    // Generate hash value (simple hash for testing - in production would be more secure)
-    let hash_value = format!("HASH{:08X}", next_number);
+            // Check if this number is already in use
+            if !existing_accounts
+                .iter()
+                .any(|acc| acc.account_number.as_ref() == Some(&num_str))
+            {
+                break num_str;
+            }
+            // If collision (very rare with 90M possible numbers), try again
+        }
+    }; // rng is dropped here
 
-    // Create the account data structure
-    let account_data = match request.account_type {
-        AccountType::Cash => create_cash_account(
-            &account_number,
-            request.initial_balance,
-            &request.initial_positions,
-        ),
-        AccountType::Margin => create_margin_account(
-            &account_number,
-            request.initial_balance,
-            &request.initial_positions,
-        ),
-    };
+    // Generate SHA256 hash value (64 uppercase hex characters)
+    let hash_value = generate_hash(&account_number);
 
-    // TODO: Call account service to create the account
-    // For now, return error saying not implemented
+    // Fixed initial balance of $200,000 (ignore request value per requirements)
+    let initial_balance = 200_000.0;
 
-    Err((
-        StatusCode::NOT_IMPLEMENTED,
-        Json(ServiceError {
-            message: Some("Account creation not yet implemented".to_string()),
-            errors: Some(vec![ServiceErrorItem {
-                id: None,
-                status: Some(501),
-                title: Some("Not Implemented".to_string()),
-                detail: Some(
-                    "Admin account creation will be implemented in the service layer".to_string(),
-                ),
-            }]),
+    // Create the account data structure (CASH only per requirements, no positions)
+    let account_data = create_cash_account(&account_number, initial_balance, &[]);
+
+    // Call service to create the account
+    if let Err(e) = app_state
+        .account_service
+        .create_account(&account_number, &hash_value, &account_data)
+        .await
+    {
+        return Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ServiceError {
+                message: Some("Failed to create account".to_string()),
+                errors: Some(vec![ServiceErrorItem {
+                    id: None,
+                    status: Some(500),
+                    title: Some("Internal Server Error".to_string()),
+                    detail: Some(e.to_string()),
+                }]),
+            }),
+        ));
+    }
+
+    // Return success response
+    Ok((
+        StatusCode::CREATED,
+        Json(CreateAccountResponse {
+            account_number,
+            hash_value,
+            account_type: "CASH".to_string(),
+            initial_balance,
         }),
     ))
+}
+
+/// Generate SHA256 hash of account number (64 uppercase hex characters)
+fn generate_hash(account_number: &str) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(account_number.as_bytes());
+    let result = hasher.finalize();
+    format!("{:X}", result)
 }
 
 /// Delete an account by account number

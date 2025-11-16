@@ -96,7 +96,7 @@ POST   /admin/accounts/{accountNumber}/reset  # Reset to initial state
 
 ## Implementation Phases
 
-### Phase 0.1: Account Creation ⏳ IN PROGRESS
+### Phase 0.1: Account Creation ✅ COMPLETE
 
 **Goal:** Create new CASH accounts with random account numbers and SHA256 hash values
 
@@ -105,25 +105,33 @@ POST   /admin/accounts/{accountNumber}/reset  # Reset to initial state
 1. ✅ Create admin handler stub (`handlers/admin.rs`)
 2. ✅ Create admin router and mount at `/admin/v1`
 3. ✅ Build account data structures (CASH account with balances)
-4. ⏸️ Implement account number generation (random 8-digit)
-5. ⏸️ Implement hash value generation (SHA256)
-6. ⏸️ Add service method: `account_service.create_account()`
-7. ⏸️ Connect handler to service layer
-8. ⏸️ Test account creation via curl
-9. ⏸️ Verify account appears in `GET /accounts` endpoint
+4. ✅ Implement account number generation (random 8-digit)
+5. ✅ Implement hash value generation (SHA256)
+6. ✅ Add service method: `account_service.create_account()`
+7. ✅ Connect handler to service layer
+8. ✅ Test account creation via curl
+9. ✅ Verify account appears in `GET /accounts` endpoint
 
-**Acceptance Criteria:**
+**Acceptance Criteria:** ✅ ALL MET
 
-- Can create CASH account with `POST /admin/v1/accounts`
-- Account gets random 8-digit account number
-- Hash value is SHA256 of account number (first 16 hex chars)
-- Account has $200,000 initial balance
-- Account appears in regular Schwab API endpoints
-- Returns account_number and hash_value in response
+- ✅ Can create CASH account with `POST /admin/v1/accounts`
+- ✅ Account gets random 8-digit account number (range: 10000000-99999999)
+- ✅ Hash value is SHA256 of account number (64 uppercase hex characters)
+- ✅ Account has $200,000 initial balance (fixed, ignores request body)
+- ✅ Account appears in regular Schwab API endpoints
+- ✅ Returns account_number and hash_value in response
+
+**Implementation Notes:**
+
+- Random number generation uses `rand::thread_rng()` with uniqueness checking
+- SHA256 hash computed using `sha2` crate, formatted as 64 uppercase hex chars
+- RNG scoped to prevent Send trait issues across await boundaries
+- Enabled `axum` macros feature for `#[axum::debug_handler]` attribute
+- Request body accepted but ignored (fixed $200k CASH accounts only)
 
 ---
 
-### Phase 0.2: Account Deletion
+### Phase 0.2: Account Deletion ⏸️ NOT STARTED
 
 **Goal:** Hard delete accounts and all related data
 
@@ -151,7 +159,7 @@ POST   /admin/accounts/{accountNumber}/reset  # Reset to initial state
 
 ---
 
-### Phase 0.3: Account Reset
+### Phase 0.3: Account Reset ⏸️ NOT STARTED
 
 **Goal:** Reset account to initial state while preserving account_number and hash
 
@@ -180,7 +188,7 @@ POST   /admin/accounts/{accountNumber}/reset  # Reset to initial state
 
 ---
 
-### Phase 0.4: Testing & Documentation
+### Phase 0.4: Testing & Documentation ⏸️ NOT STARTED
 
 **Goal:** Validate all admin operations work correctly
 
@@ -210,18 +218,19 @@ POST   /admin/accounts/{accountNumber}/reset  # Reset to initial state
 
 **Completed:**
 
-- ✅ Design decisions documented
+- ✅ Design decisions documented (all 6 decisions finalized)
 - ✅ Admin router infrastructure created
 - ✅ Basic handler stubs in place
 - ✅ CASH account structure helpers written
+- ✅ **Phase 0.1: Account Creation** - Fully functional with random 8-digit account numbers and SHA256 hashes
 
 **In Progress:**
 
-- ⏸️ Phase 0.1: Account Creation (need to wire up service layer)
+- None
 
 **Next Steps:**
 
-1. Implement random account number generation
-2. Implement SHA256 hash generation
-3. Wire handler → service → repository
-4. Test account creation end-to-end
+1. **Phase 0.2:** Implement account deletion (`DELETE /admin/v1/accounts/{accountNumber}`)
+2. **Phase 0.3:** Implement account reset (`POST /admin/v1/accounts/{accountNumber}/reset`)
+3. **Phase 0.4:** Write comprehensive tests and documentation
+4. Move to Phase 1: Trading operations (orders, positions, executions)

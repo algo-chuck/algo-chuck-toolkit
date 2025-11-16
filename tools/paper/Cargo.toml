@@ -18,11 +18,12 @@ chrono = { version = "0.4", features = ["serde"] }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 # -- Web
-axum = "0.8"
+axum = { version = "0.8", features = ["macros"] }
 # -- Others
 derive_more = {version = "2", features = ["from", "display"] }
 thiserror = "2"
 rand = "0.8"
+sha2 = "0.10"
 
 [dev-dependencies]
 anyhow = "1"

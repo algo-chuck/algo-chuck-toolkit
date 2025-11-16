@@ -79,6 +79,42 @@ impl AccountService {
             .await
             .map_err(AccountServiceError::from)
     }
+
+    /// Create a new account (admin operation)
+    ///
+    /// Maps to: POST /admin/accounts
+    pub async fn create_account(
+        &self,
+        account_number: &str,
+        hash_value: &str,
+        account_data: &SecuritiesAccount,
+    ) -> Result<(), AccountServiceError> {
+        // Validate inputs
+        if account_number.trim().is_empty() {
+            return Err(AccountServiceError::InvalidInput(
+                "account_number cannot be empty".to_string(),
+            ));
+        }
+
+        if hash_value.trim().is_empty() {
+            return Err(AccountServiceError::InvalidInput(
+                "hash_value cannot be empty".to_string(),
+            ));
+        }
+
+        // Determine account type from SecuritiesAccount enum
+        let account_type = match account_data {
+            SecuritiesAccount::Cash(_) => "CASH",
+            SecuritiesAccount::Margin(_) => "MARGIN",
+        };
+
+        // Call repository to create the account
+        self.repository
+            .create(account_number, hash_value, account_type, account_data)
+            .await?;
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
