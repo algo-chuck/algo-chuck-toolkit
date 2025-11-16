@@ -5,7 +5,7 @@
 use crate::db::repositories::{OrderError, OrderRepository};
 use schwab_api::types::trader::{
     CancelOrderParams, GetOrderParams, GetOrdersByPathParams, GetOrdersByQueryParams, Order,
-    OrderRequest, PlaceOrderParams, ReplaceOrderParams,
+    OrderRequest, PlaceOrderParams, PreviewOrder, PreviewOrderParams, ReplaceOrderParams,
 };
 
 /// Errors that can occur in order service operations
@@ -161,6 +161,39 @@ impl OrderService {
             .replace_order(params.order_id, &order_request)
             .await
             .map_err(OrderServiceError::from)
+    }
+
+    /// Preview an order without placing it
+    ///
+    /// Maps to: POST /trader/v1/accounts/{accountNumber}/previewOrder
+    ///
+    /// Note: This method does not persist anything to the database.
+    /// It validates the order and calculates estimated costs/commissions.
+    pub async fn preview_order(
+        &self,
+        params: PreviewOrderParams<'_>,
+        order_request: OrderRequest,
+    ) -> Result<PreviewOrder, OrderServiceError> {
+        // Validate account hash is not empty
+        if params.account_hash.trim().is_empty() {
+            return Err(OrderServiceError::InvalidInput(
+                "account_hash cannot be empty".to_string(),
+            ));
+        }
+
+        // Validate order request has required fields
+        self.validate_order_request(&order_request)?;
+
+        // TODO: Calculate estimated costs, commissions, and order validation
+        // For now, return a basic preview structure
+        // This will be expanded in Phase 4 with proper commission calculation
+
+        Ok(PreviewOrder {
+            order_id: None,                // Preview doesn't have an order ID yet
+            order_strategy: None,          // TODO: Convert OrderRequest to OrderStrategy
+            order_validation_result: None, // TODO: Add validation result
+            commission_and_fee: None,      // TODO: Calculate commissions and fees
+        })
     }
 
     // Validation helpers

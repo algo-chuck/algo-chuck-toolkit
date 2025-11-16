@@ -4,6 +4,24 @@ A comprehensive guide for building a "drop-in" replacement mock server for the S
 
 ---
 
+## Implementation Progress
+
+**Current Phase: Phase 3 Complete** (November 16, 2025)
+
+- ✅ **Phase 1**: Database schema design and planning decisions
+- ✅ **Phase 2**: Repository layer with 4 repositories (November 15, 2025)
+- ✅ **Phase 3**: Service layer with 4 services (November 16, 2025)
+- ⏳ **Phase 4**: Query parameter filtering + Order execution (Not Started)
+- ⏳ **Phase 5**: Handler layer & API integration (Not Started)
+- ⏳ **Phase 6**: Application state & dependency injection (Not Started)
+
+**Known Limitations:**
+
+- Query parameters (fields, maxResults, status, dates, etc.) are accepted but not used for filtering
+- This will be addressed in Phase 4 Part 1
+
+---
+
 ## Project Architecture Overview
 
 Your paper trader will be a drop-in replacement mock server that implements all 13 Schwab Trader API endpoints with SQLite persistence.
@@ -722,41 +740,79 @@ impl UserPreferenceRepository {
 
 **Complete mapping of tags and operationIds:**
 
-| Tag                 | OpenAPI operationId          | Repository Method                           |
-| ------------------- | ---------------------------- | ------------------------------------------- |
-| **Accounts**        | `getAccountNumbers`          | `get_account_numbers()`                     |
-|                     | `getAccounts`                | `get_accounts()`                            |
-|                     | `getAccount`                 | `get_account()`                             |
-| **Orders**          | `getOrdersByPathParam`       | `get_orders_by_path_param()`                |
-|                     | `placeOrder`                 | `place_order()`                             |
-|                     | `getOrder`                   | `get_order()`                               |
-|                     | `cancelOrder`                | `cancel_order()`                            |
-|                     | `replaceOrder`               | `replace_order()`                           |
-|                     | `getOrdersByQueryParam`      | `get_orders_by_query_param()`               |
-|                     | `previewOrder`               | _(handled in service layer, not persisted)_ |
-| **Transactions**    | `getTransactionsByPathParam` | `get_transactions_by_path_param()`          |
-|                     | `getTransactionsById`        | `get_transactions_by_id()`                  |
-| **User Preference** | `getUserPreference`          | `get_user_preference()`                     |
+| Tag                 | OpenAPI operationId          | Repository Method                      |
+| ------------------- | ---------------------------- | -------------------------------------- |
+| **Accounts**        | `getAccountNumbers`          | `get_account_numbers()`                |
+|                     | `getAccounts`                | `get_accounts()`                       |
+|                     | `getAccount`                 | `get_account()`                        |
+| **Orders**          | `getOrdersByPathParam`       | `get_orders_by_path_param()`           |
+|                     | `placeOrder`                 | `place_order()`                        |
+|                     | `getOrder`                   | `get_order()`                          |
+|                     | `cancelOrder`                | `cancel_order()`                       |
+|                     | `replaceOrder`               | `replace_order()`                      |
+|                     | `getOrdersByQueryParam`      | `get_orders_by_query_param()`          |
+|                     | `previewOrder`               | _(service layer only - not persisted)_ |
+| **Transactions**    | `getTransactionsByPathParam` | `get_transactions_by_path_param()`     |
+|                     | `getTransactionsById`        | `get_transactions_by_id()`             |
+| **User Preference** | `getUserPreference`          | `get_user_preference()`                |
 
 ---
 
 ## Phase 3: Service Layer (Thin CRUD Wrapper)
 
-**Status: 🔄 READY TO START (Phase 2 complete)**
+**Status: ✅ COMPLETE (November 16, 2025)**
 
-### Scope
+### Implementation Summary
 
-Phase 3 implements a thin service layer that wraps repositories with basic validation. No order execution or market data yet - just CRUD operations with business logic validation.
+Phase 3 successfully implemented a thin service layer that wraps repositories with basic validation. All services use existing parameter types from `schwab_api::types::trader` and compile successfully.
 
-**What's Included:**
+**What Was Completed:**
 
-- ✅ Service structs wrapping repositories
-- ✅ Custom service error types
-- ✅ Basic validation logic
-- ✅ Unit tests with in-memory database
+- ✅ Service structs wrapping repositories (4 services)
+- ✅ Custom service error types with `thiserror`
+- ✅ Basic validation logic (non-empty checks)
+- ✅ Proper error conversion (Repository errors → Service errors)
+- ✅ Lifetime parameter handling for param types
+- ✅ Added `thiserror` dependency to Cargo.toml
+- ✅ Implemented `preview_order()` in OrderService (returns basic PreviewOrder structure)
 - ❌ No order execution (deferred to Phase 4)
 - ❌ No market data service (deferred to Phase 4)
 - ❌ No background tasks (deferred to Phase 4)
+- ❌ Unit tests (deferred - can be added when needed)
+- ⚠️ Query parameter filtering not implemented (deferred to Phase 4)
+- ⚠️ Preview order calculations (commissions, validation results) deferred to Phase 4
+
+### Files Created
+
+```
+tools/paper/src/services/
+├── mod.rs                      # Module exports for all 4 services
+├── accounts.rs                 # AccountService (3 methods)
+├── orders.rs                   # OrderService (7 methods including preview_order)
+├── transactions.rs             # TransactionService (2 methods)
+└── user_preference.rs          # UserPreferenceService (1 method)
+```
+
+Also updated: `tools/paper/Cargo.toml` (added `thiserror = "2"`)
+Also updated: `tools/paper/src/main.rs` (added `mod services;`)
+
+### Known Limitations
+
+**Query Parameters Not Implemented:**
+
+Services accept parameter structs but don't use the query parameters for filtering:
+
+- `GetAccountsParams.fields` - ignored (returns all fields)
+- `GetAccountParams.fields` - ignored (returns all fields)
+- `GetOrdersByPathParams.maxResults` - ignored (returns all orders)
+- `GetOrdersByPathParams.status` - ignored (no status filtering)
+- Date range parameters - ignored (no date filtering)
+- `GetTransactionsByPathParams.types` - ignored (no type filtering)
+- `GetTransactionsByPathParams.symbol` - ignored (no symbol filtering)
+
+**Reason:** Repository layer doesn't support filtering yet. This was intentional for Phase 3's "thin wrapper" scope.
+
+**Resolution:** Phase 4 will add filtering logic to both repositories and services.
 
 ### Design Decisions (Based on Phase 1-2)
 
@@ -1152,22 +1208,22 @@ mod tests {
 
 ### Phase 3 Implementation Tasks
 
-- [ ] Create `src/services/mod.rs` with module exports
-- [ ] Implement `AccountService` with 3 methods + error type
-- [ ] Implement `OrderService` with 6 methods + error type + validation
-- [ ] Implement `TransactionService` with 2 methods + error type
-- [ ] Implement `UserPreferenceService` with 1 method + error type
-- [ ] Add unit tests for each service using in-memory database
-- [ ] Update `main.rs` to include services module
+- [x] Create `src/services/mod.rs` with module exports
+- [x] Implement `AccountService` with 3 methods + error type
+- [x] Implement `OrderService` with 7 methods + error type + validation (includes `preview_order`)
+- [x] Implement `TransactionService` with 2 methods + error type
+- [x] Implement `UserPreferenceService` with 1 method + error type
+- [ ] Add unit tests for each service using in-memory database (deferred)
+- [x] Update `main.rs` to include services module
 
 ### Success Criteria
 
-- [ ] All 4 services compile successfully
-- [ ] Services properly wrap repository methods
-- [ ] Error types convert correctly
-- [ ] Basic validation logic works (non-empty checks, status checks)
-- [ ] Unit tests pass with in-memory database
-- [ ] No order execution logic included (deferred to Phase 4)
+- [x] All 4 services compile successfully
+- [x] Services properly wrap repository methods
+- [x] Error types convert correctly
+- [x] Basic validation logic works (non-empty checks, status checks)
+- [ ] Unit tests pass with in-memory database (deferred)
+- [x] No order execution logic included (deferred to Phase 4)
 
 ### Important Note on Error Handling
 
@@ -1203,9 +1259,19 @@ API Response: ServiceError JSON matching OpenAPI spec
 
 ## Phase 4: Order Execution & Business Logic (Future)
 
-**Status: ⏸️ NOT STARTED (Waiting for Phase 3)**
+**Status: ⏸️ NOT STARTED (Waiting for Phase 3 completion)**
 
 Phase 4 will add:
+
+**Part 1: Query Parameter Filtering (from Phase 3)**
+
+- Implement filtering logic in repository layer
+- Add support for `fields` parameter in account queries
+- Add support for `maxResults`, `status`, date ranges in order queries
+- Add support for `types`, `symbol`, date ranges in transaction queries
+- Update service layer to properly use query parameters
+
+**Part 2: Order Execution & Market Data**
 
 - `OrderExecutor` - Background task for simulating order fills
 - `MarketDataService` - Mock price feeds for order execution
@@ -1215,7 +1281,149 @@ Phase 4 will add:
 - Transaction generation from fills
 - Background tokio task for processing pending orders
 
-### Planned Structure
+### Part 1: Query Parameter Implementation
+
+**Design Decision: Pass Params Structs Directly**
+
+Instead of unpacking params into individual arguments, repositories will accept the full params struct by reference. This approach:
+
+- Avoids parameter explosion as query params grow
+- Types already validated by param structs
+- Easier to extend with new query parameters
+- Matches pattern already used in service layer
+- Single source of truth for available parameters
+
+**Repository Signature Changes:**
+
+All repository methods that currently ignore query parameters need to be updated to accept the params struct and implement filtering logic.
+
+```rust
+// db/repositories/accounts.rs
+// Change from: get_accounts(&self) -> Result<Vec<SecuritiesAccount>, AccountError>
+// To:
+pub async fn get_accounts(
+    &self,
+    params: &GetAccountsParams<'_>
+) -> Result<Vec<SecuritiesAccount>, AccountError> {
+    // Access params.fields for selective field filtering
+    // If fields is None, return full objects
+    // If fields is Some, filter JSON or deserialize selectively
+}
+
+// Change from: get_account(&self, hash: &str) -> Result<Option<SecuritiesAccount>, AccountError>
+// To:
+pub async fn get_account(
+    &self,
+    params: &GetAccountParams<'_>
+) -> Result<Option<SecuritiesAccount>, AccountError> {
+    // Use params.account_hash for lookup
+    // Use params.fields for selective field filtering
+}
+
+// db/repositories/orders.rs
+// Change from: get_orders_by_path_param(&self, account_number, from, to, status) -> Result<Vec<Order>, OrderError>
+// To:
+pub async fn get_orders_by_path_param(
+    &self,
+    params: &GetOrdersByPathParams<'_>
+) -> Result<Vec<Order>, OrderError> {
+    // Access params.account_hash, params.from_entered_time, params.to_entered_time
+    // Use params.max_results for LIMIT clause
+    // Use params.status for WHERE clause filtering
+    // Build SQL dynamically based on which optional params are present
+}
+
+// Change from: get_orders_by_query_param(&self, from, to, status) -> Result<Vec<Order>, OrderError>
+// To:
+pub async fn get_orders_by_query_param(
+    &self,
+    params: &GetOrdersByQueryParams<'_>
+) -> Result<Vec<Order>, OrderError> {
+    // Same filtering as path param version, but no account_hash filter
+    // Access params.from_entered_time, params.to_entered_time, params.max_results, params.status
+}
+
+// db/repositories/transactions.rs
+// Change from: get_transactions_by_path_param(&self, account_number, start, end, type) -> Result<Vec<Transaction>, TransactionError>
+// To:
+pub async fn get_transactions_by_path_param(
+    &self,
+    params: &GetTransactionsByPathParams<'_>
+) -> Result<Vec<Transaction>, TransactionError> {
+    // Access params.account_hash, params.start_date, params.end_date
+    // Use params.types for comma-separated type filtering
+    // Use params.symbol for symbol filtering
+    // Build WHERE clauses dynamically
+}
+```
+
+**Service Layer Updates:**
+
+Services already have the params structs, they just need to pass them through instead of extracting individual fields:
+
+```rust
+// services/accounts.rs
+pub async fn get_accounts(
+    &self,
+    params: GetAccountsParams<'_>,
+) -> Result<Vec<SecuritiesAccount>, AccountServiceError> {
+    // Before: called repository.get_accounts() with no params
+    // After: pass params directly
+    self.repository
+        .get_accounts(&params)
+        .await
+        .map_err(AccountServiceError::from)
+}
+
+pub async fn get_account(
+    &self,
+    params: GetAccountParams<'_>,
+) -> Result<SecuritiesAccount, AccountServiceError> {
+    // Validate hash is not empty
+    if params.account_hash.trim().is_empty() {
+        return Err(AccountServiceError::InvalidInput(
+            "account_hash cannot be empty".to_string(),
+        ));
+    }
+
+    // Before: called repository.get_account(hash) extracting just hash
+    // After: pass entire params struct
+    self.repository
+        .get_account(&params)
+        .await
+        .map_err(AccountServiceError::from)
+}
+```
+
+**Implementation Notes:**
+
+1. **Dynamic SQL Building**: Repositories need to build WHERE clauses conditionally based on which optional params are present
+2. **Field Filtering**: For `fields` parameter, may need JSON manipulation or selective deserialization
+3. **Date Filtering**: Use SQLite's date functions or string comparison on ISO-8601 timestamps
+4. **Status Filtering**: Simple string comparison on indexed `status` column
+5. **Symbol Filtering**: Requires extracting symbol from transaction JSON or adding indexed column
+6. **Types Filtering**: Handle comma-separated list (e.g., "TRADE,DIVIDEND")
+7. **Limit Clause**: Use `max_results` for SQL LIMIT
+
+**Phase 4 Part 1 Tasks:**
+
+- [ ] Update `AccountRepository::get_accounts()` signature to accept `&GetAccountsParams`
+- [ ] Update `AccountRepository::get_account()` signature to accept `&GetAccountParams`
+- [ ] Update `OrderRepository::get_orders_by_path_param()` signature to accept `&GetOrdersByPathParams`
+- [ ] Update `OrderRepository::get_orders_by_query_param()` signature to accept `&GetOrdersByQueryParams`
+- [ ] Update `TransactionRepository::get_transactions_by_path_param()` signature to accept `&GetTransactionsByPathParams`
+- [ ] Implement dynamic WHERE clause building in all repository methods
+- [ ] Implement LIMIT clause for `max_results` in order queries
+- [ ] Implement field filtering for account queries (if `fields` param provided)
+- [ ] Update service layer to pass params structs instead of individual fields
+- [ ] Test all combinations of optional query parameters
+- [ ] Handle edge cases (empty strings, invalid dates, etc.)
+
+**Note:** This list covers the main changes, but additional repository methods may also need updates as implementation proceeds.
+
+### Part 2: Order Execution Components
+
+**Planned Structure:**
 
 ```
 tools/paper/src/
@@ -1224,7 +1432,7 @@ tools/paper/src/
 │   └── order_executor.rs       # Background order execution
 ```
 
-### Key Components (To Be Implemented)
+**Key Components (To Be Implemented):**
 
 ```rust
 // services/order_executor.rs
