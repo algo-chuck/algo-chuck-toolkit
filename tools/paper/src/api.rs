@@ -1,13 +1,13 @@
 use axum::{
     Router,
-    routing::{get, post},
+    routing::{delete, get, post},
 };
 use std::sync::Arc;
 
 use crate::AppState;
 use crate::handlers::*;
 
-pub fn router() -> Router<Arc<AppState>> {
+pub fn trader_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/accounts/accountNumbers", get(get_account_numbers))
         .route("/accounts", get(get_accounts))
@@ -34,4 +34,11 @@ pub fn router() -> Router<Arc<AppState>> {
             get(get_transactions_by_id),
         )
         .route("/userPreference", get(get_user_preference))
+}
+
+pub fn admin_router() -> Router<Arc<AppState>> {
+    Router::new()
+        .route("/accounts", post(create_account))
+        .route("/accounts/{accountNumber}", delete(delete_account))
+        .route("/accounts/{accountNumber}/reset", post(reset_account))
 }

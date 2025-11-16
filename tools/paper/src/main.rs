@@ -67,7 +67,8 @@ async fn main() -> Result<()> {
 
     // Build router with state
     let app = Router::new()
-        .nest("/trader/v1", api::router())
+        .nest("/trader/v1", api::trader_router())
+        .nest("/admin/v1", api::admin_router())
         .with_state(Arc::new(app_state))
         .layer(map_response(main_response_mapper));
 
