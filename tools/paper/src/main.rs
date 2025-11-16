@@ -29,7 +29,7 @@ pub struct AppState {
 async fn main() -> Result<()> {
     // Initialize database connection
     let database_url =
-        std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite:./paper_trader.db".to_string());
+        std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
 
     println!("->> Connecting to database: {}", database_url);
 
@@ -37,12 +37,11 @@ async fn main() -> Result<()> {
         .await
         .map_err(|err| format!("Cannot connect to database. \nCause: {err}"))?;
 
-    // TODO: Run migrations when migrations directory is set up
-    // println!("->> Running database migrations...");
-    // sqlx::migrate!("./migrations")
-    //     .run(&pool)
-    //     .await
-    //     .map_err(|err| format!("Cannot run migrations. \nCause: {err}"))?;
+    println!("->> Running database migrations...");
+    sqlx::migrate!("./src/db/migrations")
+        .run(&pool)
+        .await
+        .map_err(|err| format!("Cannot run migrations. \nCause: {err}"))?;
 
     println!("->> Database ready");
 
