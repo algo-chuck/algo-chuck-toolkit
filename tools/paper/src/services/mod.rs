@@ -17,3 +17,9 @@ pub use transactions::{TransactionService, TransactionServiceError};
 
 pub mod user_preference;
 pub use user_preference::{UserPreferenceService, UserPreferenceServiceError};
+
+pub mod market_data;
+pub use market_data::{MarketDataError, MarketDataService};
+
+pub mod order_executor;
+pub use order_executor::{OrderExecutor, OrderExecutorError};
