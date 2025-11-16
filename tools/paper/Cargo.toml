@@ -21,6 +21,7 @@ serde_json = { workspace = true }
 axum = "0.8"
 # -- Others
 derive_more = {version = "2", features = ["from", "display"] }
+thiserror = "2"
 
 [dev-dependencies]
 anyhow = "1"

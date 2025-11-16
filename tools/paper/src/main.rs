@@ -5,6 +5,7 @@ mod db;
 mod error;
 mod handlers;
 mod response;
+mod services;
 
 pub use self::error::{Error, Result};
 pub use self::response::{Created, EmptyOK};
