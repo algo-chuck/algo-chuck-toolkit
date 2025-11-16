@@ -6,7 +6,7 @@ use axum::{
 use schwab_api::prelude::trader::{Order, PreviewOrder};
 use schwab_api::types::trader::{
     CancelOrderParams, GetOrderParams, GetOrdersByPathParams, GetOrdersByQueryParams, OrderRequest,
-    PlaceOrderParams, PreviewOrderParams, ReplaceOrderParams,
+    PlaceOrderParams, ReplaceOrderParams,
 };
 use serde::Deserialize;
 use std::sync::Arc;

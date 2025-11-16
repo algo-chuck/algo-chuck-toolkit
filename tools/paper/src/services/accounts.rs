@@ -82,7 +82,7 @@ impl AccountService {
 
     /// Create a new account (admin operation)
     ///
-    /// Maps to: POST /admin/accounts
+    /// Maps to: POST /admin/v1/accounts
     pub async fn create_account(
         &self,
         account_number: &str,
@@ -119,7 +119,7 @@ impl AccountService {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    // use super::*;
 
     // Tests will be added with in-memory database setup
     #[tokio::test]

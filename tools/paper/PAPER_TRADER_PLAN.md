@@ -147,7 +147,7 @@ _Implementation: Set initial sequence value or start ID counter at 1001_
 
 - ~~**Option A:** Seed database with 2-3 sample accounts on first run~~
 - **Option B:** Start with empty database, no seeding for now
-- ~~**Option C:** Add admin endpoint to create accounts (e.g., POST /admin/accounts)~~
+- ~~**Option C:** Add admin endpoint to create accounts (e.g., POST /admin/v1/accounts)~~
 
 **Decision: [✅] No seeding initially**  
 **TODO: Create Phase 0 (Account Management) to address:**
@@ -1838,7 +1838,7 @@ This phase addresses how accounts are created, initialized, reset, and managed o
 **Questions to Answer:**
 
 - [ ] How are new paper trading accounts created?
-  - Admin REST endpoints (e.g., `POST /admin/accounts`)?
+  - Admin REST endpoints (e.g., `POST /admin/v1/accounts`)?
   - CLI commands (e.g., `paper-trader create-account --type CASH --balance 100000`)?
   - Configuration file on startup?
 - [ ] What are the initial account settings?
@@ -1866,11 +1866,11 @@ This phase addresses how accounts are created, initialized, reset, and managed o
 **Proposed Admin Endpoints (To Be Designed):**
 
 ```
-POST   /admin/accounts              # Create new account
-DELETE /admin/accounts/{accountNumber}  # Delete account
-POST   /admin/accounts/{accountNumber}/reset  # Reset to initial state
-PUT    /admin/accounts/{accountNumber}/balance  # Manually adjust balance
-POST   /admin/accounts/{accountNumber}/positions  # Manually add position
+POST   /admin/v1/accounts              # Create new account
+DELETE /admin/v1/accounts/{accountNumber}  # Delete account
+POST   /admin/v1/accounts/{accountNumber}/reset  # Reset to initial state
+PUT    /admin/v1/accounts/{accountNumber}/balance  # Manually adjust balance
+POST   /admin/v1/accounts/{accountNumber}/positions  # Manually add position
 ```
 
 **This phase will be fully designed after Phase 1-2 are complete and we understand the account data structure better.**

@@ -81,9 +81,9 @@ This phase addresses how accounts are created, initialized, reset, and managed o
 ## Admin Endpoints Specification
 
 ```
-POST   /admin/accounts              # Create new CASH account with $200k
-DELETE /admin/accounts/{accountNumber}  # Hard delete account + all related data
-POST   /admin/accounts/{accountNumber}/reset  # Reset to initial state
+POST   /admin/v1/accounts              # Create new CASH account with $200k
+DELETE /admin/v1/accounts/{accountNumber}  # Hard delete account + all related data
+POST   /admin/v1/accounts/{accountNumber}/reset  # Reset to initial state
 ```
 
 **Not Implemented:**
