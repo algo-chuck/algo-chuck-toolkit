@@ -1,7 +1,7 @@
 // db/repositories/transactions.rs
 // Implements operations from OpenAPI tag: "Transactions"
 
-use schwab_api::types::trader::Transaction;
+use schwab_api::types::trader::{GetTransactionsByPathParams, Transaction};
 use serde_json;
 use sqlx::SqlitePool;
 
@@ -51,22 +51,48 @@ impl TransactionRepository {
     // operationId: getTransactionsByPathParam
     pub async fn get_transactions_by_path_param(
         &self,
-        account_number: &str,
-        start_date: &str,
-        end_date: &str,
-        transaction_type: Option<&str>,
+        params: &GetTransactionsByPathParams<'_>,
     ) -> Result<Vec<Transaction>, TransactionError> {
-        // TODO: Implement date and type filtering
-        let _ = (start_date, end_date, transaction_type);
+        // Build dynamic query based on provided parameters
+        let mut query =
+            String::from("SELECT transaction_data FROM transactions WHERE account_number = ?");
+        let mut bind_values: Vec<String> = vec![params.account_hash.to_string()];
 
-        let rows = sqlx::query_scalar::<_, String>(
-            "SELECT transaction_data FROM transactions 
-             WHERE account_number = ?
-             ORDER BY time DESC",
-        )
-        .bind(account_number)
-        .fetch_all(&self.pool)
-        .await?;
+        // Add date range filtering
+        query.push_str(" AND time >= ?");
+        bind_values.push(params.start_date.to_string());
+
+        query.push_str(" AND time <= ?");
+        bind_values.push(params.end_date.to_string());
+
+        // Add type filtering (comma-separated list)
+        // Split comma-separated types and build IN clause
+        let type_list: Vec<&str> = params.types.split(',').map(|s| s.trim()).collect();
+        if !type_list.is_empty() {
+            let placeholders = type_list.iter().map(|_| "?").collect::<Vec<_>>().join(",");
+            query.push_str(&format!(" AND type IN ({})", placeholders));
+            for t in type_list {
+                bind_values.push(t.to_string());
+            }
+        }
+
+        // Add symbol filtering if provided
+        // Note: This requires extracting symbol from JSON, which is complex
+        // For now, we'll skip symbol filtering and add TODO
+        // TODO: Implement symbol filtering (requires JSON extraction or indexed column)
+        if params.symbol.is_some() {
+            // Placeholder - symbol filtering not yet implemented
+        }
+
+        query.push_str(" ORDER BY time DESC");
+
+        // Execute query with dynamic bindings
+        let mut sqlx_query = sqlx::query_scalar::<_, String>(&query);
+        for value in bind_values {
+            sqlx_query = sqlx_query.bind(value);
+        }
+
+        let rows = sqlx_query.fetch_all(&self.pool).await?;
 
         rows.into_iter()
             .map(|r| serde_json::from_str(&r).map_err(TransactionError::from))

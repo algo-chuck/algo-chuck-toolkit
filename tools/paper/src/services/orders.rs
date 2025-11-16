@@ -90,14 +90,8 @@ impl OrderService {
             ));
         }
 
-        // Use account_hash as account_number for repository
         self.repository
-            .get_orders_by_path_param(
-                params.account_hash,
-                Some(params.from_entered_time.to_string()),
-                Some(params.to_entered_time.to_string()),
-                params.status.map(|s| s.to_string()),
-            )
+            .get_orders_by_path_param(&params)
             .await
             .map_err(OrderServiceError::from)
     }
@@ -110,11 +104,7 @@ impl OrderService {
         params: GetOrdersByQueryParams<'_>,
     ) -> Result<Vec<Order>, OrderServiceError> {
         self.repository
-            .get_orders_by_query_param(
-                Some(params.from_entered_time.to_string()),
-                Some(params.to_entered_time.to_string()),
-                params.status.map(|s| s.to_string()),
-            )
+            .get_orders_by_query_param(&params)
             .await
             .map_err(OrderServiceError::from)
     }

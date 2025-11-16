@@ -1,7 +1,7 @@
 // db/repositories/accounts.rs
 // Implements operations from OpenAPI tag: "Accounts"
 
-use schwab_api::types::trader::SecuritiesAccount;
+use schwab_api::types::trader::{GetAccountParams, GetAccountsParams, SecuritiesAccount};
 use serde_json;
 use sqlx::SqlitePool;
 
@@ -60,7 +60,12 @@ impl AccountRepository {
     }
 
     // operationId: getAccounts (list all accounts)
-    pub async fn get_accounts(&self) -> Result<Vec<SecuritiesAccount>, AccountError> {
+    pub async fn get_accounts(
+        &self,
+        _params: &GetAccountsParams<'_>,
+    ) -> Result<Vec<SecuritiesAccount>, AccountError> {
+        // TODO: Implement field filtering based on params.fields
+        // For now, return all fields regardless of params.fields value
         let rows = sqlx::query_scalar::<_, String>(
             "SELECT account_data FROM accounts ORDER BY created_at DESC",
         )
@@ -73,14 +78,19 @@ impl AccountRepository {
     }
 
     // operationId: getAccount (by hash)
-    pub async fn get_account(&self, hash: &str) -> Result<SecuritiesAccount, AccountError> {
+    pub async fn get_account(
+        &self,
+        params: &GetAccountParams<'_>,
+    ) -> Result<SecuritiesAccount, AccountError> {
+        // TODO: Implement field filtering based on params.fields
+        // For now, return all fields regardless of params.fields value
         let account_data = sqlx::query_scalar::<_, String>(
             "SELECT account_data FROM accounts WHERE hash_value = ?",
         )
-        .bind(hash)
+        .bind(params.account_hash)
         .fetch_optional(&self.pool)
         .await?
-        .ok_or(AccountError::NotFound(hash.to_string()))?;
+        .ok_or(AccountError::NotFound(params.account_hash.to_string()))?;
 
         serde_json::from_str(&account_data).map_err(AccountError::from)
     }

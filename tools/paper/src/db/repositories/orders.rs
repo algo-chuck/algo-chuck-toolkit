@@ -1,7 +1,9 @@
 // db/repositories/orders.rs
 // Implements operations from OpenAPI tag: "Orders"
 
-use schwab_api::types::trader::{Order, OrderRequest};
+use schwab_api::types::trader::{
+    GetOrdersByPathParams, GetOrdersByQueryParams, Order, OrderRequest,
+};
 use serde_json;
 use sqlx::SqlitePool;
 
@@ -92,22 +94,39 @@ impl OrderRepository {
     // operationId: getOrdersByPathParam
     pub async fn get_orders_by_path_param(
         &self,
-        account_number: &str,
-        from_entered_time: Option<String>,
-        to_entered_time: Option<String>,
-        status_filter: Option<String>,
+        params: &GetOrdersByPathParams<'_>,
     ) -> Result<Vec<Order>, OrderError> {
-        // TODO: Implement date and status filtering
-        let _ = (from_entered_time, to_entered_time, status_filter);
+        // Build dynamic query based on provided parameters
+        let mut query = String::from("SELECT order_data FROM orders WHERE account_number = ?");
+        let mut bind_values: Vec<String> = vec![params.account_hash.to_string()];
 
-        let rows = sqlx::query_scalar::<_, String>(
-            "SELECT order_data FROM orders 
-             WHERE account_number = ?
-             ORDER BY entered_time DESC",
-        )
-        .bind(account_number)
-        .fetch_all(&self.pool)
-        .await?;
+        // Add date range filtering (required fields)
+        query.push_str(" AND entered_time >= ?");
+        bind_values.push(params.from_entered_time.to_string());
+
+        query.push_str(" AND entered_time <= ?");
+        bind_values.push(params.to_entered_time.to_string());
+
+        // Add status filtering if provided (optional)
+        if let Some(status) = params.status {
+            query.push_str(" AND status = ?");
+            bind_values.push(status.to_string());
+        }
+
+        query.push_str(" ORDER BY entered_time DESC");
+
+        // Add limit if max_results provided (optional)
+        if let Some(max_results) = params.max_results {
+            query.push_str(&format!(" LIMIT {}", max_results));
+        }
+
+        // Execute query with dynamic bindings
+        let mut sqlx_query = sqlx::query_scalar::<_, String>(&query);
+        for value in bind_values {
+            sqlx_query = sqlx_query.bind(value);
+        }
+
+        let rows = sqlx_query.fetch_all(&self.pool).await?;
 
         rows.into_iter()
             .map(|r| serde_json::from_str(&r).map_err(OrderError::from))
@@ -117,19 +136,39 @@ impl OrderRepository {
     // operationId: getOrdersByQueryParam
     pub async fn get_orders_by_query_param(
         &self,
-        from_entered_time: Option<String>,
-        to_entered_time: Option<String>,
-        status_filter: Option<String>,
+        params: &GetOrdersByQueryParams<'_>,
     ) -> Result<Vec<Order>, OrderError> {
-        // TODO: Implement date and status filtering for all accounts
-        let _ = (from_entered_time, to_entered_time, status_filter);
+        // Build dynamic query (similar to path param but without account filter)
+        let mut query = String::from("SELECT order_data FROM orders WHERE 1=1");
+        let mut bind_values: Vec<String> = vec![];
 
-        let rows = sqlx::query_scalar::<_, String>(
-            "SELECT order_data FROM orders 
-             ORDER BY entered_time DESC",
-        )
-        .fetch_all(&self.pool)
-        .await?;
+        // Add date range filtering (required fields)
+        query.push_str(" AND entered_time >= ?");
+        bind_values.push(params.from_entered_time.to_string());
+
+        query.push_str(" AND entered_time <= ?");
+        bind_values.push(params.to_entered_time.to_string());
+
+        // Add status filtering if provided (optional)
+        if let Some(status) = params.status {
+            query.push_str(" AND status = ?");
+            bind_values.push(status.to_string());
+        }
+
+        query.push_str(" ORDER BY entered_time DESC");
+
+        // Add limit if max_results provided (optional)
+        if let Some(max_results) = params.max_results {
+            query.push_str(&format!(" LIMIT {}", max_results));
+        }
+
+        // Execute query with dynamic bindings
+        let mut sqlx_query = sqlx::query_scalar::<_, String>(&query);
+        for value in bind_values {
+            sqlx_query = sqlx_query.bind(value);
+        }
+
+        let rows = sqlx_query.fetch_all(&self.pool).await?;
 
         rows.into_iter()
             .map(|r| serde_json::from_str(&r).map_err(OrderError::from))

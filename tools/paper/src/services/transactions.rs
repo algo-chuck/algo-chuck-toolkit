@@ -45,20 +45,8 @@ impl TransactionService {
             ));
         }
 
-        // Use types if available, otherwise pass None
-        let types_str = if params.types.is_empty() {
-            None
-        } else {
-            Some(params.types)
-        };
-
         self.repository
-            .get_transactions_by_path_param(
-                params.account_hash,
-                params.start_date,
-                params.end_date,
-                types_str,
-            )
+            .get_transactions_by_path_param(&params)
             .await
             .map_err(TransactionServiceError::from)
     }

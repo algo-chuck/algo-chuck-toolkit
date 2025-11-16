@@ -52,10 +52,10 @@ impl AccountService {
     /// Maps to: GET /trader/v1/accounts
     pub async fn get_accounts(
         &self,
-        _params: GetAccountsParams<'_>,
+        params: GetAccountsParams<'_>,
     ) -> Result<Vec<SecuritiesAccount>, AccountServiceError> {
         self.repository
-            .get_accounts()
+            .get_accounts(&params)
             .await
             .map_err(AccountServiceError::from)
     }
@@ -75,7 +75,7 @@ impl AccountService {
         }
 
         self.repository
-            .get_account(&params.account_hash)
+            .get_account(&params)
             .await
             .map_err(AccountServiceError::from)
     }
