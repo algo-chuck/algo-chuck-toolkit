@@ -2,10 +2,12 @@ use axum::{
     Router,
     routing::{get, post},
 };
+use std::sync::Arc;
 
+use crate::AppState;
 use crate::handlers::*;
 
-pub fn router() -> Router {
+pub fn router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/accounts/accountNumbers", get(get_account_numbers))
         .route("/accounts", get(get_accounts))
