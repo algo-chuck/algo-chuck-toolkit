@@ -8,9 +8,10 @@ mod handlers;
 mod response;
 mod services;
 
-pub use self::error::{Error, Result};
-pub use self::response::{Created, EmptyOK};
+pub use error::{Error, Result};
+pub use response::{Created, EmptyOK};
 
+use db::init_db;
 use db::repositories::{
     AccountRepository, OrderRepository, TransactionRepository, UserPreferenceRepository,
 };
@@ -28,22 +29,10 @@ pub struct AppState {
 #[tokio::main]
 async fn main() -> Result<()> {
     // Initialize database connection
-    let database_url =
-        std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
-
-    println!("->> Connecting to database: {}", database_url);
-
-    let pool = sqlx::SqlitePool::connect(&database_url)
+    let pool = init_db()
         .await
         .map_err(|err| format!("Cannot connect to database. \nCause: {err}"))?;
-
-    println!("->> Running database migrations...");
-    sqlx::migrate!("./src/db/migrations")
-        .run(&pool)
-        .await
-        .map_err(|err| format!("Cannot run migrations. \nCause: {err}"))?;
-
-    println!("->> Database ready");
+    println!("->> {:<12} - init_db", "DB_POOL");
 
     // Create repositories
     let account_repo = AccountRepository::new(pool.clone());
@@ -79,7 +68,11 @@ async fn main() -> Result<()> {
         .await
         .map_err(|err| format!("Cannot start TcpListener. \nCause: {err}"))?;
 
-    println!("->> LISTENING on {:?}\n", listener.local_addr().unwrap());
+    println!(
+        "->> {:<12} - listening on {}\n",
+        "SERVER",
+        listener.local_addr().unwrap()
+    );
 
     axum::serve(listener, app)
         .await

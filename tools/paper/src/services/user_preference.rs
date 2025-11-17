@@ -42,7 +42,7 @@ impl UserPreferenceService {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    // use super::*;
 
     // Tests will be added with in-memory database setup
     #[tokio::test]
