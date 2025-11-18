@@ -121,6 +121,16 @@ impl AccountRepository {
 
         Ok(())
     }
+
+    /// Delete an account by account number
+    pub async fn delete(&self, account_number: &str) -> Result<u64, RepositoryError> {
+        let result = sqlx::query("DELETE FROM accounts WHERE account_number = ?")
+            .bind(account_number)
+            .execute(&self.pool)
+            .await?;
+
+        Ok(result.rows_affected())
+    }
 }
 
 #[cfg(test)]

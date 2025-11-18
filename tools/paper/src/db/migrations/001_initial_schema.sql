@@ -23,7 +23,7 @@ CREATE TABLE orders (
     order_data TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (account_number) REFERENCES accounts(account_number)
+    FOREIGN KEY (account_number) REFERENCES accounts(account_number) ON DELETE CASCADE
 );
 
 -- Table 3: Transactions
@@ -35,7 +35,7 @@ CREATE TABLE transactions (
     time TIMESTAMP,
     transaction_data TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (account_number) REFERENCES accounts(account_number)
+    FOREIGN KEY (account_number) REFERENCES accounts(account_number) ON DELETE CASCADE
 );
 
 -- Table 4: User Preferences

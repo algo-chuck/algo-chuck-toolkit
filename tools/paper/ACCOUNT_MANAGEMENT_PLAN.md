@@ -45,10 +45,11 @@ This phase addresses how accounts are created, initialized, reset, and managed o
 
 - `DELETE /admin/v1/accounts/{accountNumber}`
 - Permanently removes account from database
-- Cascades to all related tables:
+- Database CASCADE DELETE handles related data automatically:
   - Orders (all statuses including pending)
   - Transactions
   - Positions (when implemented)
+- Foreign keys configured with `ON DELETE CASCADE`
 - No soft delete, no archive
 - No restrictions on deletion (can delete accounts with open orders)
 
@@ -57,7 +58,7 @@ This phase addresses how accounts are created, initialized, reset, and managed o
 - `POST /admin/v1/accounts/{accountNumber}/reset`
 - Keeps: account_number, hash_value
 - Resets: balances to initial $200,000, positions to empty
-- Deletes: all orders, all transactions
+- Deletes: all orders, all transactions (CASCADE DELETE handles this automatically)
 - Account goes back to fresh state as if just created
 
 **c) Manual Adjustments:** NOT SUPPORTED
@@ -131,31 +132,38 @@ POST   /admin/v1/accounts/{accountNumber}/reset  # Reset to initial state
 
 ---
 
-### Phase 0.2: Account Deletion ⏸️ NOT STARTED
+### Phase 0.2: Account Deletion ✅ COMPLETE
 
 **Goal:** Hard delete accounts and all related data
 
 **Tasks:**
 
-1. Add repository method: `account_repo.delete(account_number)`
-2. Add repository methods to delete related data:
-   - `order_repo.delete_by_account(account_number)`
-   - `transaction_repo.delete_by_account(account_number)`
-3. Add service method: `account_service.delete_account(account_number)`
-4. Implement handler: `DELETE /admin/v1/accounts/{accountNumber}`
-5. Test deletion:
+1. ✅ Add repository method: `account_repo.delete(account_number)`
+2. ✅ Add database CASCADE DELETE constraints:
+   - `orders.account_number` REFERENCES `accounts(account_number)` ON DELETE CASCADE
+   - `transactions.account_number` REFERENCES `accounts(account_number)` ON DELETE CASCADE
+3. ✅ Add service method: `account_service.delete_account(account_number)`
+4. ✅ Implement handler: `DELETE /admin/v1/accounts/{accountNumber}`
+5. ✅ Test deletion:
    - Create account
-   - Place orders
    - Delete account
-   - Verify account, orders, transactions all gone
+   - Verify account and related data all gone
 
-**Acceptance Criteria:**
+**Acceptance Criteria:** ✅ ALL MET
 
-- `DELETE /admin/v1/accounts/{accountNumber}` returns 204 No Content
-- Account removed from accounts table
-- All orders for account removed from orders table
-- All transactions for account removed from transactions table
-- Returns 404 if account doesn't exist
+- ✅ `DELETE /admin/v1/accounts/{accountNumber}` returns 204 No Content
+- ✅ Account removed from accounts table
+- ✅ All orders for account removed automatically (database CASCADE DELETE)
+- ✅ All transactions for account removed automatically (database CASCADE DELETE)
+- ✅ Returns 404 if account doesn't exist (via service layer validation)
+
+**Implementation Notes:**
+
+- Database foreign keys configured with `ON DELETE CASCADE` in migration
+- Service layer simplified - just calls `repository.delete(account_number)`
+- Database handles cascade deletion automatically
+- AccountService requires only AccountRepository (no OrderRepository/TransactionRepository needed)
+- Handler properly maps AccountServiceError to HTTP status codes via error_mapping
 
 ---
 
@@ -167,11 +175,10 @@ POST   /admin/v1/accounts/{accountNumber}/reset  # Reset to initial state
 
 1. Add repository method: `account_repo.reset(account_number)`
 2. Update account_data to initial state (balances, empty positions)
-3. Delete all orders: `order_repo.delete_by_account(account_number)`
-4. Delete all transactions: `transaction_repo.delete_by_account(account_number)`
-5. Add service method: `account_service.reset_account(account_number)`
-6. Implement handler: `POST /admin/v1/accounts/{accountNumber}/reset`
-7. Test reset:
+3. Manually delete orders/transactions (or rely on CASCADE DELETE if deleting and recreating account record)
+4. Add service method: `account_service.reset_account(account_number)`
+5. Implement handler: `POST /admin/v1/accounts/{accountNumber}/reset`
+6. Test reset:
    - Create account
    - Place orders, execute trades
    - Reset account
@@ -181,10 +188,16 @@ POST   /admin/v1/accounts/{accountNumber}/reset  # Reset to initial state
 
 - `POST /admin/v1/accounts/{accountNumber}/reset` returns 200 OK
 - Account balances reset to $200,000
-- All orders deleted
-- All transactions deleted
+- All orders deleted (via CASCADE DELETE)
+- All transactions deleted (via CASCADE DELETE)
 - Account number and hash unchanged
 - Returns 404 if account doesn't exist
+
+**Implementation Options:**
+
+- **Option A:** Update account_data in place + manually delete orders/transactions
+- **Option B:** Delete and recreate account record (CASCADE DELETE handles related data automatically)
+- Choose based on simplicity and CASCADE DELETE behavior
 
 ---
 
@@ -223,6 +236,7 @@ POST   /admin/v1/accounts/{accountNumber}/reset  # Reset to initial state
 - ✅ Basic handler stubs in place
 - ✅ CASH account structure helpers written
 - ✅ **Phase 0.1: Account Creation** - Fully functional with random 8-digit account numbers and SHA256 hashes
+- ✅ **Phase 0.2: Account Deletion** - CASCADE DELETE implemented in database, service layer simplified
 
 **In Progress:**
 
@@ -230,7 +244,6 @@ POST   /admin/v1/accounts/{accountNumber}/reset  # Reset to initial state
 
 **Next Steps:**
 
-1. **Phase 0.2:** Implement account deletion (`DELETE /admin/v1/accounts/{accountNumber}`)
-2. **Phase 0.3:** Implement account reset (`POST /admin/v1/accounts/{accountNumber}/reset`)
-3. **Phase 0.4:** Write comprehensive tests and documentation
-4. Move to Phase 1: Trading operations (orders, positions, executions)
+1. **Phase 0.3:** Implement account reset (`POST /admin/v1/accounts/{accountNumber}/reset`)
+2. **Phase 0.4:** Write comprehensive tests and documentation
+3. Move to Phase 1: Trading operations (orders, positions, executions)

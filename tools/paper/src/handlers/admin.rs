@@ -102,25 +102,26 @@ pub async fn create_account(
 ///
 /// DELETE /admin/v1/accounts/{accountNumber}
 pub async fn delete_account(
-    State(_app_state): State<Arc<AppState>>,
-    Path(_account_number): Path<String>,
+    State(app_state): State<Arc<AppState>>,
+    Path(account_number): Path<String>,
 ) -> Result<StatusCode, (StatusCode, Json<ServiceError>)> {
-    println!("->> {:<12} - delete_account", "HANDLER");
+    println!(
+        "->> {:<12} - delete_account (account_number={})",
+        "HANDLER", account_number
+    );
 
-    Err((
-        StatusCode::NOT_IMPLEMENTED,
-        Json(ServiceError {
-            message: Some("Account deletion not yet implemented".to_string()),
-            errors: Some(vec![ServiceErrorItem {
-                id: None,
-                status: Some(501),
-                title: Some("Not Implemented".to_string()),
-                detail: Some(
-                    "Admin account deletion will be implemented in the service layer".to_string(),
-                ),
-            }]),
-        }),
-    ))
+    // Call service to delete the account (and cascade to orders/transactions)
+    app_state
+        .account_service
+        .delete_account(&account_number)
+        .await
+        .map_err(|e| {
+            use crate::handlers::error_mapping::map_account_error;
+            map_account_error(e)
+        })?;
+
+    // Return 204 No Content on successful deletion
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// Reset an account to its initial state

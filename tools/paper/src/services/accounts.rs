@@ -2,7 +2,7 @@
 //!
 //! Thin CRUD wrapper around AccountRepository with input validation.
 
-use crate::db::repositories::{RepositoryError, AccountRepository};
+use crate::db::repositories::{AccountRepository, RepositoryError};
 use schwab_api::types::trader::{
     AccountNumberHash, GetAccountParams, GetAccountsParams, SecuritiesAccount,
 };
@@ -112,6 +112,29 @@ impl AccountService {
         self.repository
             .create(account_number, hash_value, account_type, account_data)
             .await?;
+
+        Ok(())
+    }
+
+    /// Delete an account (admin operation)
+    ///
+    /// Maps to: DELETE /admin/v1/accounts/{accountNumber}
+    ///
+    /// Cascade deletion is handled by database foreign key constraints.
+    pub async fn delete_account(&self, account_number: &str) -> Result<(), AccountServiceError> {
+        // Validate input
+        if account_number.trim().is_empty() {
+            return Err(AccountServiceError::InvalidInput(
+                "account_number cannot be empty".to_string(),
+            ));
+        }
+
+        // Delete the account - related records cascade automatically
+        let rows_affected = self.repository.delete(account_number).await?;
+
+        if rows_affected == 0 {
+            return Err(AccountServiceError::NotFound(account_number.to_string()));
+        }
 
         Ok(())
     }

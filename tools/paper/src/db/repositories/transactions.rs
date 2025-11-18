@@ -6,6 +6,7 @@ use sqlx::SqlitePool;
 
 use crate::db::{RepositoryError, not_found};
 
+#[derive(Debug, Clone)]
 pub struct TransactionRepository {
     pool: SqlitePool,
 }
