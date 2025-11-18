@@ -26,6 +26,8 @@ use crate::{AppState, Created};
 pub async fn create_account(
     State(app_state): State<Arc<AppState>>,
 ) -> Result<Created, (StatusCode, Json<ServiceError>)> {
+    println!("->> {:<12} - create_account", "HANDLER");
+
     // Fetch existing accounts first (before creating RNG)
     let existing_accounts = match app_state.account_service.get_account_numbers().await {
         Ok(accounts) => accounts,
@@ -103,6 +105,8 @@ pub async fn delete_account(
     State(_app_state): State<Arc<AppState>>,
     Path(_account_number): Path<String>,
 ) -> Result<StatusCode, (StatusCode, Json<ServiceError>)> {
+    println!("->> {:<12} - delete_account", "HANDLER");
+
     Err((
         StatusCode::NOT_IMPLEMENTED,
         Json(ServiceError {
@@ -126,6 +130,8 @@ pub async fn reset_account(
     State(_app_state): State<Arc<AppState>>,
     Path(_account_number): Path<String>,
 ) -> Result<StatusCode, (StatusCode, Json<ServiceError>)> {
+    println!("->> {:<12} - reset_account", "HANDLER");
+
     Err((
         StatusCode::NOT_IMPLEMENTED,
         Json(ServiceError {
