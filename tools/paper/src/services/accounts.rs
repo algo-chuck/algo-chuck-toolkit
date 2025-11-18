@@ -2,7 +2,7 @@
 //!
 //! Thin CRUD wrapper around AccountRepository with input validation.
 
-use crate::db::repositories::{AccountError, AccountRepository};
+use crate::db::repositories::{RepositoryError, AccountRepository};
 use schwab_api::types::trader::{
     AccountNumberHash, GetAccountParams, GetAccountsParams, SecuritiesAccount,
 };
@@ -17,7 +17,7 @@ pub enum AccountServiceError {
     InvalidInput(String),
 
     #[error("Repository error: {0}")]
-    Repository(#[from] AccountError),
+    Repository(#[from] RepositoryError),
 }
 
 /// Service for account operations

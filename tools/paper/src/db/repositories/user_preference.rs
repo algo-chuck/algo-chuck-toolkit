@@ -2,42 +2,9 @@
 // Implements operations from OpenAPI tag: "User Preference"
 
 use schwab_api::types::trader::UserPreference;
-use serde_json;
 use sqlx::SqlitePool;
 
-#[derive(Debug)]
-pub enum UserPreferenceError {
-    Database(sqlx::Error),
-    Serialization(serde_json::Error),
-    NotFound,
-}
-
-impl From<sqlx::Error> for UserPreferenceError {
-    fn from(e: sqlx::Error) -> Self {
-        match e {
-            sqlx::Error::RowNotFound => UserPreferenceError::NotFound,
-            e => UserPreferenceError::Database(e),
-        }
-    }
-}
-
-impl From<serde_json::Error> for UserPreferenceError {
-    fn from(e: serde_json::Error) -> Self {
-        UserPreferenceError::Serialization(e)
-    }
-}
-
-impl std::fmt::Display for UserPreferenceError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            UserPreferenceError::Database(e) => write!(f, "Database error: {}", e),
-            UserPreferenceError::Serialization(e) => write!(f, "Serialization error: {}", e),
-            UserPreferenceError::NotFound => write!(f, "User preference not found"),
-        }
-    }
-}
-
-impl std::error::Error for UserPreferenceError {}
+use crate::db::{RepositoryError, not_found};
 
 pub struct UserPreferenceRepository {
     pool: SqlitePool,
@@ -49,23 +16,20 @@ impl UserPreferenceRepository {
     }
 
     // operationId: getUserPreference
-    pub async fn get_user_preference(&self) -> Result<UserPreference, UserPreferenceError> {
+    pub async fn get_user_preference(&self) -> Result<UserPreference, RepositoryError> {
         let preference_data = sqlx::query_scalar::<_, String>(
             "SELECT preference_data FROM user_preferences WHERE id = 1",
         )
         .fetch_optional(&self.pool)
         .await?
-        .ok_or(UserPreferenceError::NotFound)?;
+        .ok_or_else(|| not_found("UserPreference", "1"))?;
 
-        serde_json::from_str(&preference_data).map_err(UserPreferenceError::from)
+        serde_json::from_str(&preference_data).map_err(RepositoryError::from)
     }
 
     // Additional helper method
 
-    pub async fn upsert(
-        &self,
-        preference_data: &UserPreference,
-    ) -> Result<(), UserPreferenceError> {
+    pub async fn upsert(&self, preference_data: &UserPreference) -> Result<(), RepositoryError> {
         let preference_data_json = serde_json::to_string(preference_data)?;
 
         sqlx::query(

@@ -4,42 +4,9 @@
 use schwab_api::types::trader::{
     GetOrdersByPathParams, GetOrdersByQueryParams, Order, OrderRequest,
 };
-use serde_json;
 use sqlx::SqlitePool;
 
-#[derive(Debug)]
-pub enum OrderError {
-    Database(sqlx::Error),
-    Serialization(serde_json::Error),
-    NotFound(i64),
-}
-
-impl From<sqlx::Error> for OrderError {
-    fn from(e: sqlx::Error) -> Self {
-        match e {
-            sqlx::Error::RowNotFound => OrderError::NotFound(0),
-            e => OrderError::Database(e),
-        }
-    }
-}
-
-impl From<serde_json::Error> for OrderError {
-    fn from(e: serde_json::Error) -> Self {
-        OrderError::Serialization(e)
-    }
-}
-
-impl std::fmt::Display for OrderError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            OrderError::Database(e) => write!(f, "Database error: {}", e),
-            OrderError::Serialization(e) => write!(f, "Serialization error: {}", e),
-            OrderError::NotFound(id) => write!(f, "Order not found: {}", id),
-        }
-    }
-}
-
-impl std::error::Error for OrderError {}
+use crate::db::{RepositoryError, not_found};
 
 pub struct OrderRepository {
     pool: SqlitePool,
@@ -55,7 +22,7 @@ impl OrderRepository {
         &self,
         account_number: &str,
         order_data: &OrderRequest,
-    ) -> Result<i64, OrderError> {
+    ) -> Result<i64, RepositoryError> {
         let order_data_json = serde_json::to_string(order_data)?;
         let status = "WORKING"; // Initial status
 
@@ -80,22 +47,22 @@ impl OrderRepository {
     }
 
     // operationId: getOrder
-    pub async fn get_order(&self, order_id: i64) -> Result<Order, OrderError> {
+    pub async fn get_order(&self, order_id: i64) -> Result<Order, RepositoryError> {
         let order_data =
             sqlx::query_scalar::<_, String>("SELECT order_data FROM orders WHERE order_id = ?")
                 .bind(order_id)
                 .fetch_optional(&self.pool)
                 .await?
-                .ok_or(OrderError::NotFound(order_id))?;
+                .ok_or_else(|| not_found("Order", &order_id.to_string()))?;
 
-        serde_json::from_str(&order_data).map_err(OrderError::from)
+        serde_json::from_str(&order_data).map_err(RepositoryError::from)
     }
 
     // operationId: getOrdersByPathParam
     pub async fn get_orders_by_path_param(
         &self,
         params: &GetOrdersByPathParams<'_>,
-    ) -> Result<Vec<Order>, OrderError> {
+    ) -> Result<Vec<Order>, RepositoryError> {
         // Build dynamic query based on provided parameters
         let mut query = String::from("SELECT order_data FROM orders WHERE account_number = ?");
         let mut bind_values: Vec<String> = vec![params.account_hash.to_string()];
@@ -129,7 +96,7 @@ impl OrderRepository {
         let rows = sqlx_query.fetch_all(&self.pool).await?;
 
         rows.into_iter()
-            .map(|r| serde_json::from_str(&r).map_err(OrderError::from))
+            .map(|r| serde_json::from_str(&r).map_err(RepositoryError::from))
             .collect()
     }
 
@@ -137,7 +104,7 @@ impl OrderRepository {
     pub async fn get_orders_by_query_param(
         &self,
         params: &GetOrdersByQueryParams<'_>,
-    ) -> Result<Vec<Order>, OrderError> {
+    ) -> Result<Vec<Order>, RepositoryError> {
         // Build dynamic query (similar to path param but without account filter)
         let mut query = String::from("SELECT order_data FROM orders WHERE 1=1");
         let mut bind_values: Vec<String> = vec![];
@@ -171,12 +138,12 @@ impl OrderRepository {
         let rows = sqlx_query.fetch_all(&self.pool).await?;
 
         rows.into_iter()
-            .map(|r| serde_json::from_str(&r).map_err(OrderError::from))
+            .map(|r| serde_json::from_str(&r).map_err(RepositoryError::from))
             .collect()
     }
 
     // operationId: cancelOrder
-    pub async fn cancel_order(&self, order_id: i64) -> Result<(), OrderError> {
+    pub async fn cancel_order(&self, order_id: i64) -> Result<(), RepositoryError> {
         let status = "CANCELED";
 
         sqlx::query(
@@ -197,7 +164,7 @@ impl OrderRepository {
         &self,
         order_id: i64,
         new_order_data: &OrderRequest,
-    ) -> Result<i64, OrderError> {
+    ) -> Result<i64, RepositoryError> {
         // Cancel old order
         self.cancel_order(order_id).await?;
 
@@ -206,7 +173,7 @@ impl OrderRepository {
 
         let account_number = old_order
             .account_number
-            .ok_or_else(|| OrderError::NotFound(order_id))?
+            .ok_or_else(|| not_found("Order", &order_id.to_string()))?
             .to_string();
 
         // Place new order
@@ -218,7 +185,7 @@ impl OrderRepository {
 
     // Additional helper methods
 
-    pub async fn update_status(&self, order_id: i64, status: &str) -> Result<(), OrderError> {
+    pub async fn update_status(&self, order_id: i64, status: &str) -> Result<(), RepositoryError> {
         sqlx::query(
             "UPDATE orders 
              SET status = ?, updated_at = CURRENT_TIMESTAMP
@@ -232,7 +199,7 @@ impl OrderRepository {
         Ok(())
     }
 
-    pub async fn update(&self, order_id: i64, order_data: &Order) -> Result<(), OrderError> {
+    pub async fn update(&self, order_id: i64, order_data: &Order) -> Result<(), RepositoryError> {
         let order_data_json = serde_json::to_string(order_data)?;
         let status = &order_data
             .status

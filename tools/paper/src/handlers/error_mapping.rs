@@ -2,6 +2,7 @@ use axum::{http::StatusCode, response::Json};
 use schwab_api::prelude::trader::service_error::ServiceErrorItem;
 use schwab_api::types::trader::ServiceError;
 
+use crate::db::RepositoryError;
 use crate::services::{
     AccountServiceError, OrderServiceError, TransactionServiceError, UserPreferenceServiceError,
 };
@@ -9,13 +10,80 @@ use crate::services::{
 /// Type alias for handler responses that can return service errors
 pub type HandlerResult<T> = Result<Json<T>, (StatusCode, Json<ServiceError>)>;
 
+/// Helper function to map RepositoryError to (StatusCode, ServiceError)
+fn map_repository_error(
+    err: &RepositoryError,
+    _resource_type: &str,
+) -> (StatusCode, Json<ServiceError>) {
+    match err {
+        RepositoryError::NotFound { resource, id } => (
+            StatusCode::NOT_FOUND,
+            Json(ServiceError {
+                message: Some("An error message indicating the resource is not found".to_string()),
+                errors: Some(vec![ServiceErrorItem {
+                    id: Some(id.clone()),
+                    status: Some(404),
+                    title: Some("Not Found".to_string()),
+                    detail: Some(format!(
+                        "The requested {} does not exist",
+                        resource.to_lowercase()
+                    )),
+                }]),
+            }),
+        ),
+        RepositoryError::InvalidInput(msg) => (
+            StatusCode::BAD_REQUEST,
+            Json(ServiceError {
+                message: Some(
+                    "An error message indicating the validation problem with the request."
+                        .to_string(),
+                ),
+                errors: Some(vec![ServiceErrorItem {
+                    id: None,
+                    status: Some(400),
+                    title: Some("Bad Request".to_string()),
+                    detail: Some(msg.clone()),
+                }]),
+            }),
+        ),
+        RepositoryError::Database(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ServiceError {
+                message: Some(
+                    "An error message indicating there was an unexpected server error".to_string(),
+                ),
+                errors: Some(vec![ServiceErrorItem {
+                    id: None,
+                    status: Some(500),
+                    title: Some("Internal Server Error".to_string()),
+                    detail: Some(format!("{}", e)),
+                }]),
+            }),
+        ),
+        RepositoryError::Serialization(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ServiceError {
+                message: Some(
+                    "An error message indicating there was an unexpected server error".to_string(),
+                ),
+                errors: Some(vec![ServiceErrorItem {
+                    id: None,
+                    status: Some(500),
+                    title: Some("Internal Server Error".to_string()),
+                    detail: Some(format!("Serialization error: {}", e)),
+                }]),
+            }),
+        ),
+    }
+}
+
 /// Convert AccountServiceError to ServiceError response
 pub fn map_account_error(err: AccountServiceError) -> (StatusCode, Json<ServiceError>) {
     match err {
         AccountServiceError::NotFound(id) => (
             StatusCode::NOT_FOUND,
             Json(ServiceError {
-                message: Some(format!("Account not found: {}", id)),
+                message: Some("An error message indicating the resource is not found".to_string()),
                 errors: Some(vec![ServiceErrorItem {
                     id: Some(id),
                     status: Some(404),
@@ -27,7 +95,10 @@ pub fn map_account_error(err: AccountServiceError) -> (StatusCode, Json<ServiceE
         AccountServiceError::InvalidInput(msg) => (
             StatusCode::BAD_REQUEST,
             Json(ServiceError {
-                message: Some("Invalid request".to_string()),
+                message: Some(
+                    "An error message indicating the validation problem with the request."
+                        .to_string(),
+                ),
                 errors: Some(vec![ServiceErrorItem {
                     id: None,
                     status: Some(400),
@@ -36,18 +107,7 @@ pub fn map_account_error(err: AccountServiceError) -> (StatusCode, Json<ServiceE
                 }]),
             }),
         ),
-        AccountServiceError::Repository(err) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ServiceError {
-                message: Some("Internal server error".to_string()),
-                errors: Some(vec![ServiceErrorItem {
-                    id: None,
-                    status: Some(500),
-                    title: Some("Internal Server Error".to_string()),
-                    detail: Some(format!("Repository error: {}", err)),
-                }]),
-            }),
-        ),
+        AccountServiceError::Repository(ref err) => map_repository_error(err, "account"),
     }
 }
 
@@ -57,7 +117,7 @@ pub fn map_order_error(err: OrderServiceError) -> (StatusCode, Json<ServiceError
         OrderServiceError::NotFound(id) => (
             StatusCode::NOT_FOUND,
             Json(ServiceError {
-                message: Some(format!("Order not found: {}", id)),
+                message: Some("An error message indicating the resource is not found".to_string()),
                 errors: Some(vec![ServiceErrorItem {
                     id: Some(id.to_string()),
                     status: Some(404),
@@ -69,7 +129,10 @@ pub fn map_order_error(err: OrderServiceError) -> (StatusCode, Json<ServiceError
         OrderServiceError::InvalidInput(msg) => (
             StatusCode::BAD_REQUEST,
             Json(ServiceError {
-                message: Some("Invalid request".to_string()),
+                message: Some(
+                    "An error message indicating the validation problem with the request."
+                        .to_string(),
+                ),
                 errors: Some(vec![ServiceErrorItem {
                     id: None,
                     status: Some(400),
@@ -78,18 +141,7 @@ pub fn map_order_error(err: OrderServiceError) -> (StatusCode, Json<ServiceError
                 }]),
             }),
         ),
-        OrderServiceError::Repository(err) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ServiceError {
-                message: Some("Internal server error".to_string()),
-                errors: Some(vec![ServiceErrorItem {
-                    id: None,
-                    status: Some(500),
-                    title: Some("Internal Server Error".to_string()),
-                    detail: Some(format!("Repository error: {}", err)),
-                }]),
-            }),
-        ),
+        OrderServiceError::Repository(ref err) => map_repository_error(err, "order"),
     }
 }
 
@@ -99,7 +151,7 @@ pub fn map_transaction_error(err: TransactionServiceError) -> (StatusCode, Json<
         TransactionServiceError::NotFound(id) => (
             StatusCode::NOT_FOUND,
             Json(ServiceError {
-                message: Some(format!("Transaction not found: {}", id)),
+                message: Some("An error message indicating the resource is not found".to_string()),
                 errors: Some(vec![ServiceErrorItem {
                     id: Some(id.to_string()),
                     status: Some(404),
@@ -111,7 +163,10 @@ pub fn map_transaction_error(err: TransactionServiceError) -> (StatusCode, Json<
         TransactionServiceError::InvalidInput(msg) => (
             StatusCode::BAD_REQUEST,
             Json(ServiceError {
-                message: Some("Invalid request".to_string()),
+                message: Some(
+                    "An error message indicating the validation problem with the request."
+                        .to_string(),
+                ),
                 errors: Some(vec![ServiceErrorItem {
                     id: None,
                     status: Some(400),
@@ -120,18 +175,7 @@ pub fn map_transaction_error(err: TransactionServiceError) -> (StatusCode, Json<
                 }]),
             }),
         ),
-        TransactionServiceError::Repository(err) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ServiceError {
-                message: Some("Internal server error".to_string()),
-                errors: Some(vec![ServiceErrorItem {
-                    id: None,
-                    status: Some(500),
-                    title: Some("Internal Server Error".to_string()),
-                    detail: Some(format!("Repository error: {}", err)),
-                }]),
-            }),
-        ),
+        TransactionServiceError::Repository(ref err) => map_repository_error(err, "transaction"),
     }
 }
 
@@ -143,7 +187,7 @@ pub fn map_user_preference_error(
         UserPreferenceServiceError::NotFound => (
             StatusCode::NOT_FOUND,
             Json(ServiceError {
-                message: Some("User preference not found".to_string()),
+                message: Some("An error message indicating the resource is not found".to_string()),
                 errors: Some(vec![ServiceErrorItem {
                     id: None,
                     status: Some(404),
@@ -155,7 +199,10 @@ pub fn map_user_preference_error(
         UserPreferenceServiceError::InvalidInput(msg) => (
             StatusCode::BAD_REQUEST,
             Json(ServiceError {
-                message: Some("Invalid request".to_string()),
+                message: Some(
+                    "An error message indicating the validation problem with the request."
+                        .to_string(),
+                ),
                 errors: Some(vec![ServiceErrorItem {
                     id: None,
                     status: Some(400),
@@ -164,17 +211,8 @@ pub fn map_user_preference_error(
                 }]),
             }),
         ),
-        UserPreferenceServiceError::Repository(err) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ServiceError {
-                message: Some("Internal server error".to_string()),
-                errors: Some(vec![ServiceErrorItem {
-                    id: None,
-                    status: Some(500),
-                    title: Some("Internal Server Error".to_string()),
-                    detail: Some(format!("Repository error: {}", err)),
-                }]),
-            }),
-        ),
+        UserPreferenceServiceError::Repository(ref err) => {
+            map_repository_error(err, "user preference")
+        }
     }
 }

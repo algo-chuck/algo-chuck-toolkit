@@ -2,7 +2,7 @@
 //!
 //! Thin CRUD wrapper around TransactionRepository with input validation.
 
-use crate::db::repositories::{TransactionError, TransactionRepository};
+use crate::db::repositories::{RepositoryError, TransactionRepository};
 use schwab_api::types::trader::{
     GetTransactionByIdParams, GetTransactionsByPathParams, Transaction,
 };
@@ -17,7 +17,7 @@ pub enum TransactionServiceError {
     InvalidInput(String),
 
     #[error("Repository error: {0}")]
-    Repository(#[from] TransactionError),
+    Repository(#[from] RepositoryError),
 }
 
 /// Service for transaction operations

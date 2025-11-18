@@ -169,7 +169,7 @@ fn create_cash_account(account_number: &str, initial_balance: f64) -> Securities
         initial_balances: Some(initial_balances),
         current_balances: Some(current_balances.clone()),
         projected_balances: Some(current_balances),
-        r#type: Some(schwab_api::types::trader::cash_account::Type::Cash),
+        r#type: None,
         account_number: Some(account_number.to_string()),
         round_trips: Some(0),
         is_day_trader: Some(false),

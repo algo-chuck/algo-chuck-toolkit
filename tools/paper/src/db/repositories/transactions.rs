@@ -2,42 +2,9 @@
 // Implements operations from OpenAPI tag: "Transactions"
 
 use schwab_api::types::trader::{GetTransactionsByPathParams, Transaction};
-use serde_json;
 use sqlx::SqlitePool;
 
-#[derive(Debug)]
-pub enum TransactionError {
-    Database(sqlx::Error),
-    Serialization(serde_json::Error),
-    NotFound(i64),
-}
-
-impl From<sqlx::Error> for TransactionError {
-    fn from(e: sqlx::Error) -> Self {
-        match e {
-            sqlx::Error::RowNotFound => TransactionError::NotFound(0),
-            e => TransactionError::Database(e),
-        }
-    }
-}
-
-impl From<serde_json::Error> for TransactionError {
-    fn from(e: serde_json::Error) -> Self {
-        TransactionError::Serialization(e)
-    }
-}
-
-impl std::fmt::Display for TransactionError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            TransactionError::Database(e) => write!(f, "Database error: {}", e),
-            TransactionError::Serialization(e) => write!(f, "Serialization error: {}", e),
-            TransactionError::NotFound(id) => write!(f, "Transaction not found: {}", id),
-        }
-    }
-}
-
-impl std::error::Error for TransactionError {}
+use crate::db::{RepositoryError, not_found};
 
 pub struct TransactionRepository {
     pool: SqlitePool,
@@ -52,7 +19,7 @@ impl TransactionRepository {
     pub async fn get_transactions_by_path_param(
         &self,
         params: &GetTransactionsByPathParams<'_>,
-    ) -> Result<Vec<Transaction>, TransactionError> {
+    ) -> Result<Vec<Transaction>, RepositoryError> {
         // Build dynamic query based on provided parameters
         let mut query =
             String::from("SELECT transaction_data FROM transactions WHERE account_number = ?");
@@ -95,7 +62,7 @@ impl TransactionRepository {
         let rows = sqlx_query.fetch_all(&self.pool).await?;
 
         rows.into_iter()
-            .map(|r| serde_json::from_str(&r).map_err(TransactionError::from))
+            .map(|r| serde_json::from_str(&r).map_err(RepositoryError::from))
             .collect()
     }
 
@@ -103,16 +70,16 @@ impl TransactionRepository {
     pub async fn get_transactions_by_id(
         &self,
         activity_id: i64,
-    ) -> Result<Transaction, TransactionError> {
+    ) -> Result<Transaction, RepositoryError> {
         let transaction_data = sqlx::query_scalar::<_, String>(
             "SELECT transaction_data FROM transactions WHERE activity_id = ?",
         )
         .bind(activity_id)
         .fetch_optional(&self.pool)
         .await?
-        .ok_or(TransactionError::NotFound(activity_id))?;
+        .ok_or_else(|| not_found("Transaction", &activity_id.to_string()))?;
 
-        serde_json::from_str(&transaction_data).map_err(TransactionError::from)
+        serde_json::from_str(&transaction_data).map_err(RepositoryError::from)
     }
 
     // Additional helper method
@@ -122,7 +89,7 @@ impl TransactionRepository {
         account_number: &str,
         transaction_type: &str,
         transaction_data: &Transaction,
-    ) -> Result<i64, TransactionError> {
+    ) -> Result<i64, RepositoryError> {
         let transaction_data_json = serde_json::to_string(transaction_data)?;
 
         // Get next activity_id (starting from 1001)

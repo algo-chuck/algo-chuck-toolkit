@@ -2,42 +2,9 @@
 // Implements operations from OpenAPI tag: "Accounts"
 
 use schwab_api::types::trader::{GetAccountParams, GetAccountsParams, SecuritiesAccount};
-use serde_json;
 use sqlx::SqlitePool;
 
-#[derive(Debug)]
-pub enum AccountError {
-    Database(sqlx::Error),
-    Serialization(serde_json::Error),
-    NotFound(String),
-}
-
-impl From<sqlx::Error> for AccountError {
-    fn from(e: sqlx::Error) -> Self {
-        match e {
-            sqlx::Error::RowNotFound => AccountError::NotFound("Account".to_string()),
-            e => AccountError::Database(e),
-        }
-    }
-}
-
-impl From<serde_json::Error> for AccountError {
-    fn from(e: serde_json::Error) -> Self {
-        AccountError::Serialization(e)
-    }
-}
-
-impl std::fmt::Display for AccountError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            AccountError::Database(e) => write!(f, "Database error: {}", e),
-            AccountError::Serialization(e) => write!(f, "Serialization error: {}", e),
-            AccountError::NotFound(id) => write!(f, "Account not found: {}", id),
-        }
-    }
-}
-
-impl std::error::Error for AccountError {}
+use crate::db::{RepositoryError, not_found};
 
 pub struct AccountRepository {
     pool: SqlitePool,
@@ -49,7 +16,7 @@ impl AccountRepository {
     }
 
     // operationId: getAccountNumbers
-    pub async fn get_account_numbers(&self) -> Result<Vec<(String, String)>, AccountError> {
+    pub async fn get_account_numbers(&self) -> Result<Vec<(String, String)>, RepositoryError> {
         let rows = sqlx::query_as::<_, (String, String)>(
             "SELECT account_number, hash_value FROM accounts ORDER BY created_at DESC",
         )
@@ -63,7 +30,7 @@ impl AccountRepository {
     pub async fn get_accounts(
         &self,
         _params: &GetAccountsParams<'_>,
-    ) -> Result<Vec<SecuritiesAccount>, AccountError> {
+    ) -> Result<Vec<SecuritiesAccount>, RepositoryError> {
         // TODO: Implement field filtering based on params.fields
         // For now, return all fields regardless of params.fields value
         let rows = sqlx::query_scalar::<_, String>(
@@ -73,7 +40,7 @@ impl AccountRepository {
         .await?;
 
         rows.into_iter()
-            .map(|r| serde_json::from_str(&r).map_err(AccountError::from))
+            .map(|r| serde_json::from_str(&r).map_err(RepositoryError::from))
             .collect()
     }
 
@@ -81,7 +48,7 @@ impl AccountRepository {
     pub async fn get_account(
         &self,
         params: &GetAccountParams<'_>,
-    ) -> Result<SecuritiesAccount, AccountError> {
+    ) -> Result<SecuritiesAccount, RepositoryError> {
         // TODO: Implement field filtering based on params.fields
         // For now, return all fields regardless of params.fields value
         let account_data = sqlx::query_scalar::<_, String>(
@@ -90,9 +57,9 @@ impl AccountRepository {
         .bind(params.account_hash)
         .fetch_optional(&self.pool)
         .await?
-        .ok_or(AccountError::NotFound(params.account_hash.to_string()))?;
+        .ok_or_else(|| not_found("Account", params.account_hash))?;
 
-        serde_json::from_str(&account_data).map_err(AccountError::from)
+        serde_json::from_str(&account_data).map_err(RepositoryError::from)
     }
 
     // Additional helper methods (not directly from operationIds)
@@ -103,7 +70,7 @@ impl AccountRepository {
         hash_value: &str,
         account_type: &str,
         account_data: &SecuritiesAccount,
-    ) -> Result<i64, AccountError> {
+    ) -> Result<i64, RepositoryError> {
         let account_data_json = serde_json::to_string(account_data)?;
 
         let result = sqlx::query(
@@ -123,23 +90,23 @@ impl AccountRepository {
     pub async fn find_by_account_number(
         &self,
         account_number: &str,
-    ) -> Result<SecuritiesAccount, AccountError> {
+    ) -> Result<SecuritiesAccount, RepositoryError> {
         let account_data = sqlx::query_scalar::<_, String>(
             "SELECT account_data FROM accounts WHERE account_number = ?",
         )
         .bind(account_number)
         .fetch_optional(&self.pool)
         .await?
-        .ok_or(AccountError::NotFound(account_number.to_string()))?;
+        .ok_or_else(|| not_found("Account", account_number))?;
 
-        serde_json::from_str(&account_data).map_err(AccountError::from)
+        serde_json::from_str(&account_data).map_err(RepositoryError::from)
     }
 
     pub async fn update(
         &self,
         account_number: &str,
         account_data: &SecuritiesAccount,
-    ) -> Result<(), AccountError> {
+    ) -> Result<(), RepositoryError> {
         let account_data_json = serde_json::to_string(account_data)?;
 
         sqlx::query(

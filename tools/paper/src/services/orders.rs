@@ -2,7 +2,7 @@
 //!
 //! Thin CRUD wrapper around OrderRepository with input validation.
 
-use crate::db::repositories::{OrderError, OrderRepository};
+use crate::db::repositories::{RepositoryError, OrderRepository};
 use schwab_api::types::trader::{
     CancelOrderParams, GetOrderParams, GetOrdersByPathParams, GetOrdersByQueryParams, Order,
     OrderRequest, PlaceOrderParams, PreviewOrder, PreviewOrderParams, ReplaceOrderParams,
@@ -18,7 +18,7 @@ pub enum OrderServiceError {
     InvalidInput(String),
 
     #[error("Repository error: {0}")]
-    Repository(#[from] OrderError),
+    Repository(#[from] RepositoryError),
 }
 
 /// Service for order operations

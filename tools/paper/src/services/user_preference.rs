@@ -2,7 +2,7 @@
 //!
 //! Thin CRUD wrapper around UserPreferenceRepository with input validation.
 
-use crate::db::repositories::{UserPreferenceError, UserPreferenceRepository};
+use crate::db::repositories::{RepositoryError, UserPreferenceRepository};
 use schwab_api::types::trader::UserPreference;
 
 /// Errors that can occur in user preference service operations
@@ -15,7 +15,7 @@ pub enum UserPreferenceServiceError {
     InvalidInput(String),
 
     #[error("Repository error: {0}")]
-    Repository(#[from] UserPreferenceError),
+    Repository(#[from] RepositoryError),
 }
 
 /// Service for user preference operations

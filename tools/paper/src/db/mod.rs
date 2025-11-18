@@ -4,7 +4,10 @@
 use sqlx::Error as SqlxError;
 use sqlx::sqlite::{SqlitePool, SqlitePoolOptions};
 
+pub mod error;
 pub mod repositories;
+
+pub use error::{RepositoryError, not_found};
 
 /// Initialize the database pool and run migrations
 pub async fn init_db() -> Result<SqlitePool, SqlxError> {
