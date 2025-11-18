@@ -98,22 +98,22 @@ pub async fn create_account(
     Ok(Created {})
 }
 
-/// Delete an account by account number
+/// Delete an account by hash value
 ///
-/// DELETE /admin/v1/accounts/{accountNumber}
+/// DELETE /admin/v1/accounts/{hashValue}
 pub async fn delete_account(
     State(app_state): State<Arc<AppState>>,
-    Path(account_number): Path<String>,
+    Path(hash_value): Path<String>,
 ) -> Result<StatusCode, (StatusCode, Json<ServiceError>)> {
     println!(
-        "->> {:<12} - delete_account (account_number={})",
-        "HANDLER", account_number
+        "->> {:<12} - delete_account (hash_value={})",
+        "HANDLER", hash_value
     );
 
     // Call service to delete the account (and cascade to orders/transactions)
     app_state
         .account_service
-        .delete_account(&account_number)
+        .delete_account(&hash_value)
         .await
         .map_err(|e| {
             use crate::handlers::error_mapping::map_account_error;
@@ -126,27 +126,28 @@ pub async fn delete_account(
 
 /// Reset an account to its initial state
 ///
-/// POST /admin/v1/accounts/{accountNumber}/reset
+/// POST /admin/v1/accounts/{hashValue}/reset
 pub async fn reset_account(
-    State(_app_state): State<Arc<AppState>>,
-    Path(_account_number): Path<String>,
+    State(app_state): State<Arc<AppState>>,
+    Path(hash_value): Path<String>,
 ) -> Result<StatusCode, (StatusCode, Json<ServiceError>)> {
-    println!("->> {:<12} - reset_account", "HANDLER");
+    println!(
+        "->> {:<12} - reset_account (hash_value={})",
+        "HANDLER", hash_value
+    );
 
-    Err((
-        StatusCode::NOT_IMPLEMENTED,
-        Json(ServiceError {
-            message: Some("Account reset not yet implemented".to_string()),
-            errors: Some(vec![ServiceErrorItem {
-                id: None,
-                status: Some(501),
-                title: Some("Not Implemented".to_string()),
-                detail: Some(
-                    "Admin account reset will be implemented in the service layer".to_string(),
-                ),
-            }]),
-        }),
-    ))
+    // Call service to reset the account
+    app_state
+        .account_service
+        .reset_account(&hash_value)
+        .await
+        .map_err(|e| {
+            use crate::handlers::error_mapping::map_account_error;
+            map_account_error(e)
+        })?;
+
+    // Return 200 OK on successful reset
+    Ok(StatusCode::OK)
 }
 
 // Helper functions to create account structures

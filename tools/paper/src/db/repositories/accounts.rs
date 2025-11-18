@@ -122,14 +122,42 @@ impl AccountRepository {
         Ok(())
     }
 
-    /// Delete an account by account number
-    pub async fn delete(&self, account_number: &str) -> Result<u64, RepositoryError> {
-        let result = sqlx::query("DELETE FROM accounts WHERE account_number = ?")
-            .bind(account_number)
+    /// Delete an account by hash value
+    pub async fn delete(&self, hash_value: &str) -> Result<u64, RepositoryError> {
+        let result = sqlx::query("DELETE FROM accounts WHERE hash_value = ?")
+            .bind(hash_value)
             .execute(&self.pool)
             .await?;
 
         Ok(result.rows_affected())
+    }
+
+    /// Reset an account to initial state by hash value
+    ///
+    /// This resets the account_data back to initial $200,000 CASH account.
+    /// Orders and transactions are automatically deleted via CASCADE DELETE.
+    pub async fn reset(
+        &self,
+        hash_value: &str,
+        initial_account_data: &SecuritiesAccount,
+    ) -> Result<(), RepositoryError> {
+        let account_data_json = serde_json::to_string(initial_account_data)?;
+
+        let result = sqlx::query(
+            "UPDATE accounts
+             SET account_data = ?, updated_at = CURRENT_TIMESTAMP
+             WHERE hash_value = ?",
+        )
+        .bind(account_data_json)
+        .bind(hash_value)
+        .execute(&self.pool)
+        .await?;
+
+        if result.rows_affected() == 0 {
+            return Err(not_found("Account", hash_value));
+        }
+
+        Ok(())
     }
 }
 

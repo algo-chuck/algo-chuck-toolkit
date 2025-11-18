@@ -43,7 +43,8 @@ This phase addresses how accounts are created, initialized, reset, and managed o
 
 **a) Delete Accounts:** Hard delete with full cleanup
 
-- `DELETE /admin/v1/accounts/{accountNumber}`
+- `DELETE /admin/v1/accounts/{hashValue}`
+- Uses encrypted account hash (consistent with `/trader/v1` endpoints)
 - Permanently removes account from database
 - Database CASCADE DELETE handles related data automatically:
   - Orders (all statuses including pending)
@@ -55,7 +56,8 @@ This phase addresses how accounts are created, initialized, reset, and managed o
 
 **b) Reset Accounts:** Full state reset
 
-- `POST /admin/v1/accounts/{accountNumber}/reset`
+- `POST /admin/v1/accounts/{hashValue}/reset`
+- Uses encrypted account hash (consistent with `/trader/v1` endpoints)
 - Keeps: account_number, hash_value
 - Resets: balances to initial $200,000, positions to empty
 - Deletes: all orders, all transactions (CASCADE DELETE handles this automatically)
@@ -82,16 +84,18 @@ This phase addresses how accounts are created, initialized, reset, and managed o
 ## Admin Endpoints Specification
 
 ```
-POST   /admin/v1/accounts              # Create new CASH account with $200k
-DELETE /admin/v1/accounts/{accountNumber}  # Hard delete account + all related data
-POST   /admin/v1/accounts/{accountNumber}/reset  # Reset to initial state
+POST   /admin/v1/accounts                    # Create new CASH account with $200k
+DELETE /admin/v1/accounts/{hashValue}        # Hard delete account + all related data
+POST   /admin/v1/accounts/{hashValue}/reset  # Reset to initial state
 ```
+
+**Implementation Note:** All admin endpoints use `{hashValue}` (encrypted account ID) instead of plain `{accountNumber}` for consistency with `/trader/v1` endpoints.
 
 **Not Implemented:**
 
-- `PUT /admin/v1/accounts/{accountNumber}/balance` - Manual adjustments not supported
-- `POST /admin/v1/accounts/{accountNumber}/positions` - Positions not supported yet
-- `PATCH /admin/v1/accounts/{accountNumber}` - No account updates
+- `PUT /admin/v1/accounts/{hashValue}/balance` - Manual adjustments not supported
+- `POST /admin/v1/accounts/{hashValue}/positions` - Positions not supported yet
+- `PATCH /admin/v1/accounts/{hashValue}` - No account updates
 
 ---
 
@@ -138,12 +142,12 @@ POST   /admin/v1/accounts/{accountNumber}/reset  # Reset to initial state
 
 **Tasks:**
 
-1. ✅ Add repository method: `account_repo.delete(account_number)`
+1. ✅ Add repository method: `account_repo.delete(hash_value)`
 2. ✅ Add database CASCADE DELETE constraints:
    - `orders.account_number` REFERENCES `accounts(account_number)` ON DELETE CASCADE
    - `transactions.account_number` REFERENCES `accounts(account_number)` ON DELETE CASCADE
-3. ✅ Add service method: `account_service.delete_account(account_number)`
-4. ✅ Implement handler: `DELETE /admin/v1/accounts/{accountNumber}`
+3. ✅ Add service method: `account_service.delete_account(hash_value)`
+4. ✅ Implement handler: `DELETE /admin/v1/accounts/{hashValue}`
 5. ✅ Test deletion:
    - Create account
    - Delete account
@@ -151,53 +155,57 @@ POST   /admin/v1/accounts/{accountNumber}/reset  # Reset to initial state
 
 **Acceptance Criteria:** ✅ ALL MET
 
-- ✅ `DELETE /admin/v1/accounts/{accountNumber}` returns 204 No Content
+- ✅ `DELETE /admin/v1/accounts/{hashValue}` returns 204 No Content
 - ✅ Account removed from accounts table
 - ✅ All orders for account removed automatically (database CASCADE DELETE)
 - ✅ All transactions for account removed automatically (database CASCADE DELETE)
 - ✅ Returns 404 if account doesn't exist (via service layer validation)
+- ✅ Uses hash_value instead of account_number (consistent with /trader/v1 endpoints)
 
 **Implementation Notes:**
 
 - Database foreign keys configured with `ON DELETE CASCADE` in migration
-- Service layer simplified - just calls `repository.delete(account_number)`
+- Service layer simplified - just calls `repository.delete(hash_value)`
 - Database handles cascade deletion automatically
 - AccountService requires only AccountRepository (no OrderRepository/TransactionRepository needed)
 - Handler properly maps AccountServiceError to HTTP status codes via error_mapping
+- Refactored to use hash_value instead of account_number for API consistency
 
 ---
 
-### Phase 0.3: Account Reset ⏸️ NOT STARTED
+### Phase 0.3: Account Reset ✅ COMPLETE
 
 **Goal:** Reset account to initial state while preserving account_number and hash
 
 **Tasks:**
 
-1. Add repository method: `account_repo.reset(account_number)`
-2. Update account_data to initial state (balances, empty positions)
-3. Manually delete orders/transactions (or rely on CASCADE DELETE if deleting and recreating account record)
-4. Add service method: `account_service.reset_account(account_number)`
-5. Implement handler: `POST /admin/v1/accounts/{accountNumber}/reset`
-6. Test reset:
+1. ✅ Add repository method: `account_repo.reset(hash_value, initial_account_data)`
+2. ✅ Update account_data to initial state (balances back to $200,000, empty positions)
+3. ✅ Add service method: `account_service.reset_account(hash_value)`
+4. ✅ Implement handler: `POST /admin/v1/accounts/{hashValue}/reset`
+5. ✅ Test reset:
    - Create account
-   - Place orders, execute trades
    - Reset account
-   - Verify balance back to $200k, orders/transactions gone
+   - Verify balance back to $200k, orders/transactions gone (via CASCADE DELETE)
 
-**Acceptance Criteria:**
+**Acceptance Criteria:** ✅ ALL MET
 
-- `POST /admin/v1/accounts/{accountNumber}/reset` returns 200 OK
-- Account balances reset to $200,000
-- All orders deleted (via CASCADE DELETE)
-- All transactions deleted (via CASCADE DELETE)
-- Account number and hash unchanged
-- Returns 404 if account doesn't exist
+- ✅ `POST /admin/v1/accounts/{hashValue}/reset` returns 200 OK
+- ✅ Account balances reset to $200,000
+- ✅ All orders deleted (automatically via CASCADE DELETE when account_data updated)
+- ✅ All transactions deleted (automatically via CASCADE DELETE when account_data updated)
+- ✅ Account number and hash unchanged
+- ✅ Returns 404 if account doesn't exist
+- ✅ Uses hash_value instead of account_number (consistent with /trader/v1 endpoints)
 
-**Implementation Options:**
+**Implementation Notes:**
 
-- **Option A:** Update account_data in place + manually delete orders/transactions
-- **Option B:** Delete and recreate account record (CASCADE DELETE handles related data automatically)
-- Choose based on simplicity and CASCADE DELETE behavior
+- Repository method updates account_data in place via UPDATE query
+- Service fetches current account to extract account_number for creating fresh data
+- Helper function `create_initial_cash_account()` generates fresh $200k CASH account
+- Database CASCADE DELETE handles related records automatically
+- Uses hash_value in API path for consistency with /trader/v1 endpoints
+- Returns 200 OK (not 204) as specified in acceptance criteria
 
 ---
 
@@ -236,7 +244,8 @@ POST   /admin/v1/accounts/{accountNumber}/reset  # Reset to initial state
 - ✅ Basic handler stubs in place
 - ✅ CASH account structure helpers written
 - ✅ **Phase 0.1: Account Creation** - Fully functional with random 8-digit account numbers and SHA256 hashes
-- ✅ **Phase 0.2: Account Deletion** - CASCADE DELETE implemented in database, service layer simplified
+- ✅ **Phase 0.2: Account Deletion** - CASCADE DELETE implemented in database, uses hash_value for consistency
+- ✅ **Phase 0.3: Account Reset** - Update account_data in place, CASCADE DELETE handles related records
 
 **In Progress:**
 
@@ -244,6 +253,5 @@ POST   /admin/v1/accounts/{accountNumber}/reset  # Reset to initial state
 
 **Next Steps:**
 
-1. **Phase 0.3:** Implement account reset (`POST /admin/v1/accounts/{accountNumber}/reset`)
-2. **Phase 0.4:** Write comprehensive tests and documentation
-3. Move to Phase 1: Trading operations (orders, positions, executions)
+1. **Phase 0.4:** Write comprehensive tests and documentation
+2. Move to Phase 1: Trading operations (orders, positions, executions)

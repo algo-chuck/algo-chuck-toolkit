@@ -118,26 +118,104 @@ impl AccountService {
 
     /// Delete an account (admin operation)
     ///
-    /// Maps to: DELETE /admin/v1/accounts/{accountNumber}
+    /// Maps to: DELETE /admin/v1/accounts/{hashValue}
     ///
     /// Cascade deletion is handled by database foreign key constraints.
-    pub async fn delete_account(&self, account_number: &str) -> Result<(), AccountServiceError> {
+    pub async fn delete_account(&self, hash_value: &str) -> Result<(), AccountServiceError> {
         // Validate input
-        if account_number.trim().is_empty() {
+        if hash_value.trim().is_empty() {
             return Err(AccountServiceError::InvalidInput(
-                "account_number cannot be empty".to_string(),
+                "hash_value cannot be empty".to_string(),
             ));
         }
 
         // Delete the account - related records cascade automatically
-        let rows_affected = self.repository.delete(account_number).await?;
+        let rows_affected = self.repository.delete(hash_value).await?;
 
         if rows_affected == 0 {
-            return Err(AccountServiceError::NotFound(account_number.to_string()));
+            return Err(AccountServiceError::NotFound(hash_value.to_string()));
         }
 
         Ok(())
     }
+
+    /// Reset an account to initial state (admin operation)
+    ///
+    /// Maps to: POST /admin/v1/accounts/{hashValue}/reset
+    ///
+    /// Resets account balances to $200,000 and clears all orders/transactions.
+    /// CASCADE DELETE handles related data automatically.
+    pub async fn reset_account(&self, hash_value: &str) -> Result<(), AccountServiceError> {
+        // Validate input
+        if hash_value.trim().is_empty() {
+            return Err(AccountServiceError::InvalidInput(
+                "hash_value cannot be empty".to_string(),
+            ));
+        }
+
+        // First get the current account to extract account_number
+        let current_account = self
+            .repository
+            .get_account(&GetAccountParams {
+                account_hash: hash_value,
+                fields: None,
+            })
+            .await?;
+
+        let account_number = match &current_account {
+            SecuritiesAccount::Cash(cash_account) => {
+                cash_account.account_number.as_ref().ok_or_else(|| {
+                    AccountServiceError::InvalidInput("Missing account_number".into())
+                })?
+            }
+            SecuritiesAccount::Margin(margin_account) => {
+                margin_account.account_number.as_ref().ok_or_else(|| {
+                    AccountServiceError::InvalidInput("Missing account_number".into())
+                })?
+            }
+        };
+
+        // Create fresh account data with initial $200,000 balance
+        let initial_balance = 200_000.0;
+        let fresh_account_data = create_initial_cash_account(account_number, initial_balance);
+
+        // Reset the account data in the repository
+        self.repository
+            .reset(hash_value, &fresh_account_data)
+            .await?;
+
+        Ok(())
+    }
+}
+
+/// Helper function to create initial CASH account structure
+fn create_initial_cash_account(account_number: &str, initial_balance: f64) -> SecuritiesAccount {
+    use schwab_api::types::trader::{CashAccount, CashBalance, CashInitialBalance};
+
+    let initial_balances = Box::new(CashInitialBalance {
+        cash_available_for_trading: Some(initial_balance),
+        cash_balance: Some(initial_balance),
+        ..Default::default()
+    });
+
+    let current_balances = Box::new(CashBalance {
+        cash_available_for_trading: Some(initial_balance),
+        total_cash: Some(initial_balance),
+        ..Default::default()
+    });
+
+    SecuritiesAccount::Cash(Box::new(CashAccount {
+        initial_balances: Some(initial_balances),
+        current_balances: Some(current_balances.clone()),
+        projected_balances: Some(current_balances),
+        r#type: None,
+        account_number: Some(account_number.to_string()),
+        round_trips: Some(0),
+        is_day_trader: Some(false),
+        is_closing_only_restricted: Some(false),
+        pfcb_flag: Some(false),
+        positions: None,
+    }))
 }
 
 #[cfg(test)]

@@ -39,6 +39,6 @@ pub fn trader_router() -> Router<Arc<AppState>> {
 pub fn admin_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/accounts", post(create_account))
-        .route("/accounts/{accountNumber}", delete(delete_account))
-        .route("/accounts/{accountNumber}/reset", post(reset_account))
+        .route("/accounts/{hashValue}", delete(delete_account))
+        .route("/accounts/{hashValue}/reset", post(reset_account))
 }
